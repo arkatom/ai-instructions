@@ -228,9 +228,13 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 ## 🙏 Acknowledgments
 
-- **Kent Beck** for Test-Driven Development methodology
-- **ClaudeCode team** for inspiration on AI-assisted development
-- **Open source community** for tools and libraries used
+- **Kent Beck** for the foundational Test-Driven Development methodology
+  - *"Test-Driven Development: By Example"* (2003) - The seminal work that defined TDD
+  - *"Tidy First?"* (2023) - Modern approach to structural vs behavioral changes
+  - The three rules of TDD that guide our development process
+- **Martin Fowler** for documenting and evangelizing TDD practices
+- **ClaudeCode team** for inspiration on AI-assisted development workflows
+- **Open source community** for the excellent tools and libraries that make this possible
 
 ---
 
