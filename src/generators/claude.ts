@@ -1,47 +1,18 @@
-import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 import { FileUtils } from '../utils/file-utils';
+import { BaseGenerator, GenerateFilesOptions, ToolConfig } from './base';
 
-export interface GenerateFilesOptions {
-  projectName?: string;
-}
-
-export class ClaudeGenerator {
-  private templateDir: string;
-
+export class ClaudeGenerator extends BaseGenerator {
   constructor() {
-    // templates/claude/ ディレクトリのパスを設定
-    this.templateDir = join(__dirname, '../../templates/claude');
-  }
-
-  async loadTemplate(templateName: string): Promise<string> {
-    try {
-      const templatePath = join(this.templateDir, templateName);
-      const content = await readFile(templatePath, 'utf-8');
-      return content;
-    } catch (error) {
-      throw new Error(`Template file not found: ${templateName}`);
-    }
-  }
-
-  async getInstructionFiles(): Promise<string[]> {
-    try {
-      const instructionsPath = join(this.templateDir, 'instructions');
-      const files = await readdir(instructionsPath);
-      return files.filter(file => file.endsWith('.md'));
-    } catch (error) {
-      throw new Error('Instructions directory not found');
-    }
-  }
-
-  private replaceTemplateVariables(content: string, options: GenerateFilesOptions): string {
-    let processedContent = content;
-    
-    if (options.projectName) {
-      processedContent = processedContent.replace(/\{\{projectName\}\}/g, options.projectName);
-    }
-    
-    return processedContent;
+    const config: ToolConfig = {
+      name: 'claude',
+      templateDir: 'claude',
+      outputStructure: {
+        mainFile: 'CLAUDE.md',
+        directory: 'instructions'
+      }
+    };
+    super(config);
   }
 
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
