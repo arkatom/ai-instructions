@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(gh label:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(chmod:*)",
+      "Bash(npm start:*)",
+      "Bash(npm test)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7",
+    "github",
+    "memory",
+    "filesystem",
+    "sequential-thinking",
+    "iterm-mcp",
+    "notionApi",
+    "GoogleSheets"
+  ],
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Glass.aiff"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Ping.aiff"
+          }
+        ]
+      }
+    ]
+  }
+}
