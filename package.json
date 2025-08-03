@@ -2,15 +2,19 @@
   "name": "@arkatom/ai-instructions",
   "version": "0.1.0",
   "description": "🤖 CLI tool to scaffold AI development instructions for ClaudeCode, Cursor, GitHub Copilot and more",
-  "main": "src/cli.js",
+  "main": "dist/cli.js",
   "bin": {
-    "ai-instructions": "src/cli.js"
+    "ai-instructions": "dist/cli.js"
   },
   "scripts": {
-    "start": "node src/cli.js",
-    "build": "echo \"No build step required\"",
+    "build": "tsc",
+    "dev": "ts-node src/cli.ts",
+    "start": "node dist/cli.js",
     "test": "jest",
-    "lint": "echo \"Linting not configured yet\""
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "echo \"Linting not configured yet\"",
+    "clean": "rm -rf dist"
   },
   "repository": {
     "type": "git",
@@ -34,15 +38,18 @@
   },
   "homepage": "https://github.com/arkatom/ai-instructions#readme",
   "dependencies": {
-    "chalk": "^5.4.1",
+    "chalk": "^4.1.2",
     "commander": "^14.0.0",
     "fs-extra": "^11.3.0",
     "inquirer": "^12.9.0",
     "ora": "^8.2.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
     "jest": "^29.7.0",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }
 }
