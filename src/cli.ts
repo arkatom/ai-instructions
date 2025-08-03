@@ -10,6 +10,24 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ClaudeGenerator } from './generators/claude';
 
+/**
+ * Validates project name for filesystem safety
+ * @param projectName - The project name to validate
+ * @throws Error if invalid characters found or empty
+ */
+function validateProjectName(projectName: string): void {
+  // Check for empty string
+  if (!projectName || projectName.trim() === '') {
+    throw new Error('Invalid project name: cannot be empty');
+  }
+  
+  // Check for forbidden characters
+  const invalidChars = /[<>|]/;
+  if (invalidChars.test(projectName)) {
+    throw new Error(`Invalid project name: contains forbidden characters (<, >, |)`);
+  }
+}
+
 // Read package.json for version
 const packageJsonPath = join(__dirname, '../package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
@@ -28,6 +46,9 @@ program
   .option('-n, --project-name <name>', 'project name', 'my-project')
   .action(async (options) => {
     try {
+      // Validate project name before generating files
+      validateProjectName(options.projectName);
+      
       const generator = new ClaudeGenerator();
       await generator.generateFiles(options.output, { 
         projectName: options.projectName 
