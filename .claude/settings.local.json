@@ -204,7 +204,10 @@
       "mcp__github__get_pull_request",
       "mcp__github__list_issues",
       "mcp__github__update_issue",
-      "mcp__github__create_issue"
+      "mcp__github__create_issue",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:docs.cursor.com)",
+      "WebFetch(domain:docs.roocode.com)"
     ],
     "deny": []
   },
