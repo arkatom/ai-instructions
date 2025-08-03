@@ -8,7 +8,7 @@ describe('CLI Basic Functionality', () => {
 
   it('should display version when --version flag is used', () => {
     // Arrange
-    const expectedVersion = '0.1.1';
+    const expectedVersion = '0.2.0';
     
     // Act
     const result = execSync(`npx ts-node "${cliPath}" --version`, { 
