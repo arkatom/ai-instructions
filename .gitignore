@@ -43,6 +43,9 @@ Thumbs.db
 dist/
 build/
 
+# Package files
+*.tgz
+
 # Logs
 logs
 *.log

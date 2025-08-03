@@ -14,7 +14,13 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "echo \"Linting not configured yet\"",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm test",
+    "prepack": "npm run build",
+    "postpack": "echo \"📦 Package ready for publishing\"",
+    "prepublish": "echo \"⚠️ Use 'npm run prepublishOnly' for safety\"",
+    "version": "npm run build && git add dist",
+    "postversion": "git push && git push --tags"
   },
   "repository": {
     "type": "git",
@@ -31,8 +37,23 @@
     "instructions",
     "template"
   ],
-  "author": "arkatom",
+  "author": {
+    "name": "arkatom",
+    "email": "murata.atsuo.95@gmail.com",
+    "url": "https://github.com/arkatom"
+  },
   "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "files": [
+    "dist/",
+    "templates/",
+    "README.md",
+    "LICENSE"
+  ],
+  "types": "dist/cli.d.ts",
   "bugs": {
     "url": "https://github.com/arkatom/ai-instructions/issues"
   },

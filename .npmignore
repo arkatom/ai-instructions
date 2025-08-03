@@ -1,0 +1,70 @@
+# Source code (only publish built JavaScript)
+src/
+tsconfig.json
+.serena/
+
+# Test files and directories
+test/
+temp-*
+coverage/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Development dependencies and configuration
+jest.config.js
+.eslintrc*
+.prettierrc*
+.editorconfig
+
+# Build artifacts (keep dist/ but exclude source maps for smaller package)
+*.map
+
+# Environment and IDE files
+.env*
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git and CI files
+.git/
+.gitignore
+.github/
+
+# Documentation (keep README.md, exclude detailed docs)
+docs/
+CONTRIBUTING.md
+CHANGELOG.md
+
+# Package managers (keep package-lock.json for reproducible builds in development)
+node_modules/
+yarn.lock
+pnpm-lock.yaml
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Performance and debugging
+.nyc_output/
+.cache/
