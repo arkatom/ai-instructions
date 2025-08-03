@@ -39,8 +39,8 @@ describe('CLI Basic Functionality', () => {
   it('should execute init command and generate files in current directory', () => {
     // Arrange
     const expectedMessages = [
-      'Generated Claude Code template files',
-      'CLAUDE.md and instructions/ directory created',
+      'Generated claude template files',
+      'Files created for claude AI tool',
       'Project name: my-project'
     ];
     
@@ -347,8 +347,90 @@ describe('CLI Init Command Integration', () => {
       cwd: join(__dirname, '..')
     });
     
-    expect(result).toContain('Generated Claude Code template');
+    expect(result).toContain('Generated claude template');
     expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
     expect(existsSync(join(testOutputDir, 'instructions'))).toBe(true);
+  });
+});
+
+describe('CLI Multi-Tool Support', () => {
+  const cliPath = join(__dirname, '../src/cli.ts');
+  const testOutputDir = join(__dirname, '../temp-cli-multi-tool-test');
+
+  afterEach(async () => {
+    // テスト後のクリーンアップ
+    if (existsSync(testOutputDir)) {
+      await rm(testOutputDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should generate GitHub Copilot files with --tool github-copilot', () => {
+    // Act
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-project" --tool github-copilot`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    // Assert
+    expect(result).toContain('Generated github-copilot template');
+    expect(existsSync(join(testOutputDir, '.github', 'instructions', 'main.md'))).toBe(true);
+    
+    // Verify content
+    const mainContent = readFileSync(join(testOutputDir, '.github', 'instructions', 'main.md'), 'utf-8');
+    expect(mainContent).toContain('copilot-project');
+    expect(mainContent).toContain('GitHub Copilot Custom Instructions');
+  });
+
+  it('should generate Cursor files with --tool cursor', () => {
+    // Act
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "cursor-project" --tool cursor`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    // Assert
+    expect(result).toContain('Generated cursor template');
+    expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
+    
+    // Verify MDC format
+    const mainContent = readFileSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'), 'utf-8');
+    expect(mainContent).toContain('cursor-project');
+    expect(mainContent).toContain('description:');
+    expect(mainContent).toContain('alwaysApply: true');
+  });
+
+  it('should default to claude when --tool is not specified', () => {
+    // Act
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-project"`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    // Assert - should generate Claude files by default
+    expect(result).toContain('Generated claude template');
+    expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
+    expect(existsSync(join(testOutputDir, 'instructions'))).toBe(true);
+  });
+
+  it('should show error for unsupported tool', () => {
+    // Act & Assert
+    expect(() => {
+      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --tool unsupported-tool`, {
+        cwd: join(__dirname, '..'),
+        stdio: 'pipe'
+      });
+    }).toThrow();
+  });
+
+  it('should display tool option in help', () => {
+    // Act
+    const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    // Assert
+    expect(result).toContain('--tool');
+    expect(result).toContain('claude, github-copilot, cursor');
   });
 });

@@ -3,7 +3,7 @@
 🤖 **Professional CLI tool to scaffold AI development instructions for ClaudeCode, Cursor, GitHub Copilot and more**
 
 [![NPM Version](https://img.shields.io/npm/v/@arkatom/ai-instructions)](https://www.npmjs.com/package/@arkatom/ai-instructions)
-[![Tests](https://img.shields.io/badge/tests-22%20passing-brightgreen)](./test)
+[![Tests](https://img.shields.io/badge/tests-43%20passing-brightgreen)](./test)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
@@ -14,11 +14,12 @@
 ### ✨ Key Benefits
 
 - **🚀 Instant Setup**: Generate complete instruction sets in seconds
+- **🛠️ Multi-Tool Support**: Claude Code, GitHub Copilot, and Cursor AI IDE support
 - **📚 Comprehensive Templates**: Full collection of development methodology guides (TDD, Git workflow, etc.)
 - **🌐 Multi-language Support**: Unicode and Japanese character support
 - **⚙️ Highly Configurable**: Customizable project names and output directories
 - **🔒 Validated Input**: Built-in validation for project names and paths
-- **🧪 Battle-tested**: 22 comprehensive tests ensuring reliability
+- **🧪 Battle-tested**: 43 comprehensive tests ensuring reliability
 
 ## 📦 Installation
 
@@ -56,6 +57,21 @@ This creates a complete set of AI development instructions in your current direc
 ai-instructions init --project-name "my-awesome-project" --output ./my-project
 ```
 
+### Multi-Tool Support
+
+Generate instructions for different AI development tools:
+
+```bash
+# Generate Claude Code instructions (default)
+ai-instructions init --tool claude
+
+# Generate GitHub Copilot instructions
+ai-instructions init --tool github-copilot --project-name "my-project"
+
+# Generate Cursor AI IDE instructions  
+ai-instructions init --tool cursor --project-name "my-project"
+```
+
 ### Real-world Examples
 
 ```bash
@@ -71,12 +87,13 @@ ai-instructions init --project-name "My Enterprise App" --output ./enterprise
 
 ## 📁 Generated File Structure
 
-When you run `ai-instructions init`, the following structure is created:
+The file structure varies depending on the AI tool you select:
 
+### Claude Code (Default)
 ```
 your-project/
-├── CLAUDE.md                    # Main AI assistant instructions
-└── instructions/
+├── CLAUDE.md                    # Main ClaudeCode instructions
+└── instructions/                # Comprehensive development guides
     ├── base.md                  # Core development rules (MUST READ)
     ├── deep-think.md           # Deep thinking methodology  
     ├── memory.md               # Memory management instructions
@@ -88,6 +105,22 @@ your-project/
     ├── command.md              # Shell command execution rules
     └── memo/
         └── index.md            # Project memo template
+```
+
+### GitHub Copilot (`--tool github-copilot`)
+```
+your-project/
+└── .github/
+    └── instructions/
+        └── main.md             # GitHub Copilot custom instructions
+```
+
+### Cursor AI IDE (`--tool cursor`)
+```
+your-project/
+└── .cursor/
+    └── rules/
+        └── main.mdc            # Cursor AI rules with metadata
 ```
 
 ### File Descriptions

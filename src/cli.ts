@@ -8,7 +8,7 @@
 import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { ClaudeGenerator } from './generators/claude';
+import { GeneratorFactory, SupportedTool } from './generators/factory';
 
 /**
  * Validates project name for filesystem safety
@@ -44,18 +44,24 @@ program
   .description('Initialize AI development instructions')
   .option('-o, --output <path>', 'output directory', process.cwd())
   .option('-n, --project-name <name>', 'project name', 'my-project')
+  .option('-t, --tool <tool>', 'AI tool (claude, github-copilot, cursor)', 'claude')
   .action(async (options) => {
     try {
       // Validate project name before generating files
       validateProjectName(options.projectName);
       
-      const generator = new ClaudeGenerator();
+      // Validate tool option
+      if (!GeneratorFactory.isValidTool(options.tool)) {
+        throw new Error(`Unsupported tool: ${options.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
+      }
+      
+      const generator = GeneratorFactory.createGenerator(options.tool as SupportedTool);
       await generator.generateFiles(options.output, { 
         projectName: options.projectName 
       });
       
-      console.log(`✅ Generated Claude Code template files in ${options.output}`);
-      console.log(`📁 CLAUDE.md and instructions/ directory created`);
+      console.log(`✅ Generated ${generator.getToolName()} template files in ${options.output}`);
+      console.log(`📁 Files created for ${generator.getToolName()} AI tool`);
       console.log(`🎯 Project name: ${options.projectName}`);
     } catch (error) {
       console.error('❌ Failed to generate template files:', error);
