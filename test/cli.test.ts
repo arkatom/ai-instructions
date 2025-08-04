@@ -561,3 +561,193 @@ describe('CLI Multi-Language Support', () => {
     }).toThrow();
   });
 });
+
+describe('CLI Output Format Support', () => {
+  const cliPath = join(__dirname, '../src/cli.ts');
+  const testOutputDir = join(__dirname, '../temp-cli-output-format-test');
+
+  afterEach(async () => {
+    // テスト後のクリーンアップ
+    if (existsSync(testOutputDir)) {
+      await rm(testOutputDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should accept --output-format claude and generate standard Claude format', () => {
+    // RED PHASE: Test for claude output format (explicit)
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "claude-format-test" --output-format claude --lang ja`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Generated claude template');
+    expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
+    expect(existsSync(join(testOutputDir, 'instructions'))).toBe(true);
+    
+    // Verify claude format content
+    const claudeContent = readFileSync(join(testOutputDir, 'CLAUDE.md'), 'utf-8');  
+    expect(claudeContent).toContain('claude-format-test');
+    expect(claudeContent).toContain('AI開発アシスタント 行動指示');
+  });
+
+  it('should accept --output-format cursor and generate Cursor MDC format', () => {
+    // RED PHASE: Test for cursor output format 
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "cursor-format-test" --output-format cursor`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Converted from Claude format to cursor');
+    expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
+    expect(existsSync(join(testOutputDir, 'instructions'))).toBe(false); // Should not copy instructions for cursor format
+    
+    // Verify cursor format content with YAML frontmatter
+    const cursorContent = readFileSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'), 'utf-8');
+    expect(cursorContent).toContain('cursor-format-test');
+    expect(cursorContent.startsWith('---\n')).toBe(true); // YAML frontmatter
+    expect(cursorContent).toContain('description:');
+    expect(cursorContent).toContain('alwaysApply: true');
+  });
+
+  it('should accept --output-format copilot and generate GitHub Copilot 2024 format', () => {
+    // RED PHASE: Test for copilot output format
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-format-test" --output-format copilot`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Converted from Claude format to copilot');
+    expect(existsSync(join(testOutputDir, '.github', 'copilot-instructions.md'))).toBe(true);
+    expect(existsSync(join(testOutputDir, 'instructions'))).toBe(false); // Should not copy instructions for copilot format
+    
+    // Verify copilot format content (2024 standard - no YAML frontmatter)
+    const copilotContent = readFileSync(join(testOutputDir, '.github', 'copilot-instructions.md'), 'utf-8');
+    expect(copilotContent).toContain('copilot-format-test');
+    expect(copilotContent.startsWith('---\n')).toBe(false); // No YAML frontmatter for 2024 standard
+    expect(copilotContent).toContain('GitHub Copilot Custom Instructions');
+  });
+
+  it('should accept --output-format windsurf and generate Windsurf format', () => {
+    // RED PHASE: Test for windsurf output format
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "windsurf-format-test" --output-format windsurf`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Converted from Claude format to windsurf');
+    expect(existsSync(join(testOutputDir, '.windsurfrules'))).toBe(true);
+    expect(existsSync(join(testOutputDir, 'instructions'))).toBe(false); // Should not copy instructions for windsurf format
+    
+    // Verify windsurf format content
+    const windsurfContent = readFileSync(join(testOutputDir, '.windsurfrules'), 'utf-8');
+    expect(windsurfContent).toContain('windsurf-format-test');
+    expect(windsurfContent).toContain('Windsurf AI Pair Programming Rules');
+  });
+
+  it('should accept -f as short form for --output-format', () => {
+    // RED PHASE: Test for short form option -f
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "short-form-test" -f cursor`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Converted from Claude format to cursor');
+    expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
+    
+    const cursorContent = readFileSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'), 'utf-8');
+    expect(cursorContent).toContain('short-form-test');
+  });
+
+  it('should default to claude format when --output-format is not specified', () => {
+    // RED PHASE: Test default output format behavior
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-format-test"`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Generated claude template');
+    expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
+    expect(existsSync(join(testOutputDir, 'instructions'))).toBe(true);
+  });
+
+  it('should show error for unsupported output format', () => {
+    // RED PHASE: Test validation for unsupported output formats
+    expect(() => {
+      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --output-format unsupported-format`, {
+        cwd: join(__dirname, '..'), 
+        stdio: 'pipe'
+      });
+    }).toThrow();
+  });
+
+  it('should display output-format option in help with supported formats', () => {
+    // RED PHASE: Test help display for output-format option
+    const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('--output-format');
+    expect(result).toContain('-f');
+    expect(result).toContain('claude');
+    expect(result).toContain('cursor');
+    expect(result).toContain('copilot');
+    expect(result).toContain('windsurf');
+  });
+
+  it('should work with combined --tool, --lang, and --output-format options', () => {
+    // RED PHASE: Test combined options - note: --tool and --output-format should be consistent  
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "combined-options-test" --tool claude --lang ja --output-format cursor`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Converted from Claude format to cursor');
+    expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
+    
+    // Verify language and format are both applied
+    const cursorContent = readFileSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'), 'utf-8');
+    expect(cursorContent).toContain('combined-options-test');
+    expect(cursorContent).toContain('language: "ja"');
+  });
+
+  it('should validate output-format with case sensitivity', () => {
+    // RED PHASE: Test case sensitivity for format names
+    expect(() => {
+      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --output-format CLAUDE`, {
+        cwd: join(__dirname, '..'),
+        stdio: 'pipe'
+      });
+    }).toThrow();
+    
+    expect(() => {
+      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --output-format Cursor`, {
+        cwd: join(__dirname, '..'),
+        stdio: 'pipe'
+      });
+    }).toThrow();
+  });
+
+  it('should generate format-specific file structures correctly', () => {
+    // RED PHASE: Test that each format generates the correct file structure
+    const formats = [
+      { format: 'claude', expectedFiles: ['CLAUDE.md', 'instructions/base.md'] },
+      { format: 'cursor', expectedFiles: ['.cursor/rules/main.mdc'] },
+      { format: 'copilot', expectedFiles: ['.github/copilot-instructions.md'] },
+      { format: 'windsurf', expectedFiles: ['.windsurfrules'] }
+    ];
+
+    for (const { format, expectedFiles } of formats) {
+      const formatTestDir = join(testOutputDir, format);
+      
+      execSync(`npx ts-node "${cliPath}" init --output "${formatTestDir}" --project-name "structure-test-${format}" --output-format ${format}`, { 
+        encoding: 'utf-8',
+        cwd: join(__dirname, '..')
+      });
+
+      expectedFiles.forEach(file => {
+        expect(existsSync(join(formatTestDir, file))).toBe(true);
+      });
+    }
+  });
+});

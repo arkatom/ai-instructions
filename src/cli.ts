@@ -9,6 +9,7 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { GeneratorFactory, SupportedTool } from './generators/factory';
+import { ConverterFactory, OutputFormat } from './converters';
 
 /**
  * Validates project name for filesystem safety
@@ -40,6 +41,18 @@ function validateLanguage(lang: string): void {
   }
 }
 
+/**
+ * Validates output format option
+ * @param format - The output format to validate
+ * @throws Error if unsupported format
+ */
+function validateOutputFormat(format: string): void {
+  if (!ConverterFactory.isFormatSupported(format)) {
+    const availableFormats = ConverterFactory.getAvailableFormats();
+    throw new Error(`Unsupported output format: ${format}. Supported formats: ${availableFormats.join(', ')}`);
+  }
+}
+
 // Read package.json for version
 const packageJsonPath = join(__dirname, '../package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
@@ -58,6 +71,7 @@ program
   .option('-n, --project-name <name>', 'project name', 'my-project')
   .option('-t, --tool <tool>', 'AI tool (claude, github-copilot, cursor)', 'claude')
   .option('-l, --lang <language>', 'Language for templates (en, ja, ch)', 'en')
+  .option('-f, --output-format <format>', 'Output format (claude, cursor, copilot, windsurf)', 'claude')
   .option('--force', '⚠️  Force overwrite existing files (DANGEROUS)')
   .option('--preview', '🔍 Preview what files would be created/modified')
   .action(async (options) => {
@@ -72,6 +86,9 @@ program
       
       // Validate language option
       validateLanguage(options.lang);
+      
+      // Validate output format option
+      validateOutputFormat(options.outputFormat);
       
       // 🚨 EMERGENCY PATCH v0.2.1: Preview mode handling
       if (options.preview) {
@@ -115,7 +132,8 @@ program
       await generator.generateFiles(options.output, { 
         projectName: options.projectName,
         force: options.force || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
-        lang: options.lang as 'en' | 'ja' | 'ch'  // Issue #11: Multi-language support
+        lang: options.lang as 'en' | 'ja' | 'ch',  // Issue #11: Multi-language support
+        outputFormat: options.outputFormat as OutputFormat  // Output format support
       });
       
       console.log(`✅ Generated ${generator.getToolName()} template files in ${options.output}`);
