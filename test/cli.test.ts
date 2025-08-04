@@ -8,7 +8,7 @@ describe('CLI Basic Functionality', () => {
 
   it('should display version when --version flag is used', () => {
     // Arrange
-    const expectedVersion = '0.2.0';
+    const expectedVersion = '0.3.0';
     
     // Act
     const result = execSync(`npx ts-node "${cliPath}" --version`, { 
@@ -101,7 +101,7 @@ describe('CLI Isolated Environment Testing', () => {
     // Red: 分離環境で完全なディレクトリ構造・ファイル生成を検証
     const projectName = 'isolated-test-project';
     
-    execSync(`npx ts-node "${cliPath}" init --output "${isolatedTestDir}" --project-name "${projectName}"`, { 
+    execSync(`npx ts-node "${cliPath}" init --output "${isolatedTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..')
     });
@@ -118,7 +118,7 @@ describe('CLI Isolated Environment Testing', () => {
     // Red: テンプレート変数置換の完全性を検証
     const projectName = 'variable-replacement-test';
     
-    execSync(`npx ts-node "${cliPath}" init --output "${isolatedTestDir}" --project-name "${projectName}"`, { 
+    execSync(`npx ts-node "${cliPath}" init --output "${isolatedTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..')
     });
@@ -143,7 +143,7 @@ describe('CLI Edge Case Project Names', () => {
     // Red: スペース含みプロジェクト名の処理確認
     const projectNameWithSpaces = 'my project name';
     
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name "${projectNameWithSpaces}"`, { 
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name "${projectNameWithSpaces}" --lang ja`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..')
     });
@@ -170,7 +170,7 @@ describe('CLI Edge Case Project Names', () => {
     // Red: Unicode・日本語プロジェクト名確認
     const japaneseProjectName = 'プロジェクト名テスト';
     
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name "${japaneseProjectName}"`, { 
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name "${japaneseProjectName}" --lang ja`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..')
     });
@@ -218,7 +218,7 @@ describe('CLI Deep Content Verification', () => {
     // Red: instructions/の完全なディレクトリ構造・必要ファイル検証
     const projectName = 'content-verification-test';
     
-    execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}"`, { 
+    execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..')
     });
@@ -251,7 +251,7 @@ describe('CLI Deep Content Verification', () => {
     // Red: 生成ファイルの期待コンテンツ構造検証
     const projectName = 'structure-test';
     
-    execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}"`, { 
+    execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..')
     });
@@ -279,7 +279,7 @@ describe('CLI Deep Content Verification', () => {
     // Red: 指示ファイル間のリンク・参照整合性検証
     const projectName = 'link-verification';
     
-    execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}"`, { 
+    execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..')
     });
@@ -312,7 +312,7 @@ describe('CLI Deep Content Verification', () => {
     // Red: UTF-8エンコーディング・コンテンツ整合性確認
     const projectName = 'エンコーディングテスト'; // Unicode project name
     
-    execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}"`, { 
+    execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..')
     });
@@ -373,10 +373,10 @@ describe('CLI Multi-Tool Support', () => {
     
     // Assert
     expect(result).toContain('Generated github-copilot template');
-    expect(existsSync(join(testOutputDir, '.github', 'instructions', 'main.md'))).toBe(true);
+    expect(existsSync(join(testOutputDir, '.github', 'copilot-instructions.md'))).toBe(true);
     
     // Verify content
-    const mainContent = readFileSync(join(testOutputDir, '.github', 'instructions', 'main.md'), 'utf-8');
+    const mainContent = readFileSync(join(testOutputDir, '.github', 'copilot-instructions.md'), 'utf-8');
     expect(mainContent).toContain('copilot-project');
     expect(mainContent).toContain('GitHub Copilot Custom Instructions');
   });
