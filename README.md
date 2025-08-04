@@ -6,6 +6,7 @@
 [![Tests](https://img.shields.io/badge/tests-43%20passing-brightgreen)](./test)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Semantic Versioning](https://img.shields.io/badge/semver-2.0.0-blue)](https://semver.org/)
 
 ## 📋 Overview
 
@@ -270,6 +271,19 @@ npm pack
 # Publish to npm (maintainers only)
 npm publish
 ```
+
+## 📌 Versioning
+
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (SemVer). Version numbers follow the format `MAJOR.MINOR.PATCH`:
+
+- **MAJOR**: Incompatible API changes or breaking changes
+- **MINOR**: New functionality in a backwards compatible manner
+- **PATCH**: Backwards compatible bug fixes
+
+For example:
+- `0.3.0` → `0.3.1`: Bug fixes or minor improvements
+- `0.3.1` → `0.4.0`: New features or enhancements
+- `0.4.0` → `1.0.0`: Breaking changes or major redesign
 
 ## 🤝 Contributing
 
