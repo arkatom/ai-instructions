@@ -1,4 +1,5 @@
 import { join } from 'path';
+import { readdir, stat, readFile } from 'fs/promises';
 import { FileUtils } from '../utils/file-utils';
 import { BaseGenerator, GenerateFilesOptions, ToolConfig } from './base';
 
@@ -16,14 +17,97 @@ export class ClaudeGenerator extends BaseGenerator {
   }
 
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
-    // CLAUDE.md をコピー（変数置換付き）
-    const claudeContent = await this.loadTemplate('CLAUDE.md');
+    const force = options.force || false;
+    
+    // 🚨 EMERGENCY PATCH v0.2.1: Safe file generation with warnings
+    try {
+      const chalk = (await import('chalk')).default;
+      console.log(chalk.blue('🤖 Generating Claude AI instruction files...'));
+    } catch (error) {
+      console.log('🤖 Generating Claude AI instruction files...');
+    }
+    
+    // CLAUDE.md をコピー（言語対応版で変数置換付き）
+    const claudeContent = await this.loadTemplate('CLAUDE.md', options);
     const processedClaudeContent = this.replaceTemplateVariables(claudeContent, options);
-    await FileUtils.writeFileContent(join(targetDir, 'CLAUDE.md'), processedClaudeContent);
+    const claudePath = join(targetDir, 'CLAUDE.md');
+    
+    await this.safeWriteFile(claudePath, processedClaudeContent, force);
 
-    // instructions/ ディレクトリをコピー
-    const instructionsSourcePath = join(this.templateDir, 'instructions');
+    // instructions/ ディレクトリをコピー（言語対応版で）
+    await this.safeCopyInstructionsDirectory(targetDir, options, force);
+    
+    try {
+      const chalk = (await import('chalk')).default;
+      console.log(chalk.green('✅ Claude template generation completed!'));
+      console.log(chalk.yellow('💡 For safer conflict resolution, upgrade to v0.3.0 when available'));
+    } catch (error) {
+      console.log('✅ Claude template generation completed!');
+      console.log('💡 For safer conflict resolution, upgrade to v0.3.0 when available');
+    }
+  }
+
+  /**
+   * 🚨 EMERGENCY PATCH v0.2.1: Safe directory copying with conflict warnings
+   */
+  private async safeCopyDirectory(sourcePath: string, targetPath: string, force: boolean): Promise<void> {
+    await FileUtils.ensureDirectory(targetPath);
+    
+    const items = await readdir(sourcePath);
+    
+    for (const item of items) {
+      const sourceItemPath = join(sourcePath, item);
+      const targetItemPath = join(targetPath, item);
+      
+      const itemStat = await stat(sourceItemPath);
+      
+      if (itemStat.isDirectory()) {
+        await this.safeCopyDirectory(sourceItemPath, targetItemPath, force);
+      } else {
+        const content = await readFile(sourceItemPath, 'utf-8');
+        await this.safeWriteFile(targetItemPath, content, force);
+      }
+    }
+  }
+
+  /**
+   * Language-aware instructions directory copying
+   */
+  private async safeCopyInstructionsDirectory(targetDir: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
+    const lang = options.lang || 'en';
     const instructionsTargetPath = join(targetDir, 'instructions');
-    await FileUtils.copyDirectory(instructionsSourcePath, instructionsTargetPath);
+    
+    try {
+      // Try language-specific instructions directory first
+      const langInstructionsPath = join(this.templateDir, lang, 'instructions');
+      if (await FileUtils.fileExists(langInstructionsPath)) {
+        await this.safeCopyDirectory(langInstructionsPath, instructionsTargetPath, force);
+        return;
+      }
+      
+      // Fallback to English instructions
+      if (lang !== 'en') {
+        const enInstructionsPath = join(this.templateDir, 'en', 'instructions');
+        if (await FileUtils.fileExists(enInstructionsPath)) {
+          console.warn(`⚠️  Instructions directory not found for ${lang}, using English version`);
+          await this.safeCopyDirectory(enInstructionsPath, instructionsTargetPath, force);
+          return;
+        }
+      }
+      
+      // Legacy fallback (current structure)
+      const legacyInstructionsPath = join(this.templateDir, 'instructions');
+      if (await FileUtils.fileExists(legacyInstructionsPath)) {
+        if (lang !== 'en') {
+          console.warn(`⚠️  Using legacy instructions directory (no language support yet)`);
+        }
+        await this.safeCopyDirectory(legacyInstructionsPath, instructionsTargetPath, force);
+        return;
+      }
+      
+      throw new Error(`Instructions directory not found for language ${lang}`);
+    } catch (error) {
+      throw new Error(`Failed to copy instructions directory: ${error}`);
+    }
   }
 }

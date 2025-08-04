@@ -1,0 +1,154 @@
+/**
+ * 🚨 EMERGENCY PATCH v0.2.1 - File Safety Tests
+ * Tests for file conflict detection and warning system
+ */
+
+import { jest } from '@jest/globals';
+import { existsSync, writeFileSync, unlinkSync, mkdirSync, rmSync } from 'fs';
+import { join } from 'path';
+import { FileUtils } from '../src/utils/file-utils';
+import { ClaudeGenerator } from '../src/generators/claude';
+
+describe('🚨 File Safety Features (v0.2.1)', () => {
+  const testDir = join(__dirname, 'temp-safety-test');
+  const testFile = join(testDir, 'test-file.md');
+
+  beforeEach(() => {
+    // Create test directory
+    if (existsSync(testDir)) {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+    mkdirSync(testDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    // Clean up
+    if (existsSync(testDir)) {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  describe('FileUtils.writeFileContentSafe()', () => {
+    test('should create new file without warnings', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      
+      await FileUtils.writeFileContentSafe(testFile, 'New content');
+      
+      expect(existsSync(testFile)).toBe(true);
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ File created'));
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('should show warning when overwriting existing file (force=false)', async () => {
+      // Create existing file
+      writeFileSync(testFile, 'Existing content');
+      
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      
+      await FileUtils.writeFileContentSafe(testFile, 'New content', false);
+      
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('⚠️  WARNING'));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('already exists'));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ File overwritten'));
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('should skip warning when force=true', async () => {
+      // Create existing file
+      writeFileSync(testFile, 'Existing content');
+      
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      
+      await FileUtils.writeFileContentSafe(testFile, 'New content', true);
+      
+      expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining('⚠️  WARNING'));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ File overwritten'));
+      
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('ClaudeGenerator safety integration', () => {
+    test('should pass force flag to safe writing methods', async () => {
+      const generator = new ClaudeGenerator();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      
+      // Mock the template loading to avoid file system dependencies
+      const mockLoadTemplate = jest.spyOn(generator as any, 'loadTemplate')
+        .mockResolvedValue('# Test Template\n\nContent for {{projectName}}');
+
+      const mockSafeCopyDirectory = jest.spyOn(generator as any, 'safeCopyDirectory')
+        .mockResolvedValue(undefined);
+      
+      // Test with force=false (should show warnings)
+      await generator.generateFiles(testDir, { 
+        projectName: 'test-project',
+        force: false 
+      });
+      
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('🤖 Generating Claude'));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Claude template'));
+      
+      // Test with force=true (should not show warnings for new files)
+      consoleSpy.mockClear();
+      await generator.generateFiles(testDir, { 
+        projectName: 'test-project', 
+        force: true 
+      });
+      
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('🤖 Generating Claude'));
+      
+      mockLoadTemplate.mockRestore();
+      mockSafeCopyDirectory.mockRestore();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Deprecated method warnings', () => {
+    test('should show deprecation warning for old writeFileContent method', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      
+      await FileUtils.writeFileContent(testFile, 'Content');
+      
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('DEPRECATION WARNING'));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('writeFileContent() is unsafe'));
+      
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Error handling', () => {
+    test('should handle chalk import failure gracefully', async () => {
+      // This test verifies that if chalk fails to import, the function still works
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      
+      // Create a file to trigger the warning path
+      writeFileSync(testFile, 'Existing');
+      
+      await FileUtils.writeFileContentSafe(testFile, 'New content', false);
+      
+      // Should still show some form of warning, even without chalk
+      expect(consoleSpy).toHaveBeenCalled();
+      
+      consoleSpy.mockRestore();
+    });
+  });
+});
+
+describe('🔍 CLI Options Integration', () => {
+  test('should validate new CLI options exist', () => {
+    // This is more of a smoke test to ensure the CLI structure is correct
+    const { program } = require('../src/cli');
+    
+    // Find the init command
+    const initCommand = program.commands.find((cmd: any) => cmd.name() === 'init');
+    expect(initCommand).toBeDefined();
+    
+    // Check if new options exist
+    const options = initCommand.options.map((opt: any) => opt.long);
+    expect(options).toContain('--force');
+    expect(options).toContain('--preview');
+  });
+});

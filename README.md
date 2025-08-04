@@ -21,6 +21,47 @@
 - **🔒 Validated Input**: Built-in validation for project names and paths
 - **🧪 Battle-tested**: 43 comprehensive tests ensuring reliability
 
+## ⚠️ Important Safety Notice (v0.2.1)
+
+**🚨 CAUTION: This tool will overwrite existing files without confirmation in the target directory.**
+
+### 🛡️ Safe Usage Patterns
+
+```bash
+# ✅ RECOMMENDED: Preview changes before applying
+ai-instructions init --preview
+
+# ✅ SAFE: Use in empty directories or new projects
+mkdir my-new-project && cd my-new-project
+ai-instructions init --project-name "My New Project"
+
+# ⚠️ DANGEROUS: Force overwrite (use with extreme caution)
+ai-instructions init --force
+
+# ✅ DEFAULT: Shows warnings for existing files
+ai-instructions init  # Will display warnings before overwriting
+```
+
+### 🔒 File Conflict Handling
+
+When existing files are detected, the tool will:
+1. **Display warnings** showing file details (size, modification date)
+2. **Proceed with overwrite** after showing warnings
+3. **Provide guidance** on safer alternatives
+
+### 🚧 Upcoming Safety Features (v0.3.0)
+
+- **Interactive conflict resolution** with 5 choice options:
+  - 🔄 Merge existing + template content
+  - 📝 Rename existing file (create backup)
+  - 🆕 Rename new file (save as .new)
+  - ❌ Cancel operation
+  - 💥 Overwrite (with explicit confirmation)
+- **Intelligent backup creation**
+- **Smart content merging**
+
+> **💡 Pro Tip**: Always use version control (git) before running `ai-instructions init` in existing projects!
+
 ## 📦 Installation
 
 ### Global Installation (Recommended)
@@ -143,6 +184,9 @@ your-project/
 |--------|-------|-------------|---------|---------|
 | `--output` | `-o` | Output directory | Current directory | `--output ./my-project` |
 | `--project-name` | `-n` | Project name for templates | `my-project` | `--project-name "My App"` |
+| `--tool` | `-t` | AI tool type | `claude` | `--tool cursor` |
+| `--force` | | ⚠️ Force overwrite existing files (DANGEROUS) | `false` | `--force` |
+| `--preview` | | 🔍 Preview files that would be created/modified | `false` | `--preview` |
 | `--version` | | Show version number | | |
 | `--help` | | Display help information | | |
 
