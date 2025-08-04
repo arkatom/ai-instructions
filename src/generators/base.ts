@@ -7,6 +7,7 @@ import { FileUtils } from '../utils/file-utils';
  */
 export interface GenerateFilesOptions {
   projectName?: string;
+  force?: boolean;  // 🚨 EMERGENCY PATCH v0.2.1: Force overwrite flag
 }
 
 /**
@@ -77,6 +78,13 @@ export abstract class BaseGenerator {
    * Must be implemented by concrete classes
    */
   abstract generateFiles(targetDir: string, options?: GenerateFilesOptions): Promise<void>;
+
+  /**
+   * 🚨 EMERGENCY PATCH v0.2.1: Safe file writing with conflict warnings
+   */
+  protected async safeWriteFile(targetPath: string, content: string, force: boolean = false): Promise<void> {
+    await FileUtils.writeFileContentSafe(targetPath, content, force);
+  }
 
   /**
    * Get tool name
