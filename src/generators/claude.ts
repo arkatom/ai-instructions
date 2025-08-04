@@ -72,14 +72,15 @@ export class ClaudeGenerator extends BaseGenerator {
 
   /**
    * Language-aware instructions directory copying (Issue #19: Templates restructure)
+   * Uses templates/shared/instructions/(lang)/ structure
    */
   private async safeCopyInstructionsDirectory(targetDir: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
     const lang = options.lang || 'en';
     const instructionsTargetPath = join(targetDir, 'instructions');
     
     try {
-      // NEW: Try shared language-specific instructions directory first (templates/(lang)/instructions/)
-      const sharedInstructionsPath = join(__dirname, '../../templates', lang, 'instructions');
+      // NEW: Try shared language-specific instructions directory first (templates/shared/instructions/(lang)/)
+      const sharedInstructionsPath = join(__dirname, '../../templates/shared/instructions', lang);
       if (await FileUtils.fileExists(sharedInstructionsPath)) {
         await this.safeCopyDirectory(sharedInstructionsPath, instructionsTargetPath, force);
         return;
@@ -87,7 +88,7 @@ export class ClaudeGenerator extends BaseGenerator {
       
       // Fallback to English shared instructions
       if (lang !== 'en') {
-        const enSharedInstructionsPath = join(__dirname, '../../templates', 'en', 'instructions');
+        const enSharedInstructionsPath = join(__dirname, '../../templates/shared/instructions/en');
         if (await FileUtils.fileExists(enSharedInstructionsPath)) {
           console.warn(`⚠️  Shared instructions directory not found for ${lang}, using English version`);
           await this.safeCopyDirectory(enSharedInstructionsPath, instructionsTargetPath, force);

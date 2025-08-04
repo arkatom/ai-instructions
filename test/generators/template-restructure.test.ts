@@ -37,7 +37,7 @@ describe('Template Restructure (Issue #19)', () => {
       expect(existsSync(join(testOutputDir, 'instructions', 'deep-think.md'))).toBe(true);
     });
 
-    it('should copy instructions from templates/ja/instructions/ instead of templates/claude/ja/instructions/', async () => {
+    it('should copy instructions from templates/shared/instructions/ja/ instead of templates/claude/ja/instructions/', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -49,11 +49,11 @@ describe('Template Restructure (Issue #19)', () => {
       const baseContent = await readFile(join(testOutputDir, 'instructions', 'base.md'), 'utf-8');
       
       // 日本語のファイルであることを確認
-      expect(baseContent).toContain('基本ルール');
+      expect(baseContent).toContain('超基本ルール');
       expect(baseContent).toContain('絶対厳守');
     });
 
-    it('should copy instructions from templates/en/instructions/ for English', async () => {
+    it('should copy instructions from templates/shared/instructions/en/ for English', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -69,7 +69,7 @@ describe('Template Restructure (Issue #19)', () => {
       expect(baseContent).toContain('Absolute Requirements');
     });
 
-    it('should copy instructions from templates/ch/instructions/ for Chinese', async () => {
+    it('should copy instructions from templates/shared/instructions/ch/ for Chinese', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -102,7 +102,7 @@ describe('Template Restructure (Issue #19)', () => {
     it('should use shared instructions that are not duplicated across tools', async () => {
       // この test は実装後に有効になる
       // 現在は claude/ja/instructions/ と claude/en/instructions/ が存在するが
-      // 新しい構造では templates/ja/instructions/ と templates/en/instructions/ のみが存在する
+      // 新しい構造では templates/shared/instructions/ja/ と templates/shared/instructions/en/ のみが存在する
       
       const generator = new ClaudeGenerator();
       
