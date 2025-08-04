@@ -458,7 +458,7 @@ describe('CLI Multi-Language Support', () => {
     
     // Verify English content
     const claudeContent = readFileSync(join(testOutputDir, 'CLAUDE.md'), 'utf-8');
-    expect(claudeContent).toContain('AI開発アシスタント 行動指示'); // Should contain original Japanese content for now
+    expect(claudeContent).toContain('AI Development Assistant Instructions'); // Should contain English content
   });
 
   it('should accept --lang ja and generate Japanese templates', () => {
