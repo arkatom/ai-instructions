@@ -12,6 +12,19 @@ export class FileUtils {
   }
 
   /**
+   * Check if file exists asynchronously
+   */
+  static async fileExists(filePath: string): Promise<boolean> {
+    try {
+      const { access } = await import('fs/promises');
+      await access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * 🚨 EMERGENCY PATCH v0.2.1: Safe file writing with warnings
    * Checks for existing files and displays warnings before overwriting
    */

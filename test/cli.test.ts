@@ -434,3 +434,130 @@ describe('CLI Multi-Tool Support', () => {
     expect(result).toContain('claude, github-copilot, cursor');
   });
 });
+
+describe('CLI Multi-Language Support', () => {
+  const cliPath = join(__dirname, '../src/cli.ts');
+  const testOutputDir = join(__dirname, '../temp-cli-lang-test');
+
+  afterEach(async () => {
+    // テスト後のクリーンアップ
+    if (existsSync(testOutputDir)) {
+      await rm(testOutputDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should accept --lang en and generate English templates (default behavior)', () => {
+    // RED PHASE: Test for English language option
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "english-project" --lang en`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Generated claude template');
+    expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
+    
+    // Verify English content
+    const claudeContent = readFileSync(join(testOutputDir, 'CLAUDE.md'), 'utf-8');
+    expect(claudeContent).toContain('AI開発アシスタント 行動指示'); // Should contain original Japanese content for now
+  });
+
+  it('should accept --lang ja and generate Japanese templates', () => {
+    // RED PHASE: Test for Japanese language option
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "japanese-project" --lang ja`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Generated claude template');
+    expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
+    
+    // Verify Japanese-specific content
+    const claudeContent = readFileSync(join(testOutputDir, 'CLAUDE.md'), 'utf-8');
+    expect(claudeContent).toContain('japanese-project');
+    // TODO: Add more specific Japanese content checks once translations are implemented
+  });
+
+  it('should accept --lang ch and generate Chinese templates', () => {
+    // RED PHASE: Test for Chinese language option
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "chinese-project" --lang ch`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Generated claude template');
+    expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
+    
+    // Verify Chinese-specific content
+    const claudeContent = readFileSync(join(testOutputDir, 'CLAUDE.md'), 'utf-8');
+    expect(claudeContent).toContain('chinese-project');
+    // TODO: Add more specific Chinese content checks once translations are implemented
+  });
+
+  it('should default to English when --lang is not specified', () => {
+    // RED PHASE: Test default language behavior
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-lang-project"`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Generated claude template');
+    expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
+    
+    // Should behave the same as --lang en
+    const claudeContent = readFileSync(join(testOutputDir, 'CLAUDE.md'), 'utf-8');
+    expect(claudeContent).toContain('default-lang-project');
+  });
+
+  it('should show error for unsupported language', () => {
+    // RED PHASE: Test validation for unsupported languages
+    expect(() => {
+      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --lang fr`, {
+        cwd: join(__dirname, '..'),
+        stdio: 'pipe'
+      });
+    }).toThrow();
+  });
+
+  it('should work with combined --tool and --lang options', () => {
+    // RED PHASE: Test combined tool and language options
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "combined-test" --tool cursor --lang ja`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('Generated cursor template');
+    expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
+    
+    // Verify language-specific content in cursor template
+    const cursorContent = readFileSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'), 'utf-8');
+    expect(cursorContent).toContain('combined-test');
+  });
+
+  it('should display lang option in help', () => {
+    // RED PHASE: Test help display for language option
+    const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
+      encoding: 'utf-8',
+      cwd: join(__dirname, '..')
+    });
+    
+    expect(result).toContain('--lang');
+    expect(result).toContain('en, ja, ch');
+  });
+
+  it('should validate lang option with case sensitivity', () => {
+    // RED PHASE: Test case sensitivity for language codes
+    expect(() => {
+      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --lang EN`, {
+        cwd: join(__dirname, '..'),
+        stdio: 'pipe'
+      });
+    }).toThrow();
+    
+    expect(() => {
+      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --lang JA`, {
+        cwd: join(__dirname, '..'),
+        stdio: 'pipe'
+      });
+    }).toThrow();
+  });
+});
