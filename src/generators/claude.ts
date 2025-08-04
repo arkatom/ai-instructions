@@ -71,36 +71,42 @@ export class ClaudeGenerator extends BaseGenerator {
   }
 
   /**
-   * Language-aware instructions directory copying
+   * Language-aware instructions directory copying (Issue #19: Templates restructure)
    */
   private async safeCopyInstructionsDirectory(targetDir: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
     const lang = options.lang || 'en';
     const instructionsTargetPath = join(targetDir, 'instructions');
     
     try {
-      // Try language-specific instructions directory first
-      const langInstructionsPath = join(this.templateDir, lang, 'instructions');
-      if (await FileUtils.fileExists(langInstructionsPath)) {
-        await this.safeCopyDirectory(langInstructionsPath, instructionsTargetPath, force);
+      // NEW: Try shared language-specific instructions directory first (templates/(lang)/instructions/)
+      const sharedInstructionsPath = join(__dirname, '../../templates', lang, 'instructions');
+      if (await FileUtils.fileExists(sharedInstructionsPath)) {
+        await this.safeCopyDirectory(sharedInstructionsPath, instructionsTargetPath, force);
         return;
       }
       
-      // Fallback to English instructions
+      // Fallback to English shared instructions
       if (lang !== 'en') {
-        const enInstructionsPath = join(this.templateDir, 'en', 'instructions');
-        if (await FileUtils.fileExists(enInstructionsPath)) {
-          console.warn(`⚠️  Instructions directory not found for ${lang}, using English version`);
-          await this.safeCopyDirectory(enInstructionsPath, instructionsTargetPath, force);
+        const enSharedInstructionsPath = join(__dirname, '../../templates', 'en', 'instructions');
+        if (await FileUtils.fileExists(enSharedInstructionsPath)) {
+          console.warn(`⚠️  Shared instructions directory not found for ${lang}, using English version`);
+          await this.safeCopyDirectory(enSharedInstructionsPath, instructionsTargetPath, force);
           return;
         }
       }
       
-      // Legacy fallback (current structure)
+      // Legacy fallback: Try tool-specific instructions directory (templates/claude/(lang)/instructions/)
+      const legacyLangInstructionsPath = join(this.templateDir, lang, 'instructions');
+      if (await FileUtils.fileExists(legacyLangInstructionsPath)) {
+        console.warn(`⚠️  Using legacy tool-specific instructions directory for ${lang}`);
+        await this.safeCopyDirectory(legacyLangInstructionsPath, instructionsTargetPath, force);
+        return;
+      }
+      
+      // Final fallback: Legacy structure without language support
       const legacyInstructionsPath = join(this.templateDir, 'instructions');
       if (await FileUtils.fileExists(legacyInstructionsPath)) {
-        if (lang !== 'en') {
-          console.warn(`⚠️  Using legacy instructions directory (no language support yet)`);
-        }
+        console.warn(`⚠️  Using legacy instructions directory (no language support)`);
         await this.safeCopyDirectory(legacyInstructionsPath, instructionsTargetPath, force);
         return;
       }
