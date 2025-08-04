@@ -28,6 +28,18 @@ function validateProjectName(projectName: string): void {
   }
 }
 
+/**
+ * Validates language option
+ * @param lang - The language code to validate
+ * @throws Error if unsupported language
+ */
+function validateLanguage(lang: string): void {
+  const supportedLanguages = ['en', 'ja', 'ch'];
+  if (!supportedLanguages.includes(lang)) {
+    throw new Error(`Unsupported language: ${lang}. Supported languages: ${supportedLanguages.join(', ')}`);
+  }
+}
+
 // Read package.json for version
 const packageJsonPath = join(__dirname, '../package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
@@ -45,6 +57,7 @@ program
   .option('-o, --output <path>', 'output directory', process.cwd())
   .option('-n, --project-name <name>', 'project name', 'my-project')
   .option('-t, --tool <tool>', 'AI tool (claude, github-copilot, cursor)', 'claude')
+  .option('-l, --lang <language>', 'Language for templates (en, ja, ch)', 'en')
   .option('--force', '⚠️  Force overwrite existing files (DANGEROUS)')
   .option('--preview', '🔍 Preview what files would be created/modified')
   .action(async (options) => {
@@ -57,6 +70,9 @@ program
         throw new Error(`Unsupported tool: ${options.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
       }
       
+      // Validate language option
+      validateLanguage(options.lang);
+      
       // 🚨 EMERGENCY PATCH v0.2.1: Preview mode handling
       if (options.preview) {
         try {
@@ -67,6 +83,7 @@ program
           console.log(`📍 Target directory: ${options.output}`);
           console.log(`🤖 Tool: ${options.tool}`);
           console.log(`📦 Project name: ${options.projectName}`);
+          console.log(`🌍 Language: ${options.lang}`);
           return;
         } catch (error) {
           console.log('🔍 Preview mode: Analyzing potential file conflicts...');
@@ -75,6 +92,7 @@ program
           console.log(`📍 Target directory: ${options.output}`);
           console.log(`🤖 Tool: ${options.tool}`);
           console.log(`📦 Project name: ${options.projectName}`);
+          console.log(`🌍 Language: ${options.lang}`);
           return;
         }
       }
@@ -96,7 +114,8 @@ program
       const generator = GeneratorFactory.createGenerator(options.tool as SupportedTool);
       await generator.generateFiles(options.output, { 
         projectName: options.projectName,
-        force: options.force || false  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
+        force: options.force || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
+        lang: options.lang as 'en' | 'ja' | 'ch'  // Issue #11: Multi-language support
       });
       
       console.log(`✅ Generated ${generator.getToolName()} template files in ${options.output}`);
