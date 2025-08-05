@@ -1,6 +1,6 @@
 {
   "name": "@arkatom/ai-instructions",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "🤖 CLI tool to scaffold AI development instructions for ClaudeCode, Cursor, GitHub Copilot and more",
   "main": "dist/cli.js",
   "bin": {
@@ -49,9 +49,7 @@
   },
   "files": [
     "dist/",
-    "templates/claude/CLAUDE.md",
-    "templates/claude/instructions/*.md",
-    "templates/claude/instructions/!(memo)",
+    "templates/",
     "README.md",
     "LICENSE"
   ],
