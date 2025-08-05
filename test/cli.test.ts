@@ -8,12 +8,13 @@ describe('CLI Basic Functionality', () => {
 
   it('should display version when --version flag is used', () => {
     // Arrange
-    const expectedVersion = '0.3.0';
+    const expectedVersion = '0.4.0';
     
     // Act
     const result = execSync(`npx ts-node "${cliPath}" --version`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     // Assert
@@ -27,7 +28,8 @@ describe('CLI Basic Functionality', () => {
     // Act
     const result = execSync(`npx ts-node "${cliPath}" --help`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     // Assert
@@ -47,7 +49,8 @@ describe('CLI Basic Functionality', () => {
     // Act
     const result = execSync(`npx ts-node "${cliPath}" init`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     // Assert
@@ -103,7 +106,8 @@ describe('CLI Isolated Environment Testing', () => {
     
     execSync(`npx ts-node "${cliPath}" init --output "${isolatedTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     // 必須ファイル・ディレクトリ構造確認
@@ -120,7 +124,8 @@ describe('CLI Isolated Environment Testing', () => {
     
     execSync(`npx ts-node "${cliPath}" init --output "${isolatedTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     const claudeContent = readFileSync(join(isolatedTestDir, 'CLAUDE.md'), 'utf-8');
@@ -145,7 +150,8 @@ describe('CLI Edge Case Project Names', () => {
     
     const result = execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name "${projectNameWithSpaces}" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     expect(result).toContain(`Project name: ${projectNameWithSpaces}`);
@@ -160,7 +166,8 @@ describe('CLI Edge Case Project Names', () => {
     
     const result = execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name "${projectNameWithDashes}"`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     expect(result).toContain(`Project name: ${projectNameWithDashes}`);
@@ -172,7 +179,8 @@ describe('CLI Edge Case Project Names', () => {
     
     const result = execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name "${japaneseProjectName}" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     expect(result).toContain(`Project name: ${japaneseProjectName}`);
@@ -197,7 +205,8 @@ describe('CLI Edge Case Project Names', () => {
     
     const result = execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name "${longProjectName}"`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     expect(result).toContain(`Project name: ${longProjectName}`);
@@ -220,7 +229,8 @@ describe('CLI Deep Content Verification', () => {
     
     execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     // 必須instructionsファイル群確認
@@ -253,7 +263,8 @@ describe('CLI Deep Content Verification', () => {
     
     execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     // CLAUDE.md構造確認
@@ -281,7 +292,8 @@ describe('CLI Deep Content Verification', () => {
     
     execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     const claudeContent = readFileSync(join(contentTestDir, 'CLAUDE.md'), 'utf-8');
@@ -314,7 +326,8 @@ describe('CLI Deep Content Verification', () => {
     
     execSync(`npx ts-node "${cliPath}" init --output "${contentTestDir}" --project-name "${projectName}" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
     // UTF-8エンコーディング確認
@@ -344,7 +357,8 @@ describe('CLI Init Command Integration', () => {
     // Red: CLI initコマンドがClaudeGenerator統合で実際にファイル生成
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "test-cli-project"`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Generated claude template');
@@ -368,7 +382,8 @@ describe('CLI Multi-Tool Support', () => {
     // Act
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-project" --tool github-copilot`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     // Assert
@@ -385,7 +400,8 @@ describe('CLI Multi-Tool Support', () => {
     // Act
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "cursor-project" --tool cursor`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     // Assert
@@ -403,7 +419,8 @@ describe('CLI Multi-Tool Support', () => {
     // Act
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-project"`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     // Assert - should generate Claude files by default
@@ -417,7 +434,8 @@ describe('CLI Multi-Tool Support', () => {
     expect(() => {
       execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --tool unsupported-tool`, {
         cwd: join(__dirname, '..'),
-        stdio: 'pipe'
+        stdio: 'pipe',
+        env: { ...process.env, NODE_ENV: 'cli-test' }
       });
     }).toThrow();
   });
@@ -426,7 +444,8 @@ describe('CLI Multi-Tool Support', () => {
     // Act
     const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     // Assert
@@ -450,7 +469,8 @@ describe('CLI Multi-Language Support', () => {
     // RED PHASE: Test for English language option
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "english-project" --lang en`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Generated claude template');
@@ -465,7 +485,8 @@ describe('CLI Multi-Language Support', () => {
     // RED PHASE: Test for Japanese language option
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "japanese-project" --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Generated claude template');
@@ -481,7 +502,8 @@ describe('CLI Multi-Language Support', () => {
     // RED PHASE: Test for Chinese language option
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "chinese-project" --lang ch`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Generated claude template');
@@ -497,7 +519,8 @@ describe('CLI Multi-Language Support', () => {
     // RED PHASE: Test default language behavior
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-lang-project"`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Generated claude template');
@@ -513,7 +536,8 @@ describe('CLI Multi-Language Support', () => {
     expect(() => {
       execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --lang fr`, {
         cwd: join(__dirname, '..'),
-        stdio: 'pipe'
+        stdio: 'pipe',
+        env: { ...process.env, NODE_ENV: 'cli-test' }
       });
     }).toThrow();
   });
@@ -522,7 +546,8 @@ describe('CLI Multi-Language Support', () => {
     // RED PHASE: Test combined tool and language options
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "combined-test" --tool cursor --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Generated cursor template');
@@ -537,7 +562,8 @@ describe('CLI Multi-Language Support', () => {
     // RED PHASE: Test help display for language option
     const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('--lang');
@@ -549,14 +575,16 @@ describe('CLI Multi-Language Support', () => {
     expect(() => {
       execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --lang EN`, {
         cwd: join(__dirname, '..'),
-        stdio: 'pipe'
+        stdio: 'pipe',
+        env: { ...process.env, NODE_ENV: 'cli-test' }
       });
     }).toThrow();
     
     expect(() => {
       execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --lang JA`, {
         cwd: join(__dirname, '..'),
-        stdio: 'pipe'
+        stdio: 'pipe',
+        env: { ...process.env, NODE_ENV: 'cli-test' }
       });
     }).toThrow();
   });
@@ -577,7 +605,8 @@ describe('CLI Output Format Support', () => {
     // RED PHASE: Test for claude output format (explicit)
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "claude-format-test" --output-format claude --lang ja`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Generated claude template');
@@ -594,7 +623,8 @@ describe('CLI Output Format Support', () => {
     // RED PHASE: Test for cursor output format 
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "cursor-format-test" --output-format cursor`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Converted from Claude format to cursor');
@@ -613,7 +643,8 @@ describe('CLI Output Format Support', () => {
     // RED PHASE: Test for copilot output format
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-format-test" --output-format copilot`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Converted from Claude format to copilot');
@@ -631,7 +662,8 @@ describe('CLI Output Format Support', () => {
     // RED PHASE: Test for windsurf output format
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "windsurf-format-test" --output-format windsurf`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Converted from Claude format to windsurf');
@@ -648,7 +680,8 @@ describe('CLI Output Format Support', () => {
     // RED PHASE: Test for short form option -f
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "short-form-test" -f cursor`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Converted from Claude format to cursor');
@@ -662,7 +695,8 @@ describe('CLI Output Format Support', () => {
     // RED PHASE: Test default output format behavior
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-format-test"`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Generated claude template');
@@ -684,7 +718,8 @@ describe('CLI Output Format Support', () => {
     // RED PHASE: Test help display for output-format option
     const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('--output-format');
@@ -699,7 +734,8 @@ describe('CLI Output Format Support', () => {
     // RED PHASE: Test combined options - note: --tool and --output-format should be consistent  
     const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "combined-options-test" --tool claude --lang ja --output-format cursor`, { 
       encoding: 'utf-8',
-      cwd: join(__dirname, '..')
+      cwd: join(__dirname, '..'),
+      env: { ...process.env, NODE_ENV: 'cli-test' }
     });
     
     expect(result).toContain('Converted from Claude format to cursor');
@@ -716,14 +752,16 @@ describe('CLI Output Format Support', () => {
     expect(() => {
       execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --output-format CLAUDE`, {
         cwd: join(__dirname, '..'),
-        stdio: 'pipe'
+        stdio: 'pipe',
+        env: { ...process.env, NODE_ENV: 'cli-test' }
       });
     }).toThrow();
     
     expect(() => {
       execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --output-format Cursor`, {
         cwd: join(__dirname, '..'),
-        stdio: 'pipe'
+        stdio: 'pipe',
+        env: { ...process.env, NODE_ENV: 'cli-test' }
       });
     }).toThrow();
   });
