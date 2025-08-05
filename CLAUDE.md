@@ -1,55 +1,55 @@
-# AI開発アシスタント 行動指示 - my-project
+# AI Development Assistant Instructions - my-project
 
-## 🚨 基本原則（必須）
+## 🚨 Core Principles (MANDATORY)
 
-すべてのタスク・コマンド・ツール実行前に必ず読み込み
+Must be read before executing any task, command, or tool
 
-- [基本ルール](./instructions/base.md) - 絶対厳守事項
-- [深層思考](./instructions/deep-think.md)
-- [memory](./instructions/memory.md)
+- [Basic Rules](./instructions/base.md) - Absolute requirements
+- [Deep Thinking](./instructions/deep-think.md)
+- [Memory](./instructions/memory.md)
 
-## プロジェクト 固有のアーキテクチャ・ルール・ドキュメント
+## Project-Specific Architecture, Rules & Documentation
 
-- [プロジェクトドキュメント索引](./docs/README.md)
+- [Project Documentation Index](./docs/README.md)
 
-## 📋 場面別必須参照ファイル
+## 📋 Situational Reference Files
 
-### 実行環境
+### Execution Environment
 
-- [コマンド実行](./instructions/command.md) - シェル、実行ルール
+- [Command Execution](./instructions/command.md) - Shell, execution rules
 
-### Git・コミット関連
+### Git & Commit Related
 
-- [Gitルール](./instructions/git.md) - GitHub操作、Issue、ブランチ戦略
-- [コミット規約](./instructions/commit-rules.md) - コミットメッセージ形式
-- [PRルール](./instructions/pr-rules.md) - プルリクエスト作成規約
+- [Git Rules](./instructions/git.md) - GitHub operations, Issues, branch strategy
+- [Commit Conventions](./instructions/commit-rules.md) - Commit message format
+- [PR Rules](./instructions/pr-rules.md) - Pull request creation guidelines
 
-### 開発プロセス
+### Development Process
 
-- [開発スタイル](./instructions/develop.md) - Issue駆動、TDD、スクラム
-- [TDDルール](./instructions/KentBeck-tdd-rules.md) - テスト駆動開発
-- [スクラム開発](./instructions/scrum.md) - スプリント管理
+- [Development Style](./instructions/develop.md) - Issue-driven, TDD, Scrum
+- [TDD Rules](./instructions/KentBeck-tdd-rules.md) - Test-driven development
+- [Scrum Development](./instructions/scrum.md) - Sprint management
 
-### 用語・表記統一
+### Terminology & Standardization
 
-- [ドメイン用語集](./instructions/domain-terms.md) - 統一表記確認
-- [用語更新ワークフロー](./instructions/domain-term-workflow.md) - 新用語提案
+- [Domain Glossary](./instructions/domain-terms.md) - Unified terminology
+- [Term Update Workflow](./instructions/domain-term-workflow.md) - New term proposals
 
-### 調査・検索
+### Research & Search
 
-- [検索パターン集](./instructions/search-patterns.md) - Git検索コマンド
-- [トラブルシューティング](./instructions/troubleshooting.md) - 問題解決手順
+- [Search Patterns](./instructions/search-patterns.md) - Git search commands
+- [Troubleshooting](./instructions/troubleshooting.md) - Problem-solving procedures
 
-### 記録・管理
+### Record & Management
 
-- [ノート・日誌](./instructions/note.md) - 作業記録の書き方
+- [Notes & Journal](./instructions/note.md) - Work documentation guidelines
 
-## 🔄 実行フロー
+## 🔄 Execution Flow
 
-1. 基本ルール読み込み → 絶対厳守事項の確認
-2. 場面に応じた専用ファイル読み込み → 具体的な実行ルール確認
+1. Load basic rules → Confirm absolute requirements
+2. Load situation-specific files → Confirm specific execution rules
 
-- 例：実装時 → プロジェクトドキュメント索引 を参照
+- Example: During implementation → Reference project documentation index
 
-3. 参照確認の明示 → `✅️:{filename.md}` で表示
-4. 実行 → ルールに従って作業実行
+3. Show reference confirmation → Display as `✅️:{filename.md}`
+4. Execute → Perform work according to rules

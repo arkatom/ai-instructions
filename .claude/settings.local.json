@@ -207,7 +207,8 @@
       "mcp__github__create_issue",
       "WebFetch(domain:docs.github.com)",
       "WebFetch(domain:docs.cursor.com)",
-      "WebFetch(domain:docs.roocode.com)"
+      "WebFetch(domain:docs.roocode.com)",
+      "mcp__github__get_file_contents"
     ],
     "deny": []
   },

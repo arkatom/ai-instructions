@@ -3,9 +3,10 @@
 🤖 **Professional CLI tool to scaffold AI development instructions for ClaudeCode, Cursor, GitHub Copilot and more**
 
 [![NPM Version](https://img.shields.io/npm/v/@arkatom/ai-instructions)](https://www.npmjs.com/package/@arkatom/ai-instructions)
-[![Tests](https://img.shields.io/badge/tests-43%20passing-brightgreen)](./test)
+[![Tests](https://img.shields.io/badge/tests-110%20passing-brightgreen)](./test)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Semantic Versioning](https://img.shields.io/badge/semver-2.0.0-blue)](https://semver.org/)
 
 ## 📋 Overview
 
@@ -16,10 +17,11 @@
 - **🚀 Instant Setup**: Generate complete instruction sets in seconds
 - **🛠️ Multi-Tool Support**: Claude Code, GitHub Copilot, and Cursor AI IDE support
 - **📚 Comprehensive Templates**: Full collection of development methodology guides (TDD, Git workflow, etc.)
-- **🌐 Multi-language Support**: Unicode and Japanese character support
+- **🌐 Multi-language Support**: English, Japanese, and Chinese template support
 - **⚙️ Highly Configurable**: Customizable project names and output directories
 - **🔒 Validated Input**: Built-in validation for project names and paths
-- **🧪 Battle-tested**: 43 comprehensive tests ensuring reliability
+- **🧪 Battle-tested**: 110 comprehensive tests ensuring reliability
+- **🔄 Format Conversion**: Convert between Claude, Cursor, GitHub Copilot, and Windsurf formats
 
 ## ⚠️ Important Safety Notice (v0.2.1)
 
@@ -113,6 +115,42 @@ ai-instructions init --tool github-copilot --project-name "my-project"
 ai-instructions init --tool cursor --project-name "my-project"
 ```
 
+### Format Conversion (New in v0.3.0)
+
+Generate Claude templates and convert to other formats:
+
+```bash
+# Convert to Cursor MDC format with short option
+ai-instructions init -f cursor --project-name "my-project"
+
+# Convert to GitHub Copilot 2024 standard
+ai-instructions init --output-format copilot --project-name "my-project"
+
+# Convert to Windsurf pair programming rules
+ai-instructions init --output-format windsurf --project-name "my-project"
+
+# Maintain original Claude format (default)
+ai-instructions init --output-format claude --project-name "my-project"
+```
+
+### Multi-Language Templates
+
+Generate templates in different languages:
+
+```bash
+# English templates (default)
+ai-instructions init --lang en --project-name "my-project"
+
+# Japanese templates
+ai-instructions init --lang ja --project-name "プロジェクト名"
+
+# Chinese templates
+ai-instructions init --lang ch --project-name "项目名称"
+
+# Combined: Japanese Cursor format
+ai-instructions init -f cursor --lang ja --project-name "カーソルプロジェクト"
+```
+
 ### Real-world Examples
 
 ```bash
@@ -148,20 +186,25 @@ your-project/
         └── index.md            # Project memo template
 ```
 
-### GitHub Copilot (`--tool github-copilot`)
+### GitHub Copilot (`--tool github-copilot` or `--output-format copilot`)
 ```
 your-project/
 └── .github/
-    └── instructions/
-        └── main.md             # GitHub Copilot custom instructions
+    └── copilot-instructions.md  # GitHub Copilot 2024 standard format
 ```
 
-### Cursor AI IDE (`--tool cursor`)
+### Cursor AI IDE (`--tool cursor` or `--output-format cursor`)
 ```
 your-project/
 └── .cursor/
     └── rules/
-        └── main.mdc            # Cursor AI rules with metadata
+        └── main.mdc            # Cursor AI rules with YAML frontmatter
+```
+
+### Windsurf AI (`--output-format windsurf`)
+```
+your-project/
+└── .windsurfrules              # Windsurf pair programming rules
 ```
 
 ### File Descriptions
@@ -182,9 +225,11 @@ your-project/
 
 | Option | Alias | Description | Default | Example |
 |--------|-------|-------------|---------|---------|
+| `--lang` | `-l` | Template language (en, ja, ch) | `en` | `--lang ja` |
+| `--output-format` | `-f` | Output format (claude, cursor, copilot, windsurf) | `claude` | `-f cursor` |
 | `--output` | `-o` | Output directory | Current directory | `--output ./my-project` |
 | `--project-name` | `-n` | Project name for templates | `my-project` | `--project-name "My App"` |
-| `--tool` | `-t` | AI tool type | `claude` | `--tool cursor` |
+| `--tool` | `-t` | AI tool type (legacy, use --output-format) | `claude` | `--tool cursor` |
 | `--force` | | ⚠️ Force overwrite existing files (DANGEROUS) | `false` | `--force` |
 | `--preview` | | 🔍 Preview files that would be created/modified | `false` | `--preview` |
 | `--version` | | Show version number | | |
@@ -206,6 +251,38 @@ ai-instructions init --project-name "my-awesome_project-v2" # ✅ Hyphens & unde
 ai-instructions init --project-name "プロジェクト名"          # ✅ Unicode/Japanese
 ai-instructions init --project-name "Project123"           # ✅ Numbers
 ```
+
+### Output Format Validation
+
+The CLI validates output formats to ensure compatibility:
+
+- ✅ **Supported Formats**: `claude`, `cursor`, `copilot`, `windsurf`
+- ✅ **Case Sensitive**: Format names must be lowercase
+- ❌ **Invalid**: `CLAUDE`, `Cursor`, `GitHub-Copilot`
+
+### Language Code Validation
+
+- ✅ **Supported Languages**: `en` (English), `ja` (Japanese), `ch` (Chinese)
+- ✅ **Case Sensitive**: Language codes must be lowercase
+- ❌ **Invalid**: `EN`, `JA`, `fr`, `es`
+
+## 🔄 Format Conversion Benefits
+
+### Why Use Format Conversion?
+
+1. **🎆 Single Source of Truth**: Maintain comprehensive Claude templates
+2. **🔧 Tool-Specific Optimization**: Each format optimized for its AI tool
+3. **🗏 Multi-Tool Workflows**: Switch between AI tools seamlessly
+4. **🌐 Consistent Standards**: Apply same development practices across tools
+
+### Format-Specific Features
+
+| Format | File Extension | Key Features |
+|--------|----------------|---------------|
+| `claude` | `.md` | Full instruction hierarchy, TDD rules, comprehensive guides |
+| `cursor` | `.mdc` | YAML frontmatter, MDC format, Cursor-optimized prompts |
+| `copilot` | `.md` | GitHub 2024 standard, repository-focused instructions |
+| `windsurf` | `.windsurfrules` | Pair programming focus, collaborative development rules |
 
 ## 🛠️ Development
 
@@ -238,7 +315,7 @@ npm run cli init --help
 ### Running Tests
 
 ```bash
-# Run all tests (22 test suites)
+# Run all tests (8 test suites, 110 tests)
 npm test
 
 # Run tests in watch mode
@@ -252,11 +329,19 @@ npm run test:coverage
 
 Our comprehensive test suite includes:
 
-- **Basic CLI functionality** (version, help, commands)
-- **Error handling** (invalid inputs, filesystem errors)  
-- **Edge cases** (Unicode names, very long names, empty strings)
-- **Content verification** (generated file structure and content)
-- **Integration testing** (end-to-end CLI workflows)
+- **Basic CLI functionality** (version, help, commands) - 41 tests
+- **Format conversion system** (Claude → Cursor/Copilot/Windsurf) - 16 tests  
+- **Multi-language support** (English, Japanese, Chinese templates) - 21 tests
+- **Multi-tool generators** (Claude, GitHub Copilot, Cursor) - 17 tests
+- **Error handling** (invalid inputs, filesystem errors, validation) - 8 tests
+- **Edge cases** (Unicode names, very long names, empty strings) - 7 tests
+
+**Key Test Categories:**
+- **CLI Output Format Support**: 12 comprehensive tests for --output-format/-f option
+- **Multi-Language Templates**: Tests for en/ja/ch language generation
+- **GitHub Copilot 2024 Standard**: Tests for new .github/copilot-instructions.md path
+- **Content verification**: Generated file structure and content validation
+- **Integration testing**: End-to-end CLI workflows with format conversion
 
 ### Build and Distribution
 
@@ -270,6 +355,19 @@ npm pack
 # Publish to npm (maintainers only)
 npm publish
 ```
+
+## 📌 Versioning
+
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (SemVer). Version numbers follow the format `MAJOR.MINOR.PATCH`:
+
+- **MAJOR**: Incompatible API changes or breaking changes
+- **MINOR**: New functionality in a backwards compatible manner
+- **PATCH**: Backwards compatible bug fixes
+
+For example:
+- `0.3.0` → `0.3.1`: Bug fixes or minor improvements
+- `0.3.1` → `0.4.0`: New features or enhancements
+- `0.4.0` → `1.0.0`: Breaking changes or major redesign
 
 ## 🤝 Contributing
 

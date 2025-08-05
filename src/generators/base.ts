@@ -1,6 +1,7 @@
 import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 import { FileUtils } from '../utils/file-utils';
+import { OutputFormat } from '../converters';
 
 /**
  * Options for file generation
@@ -9,6 +10,7 @@ export interface GenerateFilesOptions {
   projectName?: string;
   force?: boolean;  // 🚨 EMERGENCY PATCH v0.2.1: Force overwrite flag
   lang?: 'en' | 'ja' | 'ch';  // Issue #11: Multi-language support
+  outputFormat?: OutputFormat;  // Issue #19: Multi-format output support
 }
 
 /**
