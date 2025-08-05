@@ -87,21 +87,21 @@ describe('Multi-Tool Support', () => {
       generator = GeneratorFactory.createGenerator('github-copilot');
     });
 
-    it('should generate .github/instructions/ directory structure', async () => {
+    it('should generate .github/copilot-instructions.md (2024 standard)', async () => {
       await generator.generateFiles(tempDir, { projectName: 'test-project' });
 
-      // Check .github/instructions directory exists
-      await expect(access(join(tempDir, '.github', 'instructions'))).resolves.not.toThrow();
+      // Check .github directory exists
+      await expect(access(join(tempDir, '.github'))).resolves.not.toThrow();
 
-      // Check main.md exists
-      await expect(access(join(tempDir, '.github', 'instructions', 'main.md'))).resolves.not.toThrow();
+      // Check copilot-instructions.md exists (2024 standard)
+      await expect(access(join(tempDir, '.github', 'copilot-instructions.md'))).resolves.not.toThrow();
     });
 
-    it('should replace project name variables in main.md', async () => {
+    it('should replace project name variables in copilot-instructions.md', async () => {
       const projectName = 'github-copilot-project';
       await generator.generateFiles(tempDir, { projectName });
 
-      const mainContent = await readFile(join(tempDir, '.github', 'instructions', 'main.md'), 'utf-8');
+      const mainContent = await readFile(join(tempDir, '.github', 'copilot-instructions.md'), 'utf-8');
       expect(mainContent).toContain(projectName);
       expect(mainContent).toContain('GitHub Copilot Custom Instructions');
     });
@@ -109,7 +109,7 @@ describe('Multi-Tool Support', () => {
     it('should contain GitHub Copilot specific instructions', async () => {
       await generator.generateFiles(tempDir, { projectName: 'test-project' });
 
-      const mainContent = await readFile(join(tempDir, '.github', 'instructions', 'main.md'), 'utf-8');
+      const mainContent = await readFile(join(tempDir, '.github', 'copilot-instructions.md'), 'utf-8');
       expect(mainContent).toContain('Test-Driven Development');
       expect(mainContent).toContain('GitHub Flow');
       expect(mainContent).toContain('Code Generation Guidelines');
@@ -176,7 +176,7 @@ describe('Multi-Tool Support', () => {
       await expect(access(join(claudeDir, 'CLAUDE.md'))).resolves.not.toThrow();
       await expect(access(join(claudeDir, 'instructions'))).resolves.not.toThrow();
 
-      await expect(access(join(copilotDir, '.github', 'instructions', 'main.md'))).resolves.not.toThrow();
+      await expect(access(join(copilotDir, '.github', 'copilot-instructions.md'))).resolves.not.toThrow();
 
       await expect(access(join(cursorDir, '.cursor', 'rules', 'main.mdc'))).resolves.not.toThrow();
     });
@@ -201,7 +201,7 @@ describe('Multi-Tool Support', () => {
             mainFilePath = join(toolDir, 'CLAUDE.md');
             break;
           case 'github-copilot':
-            mainFilePath = join(toolDir, '.github', 'instructions', 'main.md');
+            mainFilePath = join(toolDir, '.github', 'copilot-instructions.md');
             break;
           case 'cursor':
             mainFilePath = join(toolDir, '.cursor', 'rules', 'main.mdc');
