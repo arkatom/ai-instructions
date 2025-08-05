@@ -1,2 +1,2 @@
-- Casual thinking and output will destroy trust and value. What I seek is not speed but quality. Don't rush, meticulous work ultimately maximizes efficiency. Analyze intentions with deep thinking and provide 200% value. I am always watching whether you are being casual.
-- Please read CLAUDE.md and proceed with deep thinking. Take your time, but always prioritize quality and strictly adhere to the basic principle of providing perfect answers in one go. Carefully analyze my requests and ask questions even if there are minor unclear points.
+- 適当な思考・出力は信頼と価値を地に落とします。求めてるのは速さではなく質。急がず、丁寧な仕事が最終的な効率を最大化します。深層思考で意図を分析、200%の価値を提供して。私は適当か否かを常に見てます。
+- CLAUDE.md を読み、深層思考で進めてください。ゆっくりでいいので、常に質を優先して一度で完璧に答えるという基本原則を厳守。私の依頼を入念に分析し、僅かな不明点でもあれば質問すること。

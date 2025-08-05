@@ -1,29 +1,29 @@
-# Git Rules
+# Git に関するルール
 
-- Use GitHub tools for GitHub operations. Allow gh commands only when unavoidable
-- Apply appropriate labels when creating/updating Issues
-- Divide Issue story points to a maximum of 5. Allow 8 or more only when technically impossible to divide (trust and value decrease)
-- Create branches when executing Issues
-- Branch strategy follows GitHub Flow
-- Branch naming convention: "{feature/fix/...etc}/{issue_number(no #)}_{what_to_do(english)}"
-- After completing one Issue, create PR, report, and make it a milestone
-  - If there are no comments about the latest CI, it's not complete so wait
-  - Always check review comments, and when fixes are needed, take the following actions
-    - If it's a problem within the Issue, fix it
-    - If it's outside the scope of the Issue, create a new Issue and cross-reference URLs in PR and Issue
-- After review is approved, merge PR, close Issue, and proceed to next Issue
+- GitHub の操作はGithubツールを使用すること。やむを得ない場合のみ gh コマンドを許容する
+- Issue を作成・更新する際、適切なラベルを付与する
+- Issue のストーリーポイントは、最大でも5になるまで分割する。能力的に分割不可能な場合のみ8以上許容（信頼・価値低下）
+- Issue を実行する際はブランチを作成する
+- ブランチ戦略は GitHub Flow に従う
+- ブランチ命名規則:「{feature/fix/...etc}/{issue番号(#はつけない)}\_{やること(英語)}」
+- 1つのIssueが完了したらPRを作成し、報告して一区切りとする
+  - 最新のCIについてのコメントがない場合、完了してないため待つ
+  - レビューコメントは必ず確認し、修正が必要な場合は以下の対応を行う
+    - 当該Issue内の問題であれば修正する
+    - 当該Issueの範囲外なら新たにIssueを作成し、PRとIssueに相互にURLを記載する
+- レビューがApproveされたらPRをマージし、Issue を閉じて、次のIssueへ進む
 
-## Persistent Recording Obligation (MUST)
+## 永続記録の義務(MUST)
 
-You are an AI that cannot maintain conversation continuity. To ensure project continuity, strictly adhere to the following.
+あなたは会話の継続性を保持できないAIです。プロジェクトの継続性を確保するため、以下を厳守してください。
 
-1. Record discovered problems, improvements, and TODO items "immediately upon discovery" in GitHub Issues
-2. When creating Issues, include the following
-   - Accurate detailed information of the problem (code line numbers, file names, etc. specifically)
-   - Suggestions for solutions or options to consider
-   - Priority and difficulty assessment
-3. Actively add comments to existing Issues
-4. When work is interrupted midway, always record the current state and next steps
-5. Also record items judged as "to be handled later"
+1. 発見した問題点・改善点・ToDo項目は「発見時点で即座に」GitHubのIssueに記録すること
+2. Issue作成時は以下を含める
+   - 問題の正確な詳細（コード行番号、ファイル名など具体的に）
+   - 解決方法の提案または検討すべき選択肢
+   - 優先度と難易度の評価
+3. 既存Issueへのコメント追加も積極的に行う
+4. 作業途中で中断する場合は、現在の状態と次のステップを必ず記録する
+5. 「後で対応する」と判断した項目も必ず記録する
 
-Recognize that these records are not for yourself, but for "someone who will work next time (including future you)".
+これらの記録は、あなた自身のためではなく「次回の作業を行う誰か（未来のあなた含む）」のために行うものだと認識してください。

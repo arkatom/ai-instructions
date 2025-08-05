@@ -1,58 +1,58 @@
-# Troubleshooting
+# トラブルシューティング
 
-## When Search Returns No Results
+## 検索でヒットしない場合
 
-### 1. Check for Notation Variations
+### 1. 表記揺れをチェック
 
-- Confirm if abbreviations are used
-- Use unified terms from domain-terms.md
+- 略語が使われていないか確認
+- domain-terms.mdの統一用語を使用
 
-### 2. Search with Synonyms
+### 2. 類義語で検索
 
 ```bash
-# authentication related
+# authentication関連
 git log --grep="\[tags:.*login.*\]" --oneline
 git log --grep="\[tags:.*jwt.*\]" --oneline
-git log --grep="\[tags:.*auth.*\]" --oneline  # for old commits
+git log --grep="\[tags:.*auth.*\]" --oneline  # 古いコミット用
 ```
 
-### 3. Search by File Path
+### 3. ファイルパスで検索
 
 ```bash
 git log --name-only | grep auth
 git log -- "src/auth/*"
 ```
 
-### 4. Broaden Time Range
+### 4. 時期を広げる
 
 ```bash
 git log --grep="\[domain:authentication\]" --since="1 month ago"
 git log --grep="\[domain:authentication\]" --since="3 months ago"
 ```
 
-## When Related Information Cannot Be Found
+## 関連情報が見つからない場合
 
-### 1. Search with Higher-level Domain
+### 1. 上位ドメインで検索
 
-When too specific, increase abstraction level
+具体的すぎる場合は抽象度を上げる
 
 ```bash
-# Specific → Abstract
-git log --grep="\[domain:jwt\]"           # none
-git log --grep="\[domain:authentication\]" # exists
+# 具体的 → 抽象的
+git log --grep="\[domain:jwt\]"           # なし
+git log --grep="\[domain:authentication\]" # あり
 ```
 
-### 2. Cross-domain Search
+### 2. クロスドメイン検索
 
-When spanning multiple domains
+複数ドメインにまたがる場合
 
 ```bash
 git log --grep="\[domain:user\].*\[domain:session\]"
 ```
 
-### 3. Track from Issue Numbers
+### 3. Issue番号から追跡
 
-Follow the trail from related Issues
+関連するIssueから芋づる式に
 
 ```bash
 git log --grep="#123"

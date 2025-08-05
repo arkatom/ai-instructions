@@ -1,7 +1,7 @@
-# Development Style
+# 開発スタイル
 
-- Conduct issue-driven development starting from GitHub Issues
-  - Always read and understand the Issue content when starting a task
-- Conduct development strictly following TDD. Implement with maximum consideration for testability
-- Conduct Scrum development
-- Actively use all MCP server tools
+- GitHub Issue を起点に、issue ドリブンな開発を行う
+  - タスク開始時に必ず Issue を読み込み、Issue の内容を理解すること
+- TDDを厳守した開発を行う。テスト容易性に極力配慮した実装を行う
+- スクラム開発を行う
+- MCPサーバーのツールはすべて積極的に使用する

@@ -1,5 +1,5 @@
-# Commands
+# コマンド
 
-- Shell often uses fish
-- All commands are executable. However, when tools like Github MCP Server are available, prioritize them
-- For commands that may become interactive or paginated, use `| echo`, `head` commands, etc., to ensure output is completed within a single command
+- シェルは fish を使用している場合が多い
+- コマンドはすべて実行可能。ただし、Github MCP Server などのツールが利用可能な場合は、それを優先する
+- インタラクティブになる、またはページングする可能性のあるコマンドは `| echo`, `head` コマンドなどを使用し、必ず1コマンド内で出力が完結するようにする

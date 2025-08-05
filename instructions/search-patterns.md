@@ -1,8 +1,8 @@
-# Search Pattern Collection
+# 検索パターン集
 
-## Basic Search Commands
+## 基本検索コマンド
 
-### Domain-specific Search
+### ドメイン別検索
 
 ```bash
 git log --grep="\[domain:authentication\]" --oneline
@@ -11,7 +11,7 @@ git log --grep="\[domain:session\]" --oneline
 git log --grep="\[domain:agent\]" --oneline
 ```
 
-### Feature-specific Search
+### 機能別検索
 
 ```bash
 git log --grep="\[tags:.*login.*\]" --oneline
@@ -19,32 +19,32 @@ git log --grep="\[tags:.*jwt.*\]" --oneline
 git log --grep="\[tags:.*timeout.*\]" --oneline
 ```
 
-### Problem Investigation
+### 問題調査
 
 ```bash
-git log --grep="fix.*\[domain:.*\]" --oneline        # Bug fix history
-git log --grep="feat.*\[domain:.*\]" --oneline       # Feature addition history
+git log --grep="fix.*\[domain:.*\]" --oneline        # バグ修正履歴
+git log --grep="feat.*\[domain:.*\]" --oneline       # 機能追加履歴
 ```
 
-## Scenario-specific Search
+## シナリオ別検索
 
-### When Investigating Bugs
+### バグ調査時
 
 ```bash
-# 1. Identify related domain from error message
-# 2. Check recent changes in that domain
+# 1. エラーメッセージから関連ドメインを特定
+# 2. そのドメインの最近の変更を確認
 git log --grep="\[domain:DOMAIN_NAME\]" --since="1 week ago"
 
-# 3. Investigate related fix commits
+# 3. 関連するfixコミットを調査
 git log --grep="fix.*\[domain:DOMAIN_NAME\]" --oneline
 ```
 
-### When Adding Features
+### 機能追加時
 
 ```bash
-# 1. Check implementation of similar features
+# 1. 類似機能の実装を確認
 git log --grep="\[tags:.*FEATURE_NAME.*\]" --oneline
 
-# 2. Check design patterns of related domains
+# 2. 関連ドメインの設計パターンを確認
 git log --grep="\[domain:DOMAIN_NAME\]" --oneline
 ```

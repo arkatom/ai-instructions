@@ -1,44 +1,44 @@
-# Pull Request (PR) Creation Rules
+# プルリクエスト（PR）作成のルール
 
-## Basic (MUST)
+## 基本(MUST)
 
-1. PRs must be linked to Issues
-   - Always include related Issue numbers in PR descriptions
-   - Write Issue numbers with hash tags (e.g., `#123`)
+1. PRは必ずIssueに紐づけること
+   - 関連するIssue番号を必ずPRの説明に記載してください
+   - Issue番号はハッシュタグ付きで記載（例: `#123`）
 
-2. PR titles must follow the format "#Issue_number: PR_content"
-   - Example: `#123: Implementation of login screen`
-   - Content should be specific and concise
+2. PRのタイトルは「#Issue番号: PRの内容」の形式にすること
+   - 例: `#123: ログイン画面の実装`
+   - 内容は具体的かつ簡潔に
 
-3. PR descriptions must include the following
-   - Overview: What, why, and how, described concisely
-   - Changes: Detailed change points in list format
-   - Related Issues: Related Issue numbers
-   - Review points: Points you especially want reviewers to focus on
+3. PRの説明には以下を含めること
+   - 概要: 何を、なぜ、どうしたのか簡潔に
+   - 変更内容: 詳細な変更点をリスト形式で
+   - 関連Issue: 関連するIssue番号
+   - レビュー観点: レビュアーに特に見てほしい点
 
-## Multiple PR Prohibition (MUST)
+## 複数PR禁止(MUST)
 
-Creating multiple PRs simultaneously is prohibited.
-Reasons: Merge conflicts occur, code review quality decreases, build/test environment load
+同時に複数のPRを作成することは禁止されています。
+理由: マージコンフリクトの発生、コードレビューの質の低下、ビルド/テスト環境への負荷
 
-1. Always maintain only one open PR
-   - Before creating a new PR, confirm that existing PRs have been merged
-   - If existing PRs are still open, complete those PRs first
+1. 常に1つのPRのみを開いた状態にする
+   - 新しいPRを作成する前に、既存のPRがマージされていることを確認する
+   - 既存のPRがまだオープンの場合は、そのPRを先に完了させる
 
-2. Create one PR per Issue
-   - Don't split one Issue into multiple PRs
-   - For large Issues, split the Issues first before working on them
+2. 1つのIssueに対して1つのPRを作成する
+   - 1つのIssueを複数のPRに分割しない
+   - 大きなIssueは、先にIssueを分割してから取り組む
 
-3. Exceptional cases requiring multiple PRs
-   - Requires prior approval from team leader
-   - Even when approved, clearly state the reason and references to related PRs in PR description
+3. 例外的に複数PRが必要な場合
+   - チームリーダーの事前承認が必要
+   - 承認を得た場合でも、PRの説明に理由と関連PRへの参照を明記する
 
-## Checklist
+## チェックリスト
 
-Please confirm the following before creating a PR:
+PRを作成する前に以下を確認してください:
 
-- [ ] Has the code been tested locally?
-- [ ] Is the code style unified?
-- [ ] Have unnecessary comments and debug code been removed?
-- [ ] Are there no existing open PRs (or are they completed)?
-- [ ] Is the PR description sufficiently detailed?
+- [ ] コードはローカルでテスト済みか
+- [ ] コードスタイルは統一されているか
+- [ ] 不要なコメントやデバッグコードは削除されているか
+- [ ] 既存のオープンPRはないか（または完了しているか）
+- [ ] PRの説明は十分に詳細か

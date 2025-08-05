@@ -1,14 +1,14 @@
-# Commit Conventions
+# コミット規約
 
-## Commit Message Conventions
+## コミットメッセージ規約
 
-### Basic Format
+### 基本形式
 
 ```
 type(scope): #issue description [domain:xxx] [tags:keyword1,keyword2]
 ```
 
-### Examples
+### 例
 
 ```bash
 feat(authentication): #123 implement JWT user authentication [domain:authentication] [tags:jwt,login,session]
@@ -16,22 +16,22 @@ fix(session): #456 resolve session timeout issue [domain:session] [tags:timeout,
 refactor(user): #789 extract user profile service [domain:user] [tags:service,extraction]
 ```
 
-### Required Elements
+### 必須要素
 
-- **Issue Number**: Automatically inserted
-- **Domain Tag**: `[domain:xxx]` (required for feat/fix)
-- **AI Tags**: `[tags:xxx,yyy]` (recommended for searchability)
-- **Unified Terms**: No abbreviations, follow domain-terms.md
+- **Issue番号**: 自動挿入される
+- **ドメインタグ**: `[domain:xxx]` (feat/fixで必須)
+- **AIタグ**: `[tags:xxx,yyy]` (検索性向上のため推奨)
+- **統一用語**: 略語禁止、domain-terms.mdに従う
 
-## Commit Procedures (MUST)
+## コミット手順(MUST)
 
-- Check changes with git status
-- Stage with appropriate context granularity using git add ...
-- Commit with git commit -m "..."
+- git status で変更点を確認
+- git add ... で、適切な文脈を保った粒度でステージング
+- git commit -m "..." でコミット
 
-## Commit Granularity Principles (MUST)
+## コミット粒度の原則(MUST)
 
-- Make commit granularity as small as possible
-- Commit at the unit of "I want to return here if something goes wrong!"
-- Commit at a unit where the "intent and purpose of changes" can be understood when looking back later (write in commit message)
-- Commit at a unit that works normally (to avoid breaking when rolling back)
+- 可能な限りコミット粒度は小さくする
+- 何かあったらここまで戻りたい！という単位でコミット
+- あとから振り返ったときに「変更の意図や目的」がわかる単位でコミット（コミットメッセージに書く）
+- 正常に動く単位でコミット（ロールバックしたら壊れた！とならないために）
