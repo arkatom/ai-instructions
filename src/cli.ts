@@ -157,5 +157,7 @@ program
     }
   });
 
-// Parse command line arguments
-program.parse();
+// Parse command line arguments (only if not in test environment)
+if (process.env.NODE_ENV !== 'test') {
+  program.parse();
+}
