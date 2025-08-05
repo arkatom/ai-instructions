@@ -20,7 +20,8 @@
     "postpack": "echo \"📦 Package ready for publishing\"",
     "prepublish": "echo \"⚠️ Use 'npm run prepublishOnly' for safety\"",
     "version": "npm run build && git add dist",
-    "postversion": "git push && git push --tags"
+    "postversion": "git push && git push --tags",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -68,6 +69,7 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",

@@ -122,11 +122,11 @@ describe('🌍 Multi-Language Integration Tests', () => {
   });
 
   describe('Claude Template Language-Specific Content', () => {
-    test('templates/claude/en/instructions/base.md should be in English, not Japanese', () => {
-      const enClaudeBase = join(__dirname, '../templates/claude/en/instructions/base.md');
-      expect(existsSync(enClaudeBase)).toBe(true);
+    test('templates/shared/instructions/en/base.md should be in English, not Japanese', () => {
+      const enSharedBase = join(__dirname, '../templates/shared/instructions/en/base.md');
+      expect(existsSync(enSharedBase)).toBe(true);
       
-      const content = readFileSync(enClaudeBase, 'utf-8');
+      const content = readFileSync(enSharedBase, 'utf-8');
       
       // Should NOT contain Japanese characters
       expect(content).not.toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/);
