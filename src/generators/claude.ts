@@ -37,7 +37,7 @@ export class ClaudeGenerator extends BaseGenerator {
     if (outputFormat === OutputFormat.CLAUDE) {
       // Standard Claude format generation
       const claudePath = join(targetDir, 'CLAUDE.md');
-      await this.safeWriteFile(claudePath, processedClaudeContent, force);
+      await this.safeWriteFile(claudePath, processedClaudeContent, force, options);
 
       // instructions/ ディレクトリをコピー（言語対応版で）
       await this.safeCopyInstructionsDirectory(targetDir, options, force);
@@ -90,7 +90,7 @@ export class ClaudeGenerator extends BaseGenerator {
       
       // Write the converted file to the correct location
       const targetPath = join(targetDir, conversionResult.targetPath);
-      await this.safeWriteFile(targetPath, conversionResult.content, force);
+      await this.safeWriteFile(targetPath, conversionResult.content, force, options);
 
       // For some formats, we might need to copy additional instruction files
       // This depends on the specific format requirements
@@ -121,8 +121,9 @@ export class ClaudeGenerator extends BaseGenerator {
 
   /**
    * 🚨 EMERGENCY PATCH v0.2.1: Safe directory copying with conflict warnings
+   * 🚀 v0.5.0: Enhanced with advanced conflict resolution options
    */
-  private async safeCopyDirectory(sourcePath: string, targetPath: string, force: boolean): Promise<void> {
+  private async safeCopyDirectory(sourcePath: string, targetPath: string, force: boolean, options?: GenerateFilesOptions): Promise<void> {
     await FileUtils.ensureDirectory(targetPath);
     
     const items = await readdir(sourcePath);
@@ -134,10 +135,10 @@ export class ClaudeGenerator extends BaseGenerator {
       const itemStat = await stat(sourceItemPath);
       
       if (itemStat.isDirectory()) {
-        await this.safeCopyDirectory(sourceItemPath, targetItemPath, force);
+        await this.safeCopyDirectory(sourceItemPath, targetItemPath, force, options);
       } else {
         const content = await readFile(sourceItemPath, 'utf-8');
-        await this.safeWriteFile(targetItemPath, content, force);
+        await this.safeWriteFile(targetItemPath, content, force, options);
       }
     }
   }
@@ -154,7 +155,7 @@ export class ClaudeGenerator extends BaseGenerator {
       // NEW: Try shared language-specific instructions directory first (templates/shared/instructions/(lang)/)
       const sharedInstructionsPath = join(__dirname, '../../templates/shared/instructions', lang);
       if (await FileUtils.fileExists(sharedInstructionsPath)) {
-        await this.safeCopyDirectory(sharedInstructionsPath, instructionsTargetPath, force);
+        await this.safeCopyDirectory(sharedInstructionsPath, instructionsTargetPath, force, options);
         return;
       }
       
@@ -163,7 +164,7 @@ export class ClaudeGenerator extends BaseGenerator {
         const enSharedInstructionsPath = join(__dirname, '../../templates/shared/instructions/en');
         if (await FileUtils.fileExists(enSharedInstructionsPath)) {
           console.warn(`⚠️  Shared instructions directory not found for ${lang}, using English version`);
-          await this.safeCopyDirectory(enSharedInstructionsPath, instructionsTargetPath, force);
+          await this.safeCopyDirectory(enSharedInstructionsPath, instructionsTargetPath, force, options);
           return;
         }
       }
@@ -172,7 +173,7 @@ export class ClaudeGenerator extends BaseGenerator {
       const legacyLangInstructionsPath = join(this.templateDir, lang, 'instructions');
       if (await FileUtils.fileExists(legacyLangInstructionsPath)) {
         console.warn(`⚠️  Using legacy tool-specific instructions directory for ${lang}`);
-        await this.safeCopyDirectory(legacyLangInstructionsPath, instructionsTargetPath, force);
+        await this.safeCopyDirectory(legacyLangInstructionsPath, instructionsTargetPath, force, options);
         return;
       }
       
@@ -180,7 +181,7 @@ export class ClaudeGenerator extends BaseGenerator {
       const legacyInstructionsPath = join(this.templateDir, 'instructions');
       if (await FileUtils.fileExists(legacyInstructionsPath)) {
         console.warn(`⚠️  Using legacy instructions directory (no language support)`);
-        await this.safeCopyDirectory(legacyInstructionsPath, instructionsTargetPath, force);
+        await this.safeCopyDirectory(legacyInstructionsPath, instructionsTargetPath, force, options);
         return;
       }
       

@@ -18,51 +18,82 @@
 - **🛠️ Multi-Tool Support**: Claude Code, GitHub Copilot, and Cursor AI IDE support
 - **📚 Comprehensive Templates**: Full collection of development methodology guides (TDD, Git workflow, etc.)
 - **🌐 Multi-language Support**: English, Japanese, and Chinese template support
+- **🛡️ Advanced File Safety**: 5 intelligent conflict resolution strategies with smart merging
 - **⚙️ Highly Configurable**: Customizable project names and output directories
 - **🔒 Validated Input**: Built-in validation for project names and paths
 - **🧪 Battle-tested**: 110 comprehensive tests ensuring reliability
 - **🔄 Format Conversion**: Convert between Claude, Cursor, GitHub Copilot, and Windsurf formats
 
-## ⚠️ Important Safety Notice (v0.2.1)
+## 🛡️ Advanced File Safety System (v0.5.0)
 
-**🚨 CAUTION: This tool will overwrite existing files without confirmation in the target directory.**
+**🚀 NEW: Intelligent conflict resolution with 5 resolution strategies**
 
-### 🛡️ Safe Usage Patterns
+### 🔒 Safe Usage Patterns
 
 ```bash
-# ✅ RECOMMENDED: Preview changes before applying
+# ✅ RECOMMENDED: Interactive conflict resolution (default)
+ai-instructions init --project-name "My Project"
+
+# ✅ SAFE: Automatic backup creation
+ai-instructions init --conflict-resolution backup --project-name "My Project"
+
+# ✅ SMART: Merge existing + template content intelligently
+ai-instructions init --conflict-resolution merge --project-name "My Project"
+
+# ✅ PREVIEW: See what files would be created/modified
 ai-instructions init --preview
 
-# ✅ SAFE: Use in empty directories or new projects
-mkdir my-new-project && cd my-new-project
-ai-instructions init --project-name "My New Project"
+# ⚠️ SKIP: Skip conflicting files (non-destructive)
+ai-instructions init --conflict-resolution skip --project-name "My Project"
 
-# ⚠️ DANGEROUS: Force overwrite (use with extreme caution)
-ai-instructions init --force
-
-# ✅ DEFAULT: Shows warnings for existing files
-ai-instructions init  # Will display warnings before overwriting
+# 🚨 DANGEROUS: Force overwrite (use with extreme caution)
+ai-instructions init --force --conflict-resolution overwrite
 ```
 
-### 🔒 File Conflict Handling
+### 🛡️ Conflict Resolution Strategies
 
-When existing files are detected, the tool will:
-1. **Display warnings** showing file details (size, modification date)
-2. **Proceed with overwrite** after showing warnings
-3. **Provide guidance** on safer alternatives
+When existing files are detected, you can choose from 5 intelligent strategies:
 
-### 🚧 Upcoming Safety Features (v0.3.0)
+| Strategy | Behavior | Use Case | Data Safety |
+|----------|----------|----------|-------------|
+| `backup` | Creates timestamped backup, writes new file | **Default** - Safest option | 🟢 High |
+| `merge` | Intelligently merges existing + template content | Update existing instructions | 🟢 High |
+| `interactive` | Prompts for choice per conflict | Full control over each file | 🟢 High |
+| `skip` | Skips conflicting files, creates non-conflicting ones | Partial update scenarios | 🟢 High |
+| `overwrite` | Overwrites without backup | **Dangerous** - Only with --force | 🔴 None |
 
-- **Interactive conflict resolution** with 5 choice options:
-  - 🔄 Merge existing + template content
-  - 📝 Rename existing file (create backup)
-  - 🆕 Rename new file (save as .new)
-  - ❌ Cancel operation
-  - 💥 Overwrite (with explicit confirmation)
-- **Intelligent backup creation**
-- **Smart content merging**
+### 🔧 Advanced CLI Options (v0.5.0)
 
-> **💡 Pro Tip**: Always use version control (git) before running `ai-instructions init` in existing projects!
+```bash
+# Conflict resolution strategy
+ai-instructions init --conflict-resolution <backup|merge|interactive|skip|overwrite>
+
+# Disable interactive prompts (batch mode)
+ai-instructions init --no-interactive
+
+# Disable automatic backups (use with caution)
+ai-instructions init --no-backup
+
+# Preview mode - see what would happen
+ai-instructions init --preview
+```
+
+### 🧠 Intelligent Content Merging
+
+For markdown files, the merge strategy uses smart content analysis:
+- **Headers**: Preserves unique sections from both files
+- **Content blocks**: Avoids duplication
+- **Metadata**: Maintains existing project-specific content
+- **Templates**: Integrates new template content seamlessly
+
+### 📁 Backup System
+
+When using `backup` or `merge` strategies:
+- Creates timestamped backups: `filename.backup.YYYYMMDD_HHMMSS.ext`
+- Handles multiple backups automatically
+- Never overwrites existing backups
+
+> **💡 Pro Tip**: Use `--conflict-resolution merge` to update existing instruction files while preserving your customizations!
 
 ## 📦 Installation
 
@@ -151,6 +182,25 @@ ai-instructions init --lang ch --project-name "项目名称"
 ai-instructions init -f cursor --lang ja --project-name "カーソルプロジェクト"
 ```
 
+### Safe Updates and Migrations (v0.5.0)
+
+```bash
+# Update existing project instructions with intelligent merging
+ai-instructions init --conflict-resolution merge --project-name "existing-project"
+
+# Backup existing files before updating
+ai-instructions init --conflict-resolution backup --project-name "existing-project"
+
+# Interactive updates - choose per file
+ai-instructions init --conflict-resolution interactive --project-name "existing-project"
+
+# Non-destructive partial update
+ai-instructions init --conflict-resolution skip --project-name "existing-project"
+
+# Batch mode without prompts (CI/CD safe)
+ai-instructions init --no-interactive --conflict-resolution backup
+```
+
 ### Real-world Examples
 
 ```bash
@@ -230,6 +280,9 @@ your-project/
 | `--output` | `-o` | Output directory | Current directory | `--output ./my-project` |
 | `--project-name` | `-n` | Project name for templates | `my-project` | `--project-name "My App"` |
 | `--tool` | `-t` | AI tool type (legacy, use --output-format) | `claude` | `--tool cursor` |
+| `--conflict-resolution` | | 🛡️ Conflict resolution strategy (backup, merge, interactive, skip, overwrite) | `backup` | `--conflict-resolution merge` |
+| `--no-interactive` | | 🤖 Disable interactive conflict resolution | `false` | `--no-interactive` |
+| `--no-backup` | | 🚨 Disable automatic backups (use with caution) | `false` | `--no-backup` |
 | `--force` | | ⚠️ Force overwrite existing files (DANGEROUS) | `false` | `--force` |
 | `--preview` | | 🔍 Preview files that would be created/modified | `false` | `--preview` |
 | `--version` | | Show version number | | |

@@ -73,6 +73,18 @@ function validateOutputDirectory(outputPath: string): void {
   // The generator will handle directory creation as needed
 }
 
+/**
+ * Validates conflict resolution strategy option
+ * @param strategy - The conflict resolution strategy to validate
+ * @throws Error if unsupported strategy
+ */
+function validateConflictResolution(strategy: string): void {
+  const supportedStrategies = ['backup', 'merge', 'skip', 'overwrite'];
+  if (!supportedStrategies.includes(strategy)) {
+    throw new Error(`Unsupported conflict resolution strategy: ${strategy}. Supported strategies: ${supportedStrategies.join(', ')}`);
+  }
+}
+
 // Read package.json for version
 const packageJsonPath = join(__dirname, '../package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
@@ -90,10 +102,13 @@ program
   .option('-o, --output <path>', 'output directory', process.cwd())
   .option('-n, --project-name <name>', 'project name', 'my-project')
   .option('-t, --tool <tool>', 'AI tool (claude, github-copilot, cursor)', 'claude')
-  .option('-l, --lang <language>', 'Language for templates (en, ja, ch)', 'en')
+  .option('-l, --lang <language>', 'Language for templates (en, ja, ch)', 'ja')
   .option('-f, --output-format <format>', 'Output format (claude, cursor, copilot, windsurf)', 'claude')
   .option('--force', '⚠️  Force overwrite existing files (DANGEROUS)')
   .option('--preview', '🔍 Preview what files would be created/modified')
+  .option('-r, --conflict-resolution <strategy>', '🛡️  Default conflict resolution (backup, merge, skip, overwrite)', 'backup')
+  .option('--no-interactive', '🤖 Disable interactive conflict resolution')
+  .option('--no-backup', '🚨 Disable automatic backups (use with caution)')
   .action(async (options) => {
     try {
       // Validate project name before generating files
@@ -112,6 +127,9 @@ program
       
       // Validate output directory path
       validateOutputDirectory(options.output);
+      
+      // Validate conflict resolution strategy
+      validateConflictResolution(options.conflictResolution);
       
       // 🚨 EMERGENCY PATCH v0.2.1: Preview mode handling
       if (options.preview) {
@@ -156,7 +174,11 @@ program
         projectName: options.projectName,
         force: options.force || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
         lang: options.lang as 'en' | 'ja' | 'ch',  // Issue #11: Multi-language support
-        outputFormat: options.outputFormat as OutputFormat  // Output format support
+        outputFormat: options.outputFormat as OutputFormat,  // Output format support
+        // 🚀 v0.5.0: Advanced file conflict resolution options
+        conflictResolution: options.conflictResolution || 'backup',
+        interactive: options.interactive !== false,  // Default to true unless --no-interactive
+        backup: options.backup !== false  // Default to true unless --no-backup
       });
       
       console.log(`✅ Generated ${generator.getToolName()} template files in ${options.output}`);

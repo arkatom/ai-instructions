@@ -49,3 +49,6 @@ build/
 # Logs
 logs
 *.log
+
+# Backup files
+backups/

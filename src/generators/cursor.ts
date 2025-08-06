@@ -23,7 +23,7 @@ export class CursorGenerator extends BaseGenerator {
     // メインルールファイルを生成（言語対応版）
     const mainRuleContent = await this.loadTemplate('main.mdc', options);
     const processedContent = this.replaceTemplateVariables(mainRuleContent, options);
-    await this.safeWriteFile(join(rulesTargetPath, 'main.mdc'), processedContent, force);
+    await this.safeWriteFile(join(rulesTargetPath, 'main.mdc'), processedContent, force, options);
 
     // 追加のルールファイルをコピー（言語対応版）
     await this.safeCopyRulesDirectory(rulesTargetPath, options, force);

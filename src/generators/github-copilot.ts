@@ -31,7 +31,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
     // メインインストラクションファイルを生成（言語対応版）
     const mainInstructionContent = await this.loadTemplate('main.md', options);
     const processedContent = this.replaceTemplateVariables(mainInstructionContent, options);
-    await this.safeWriteFile(join(githubTargetPath, 'copilot-instructions.md'), processedContent, force);
+    await this.safeWriteFile(join(githubTargetPath, 'copilot-instructions.md'), processedContent, force, options);
 
     // 追加のインストラクションファイルをコピー（言語対応版）
     await this.safeCopyInstructionsDirectory(githubTargetPath, options, force);
