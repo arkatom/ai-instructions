@@ -1,78 +1,55 @@
 # GitHub Copilot Custom Instructions - {{projectName}}
 
-## 🚨 Core Development Principles
+## 🚨 Core Principles (MANDATORY)
 
-### Absolute Requirements
-- Always follow Test-Driven Development (TDD) practices
-- Write comprehensive tests before implementation
-- Maintain clean, readable, and well-documented code
-- Prioritize code quality over speed
+Must be read before executing any task, command, or tool
 
-### Project Context
-- Project Name: {{projectName}}
-- Development Approach: Issue-driven development with GitHub Flow
-- Testing Framework: Jest/TypeScript for comprehensive test coverage
+- [Basic Rules](./instructions/base.md) - Absolute requirements
+- [Deep Thinking](./instructions/deep-think.md)
+- [Memory](./instructions/memory.md)
 
-## 📋 Code Generation Guidelines
+## Project-Specific Architecture, Rules & Documentation
 
-### TypeScript/JavaScript Standards
-- Use strict TypeScript types
-- Implement proper error handling
-- Follow ESLint and Prettier configurations
-- Create modular, reusable components
+- [Project Documentation Index](./docs/README.md)
 
-### Test-Driven Development
-- Always write tests first (Red-Green-Refactor cycle)
-- Aim for high test coverage (>90%)
-- Include unit, integration, and end-to-end tests
-- Mock external dependencies appropriately
+## 📋 Situational Reference Files
 
-### Git Workflow
-- Follow GitHub Flow branch strategy
-- Use conventional commit messages
-- Create descriptive PR descriptions
-- Link all work to GitHub Issues
+### Execution Environment
 
-## 🔧 Architecture Patterns
+- [Command Execution](./instructions/command.md) - Shell, execution rules
 
-### Code Organization
-- Implement clean architecture principles
-- Use dependency injection where appropriate
-- Separate concerns with clear interfaces
-- Apply SOLID principles consistently
+### Git & Commit
 
-### Documentation
-- Include JSDoc comments for all public methods
-- Maintain README files for complex modules
-- Document API endpoints with clear examples
-- Update documentation with code changes
+- [Git Rules](./instructions/git.md) - GitHub operations, issues, branch strategy
+- [Commit Convention](./instructions/commit-rules.md) - Commit message format
+- [PR Rules](./instructions/pr-rules.md) - Pull request creation rules
 
-## 🎯 Quality Assurance
+### Development Process
 
-### Performance
-- Optimize for both development and production
-- Implement efficient algorithms and data structures
-- Consider memory usage and resource consumption
-- Profile critical code paths
+- [Development Style](./instructions/develop.md) - Issue-driven, TDD, Scrum
+- [TDD Rules](./instructions/KentBeck-tdd-rules.md) - Test-driven development
+- [Scrum Development](./instructions/scrum.md) - Sprint management
 
-### Security
-- Validate all inputs
-- Sanitize data appropriately
-- Follow security best practices
-- Keep dependencies updated
+### Terminology & Standardization
 
-## 📊 Issue-Driven Development
+- [Domain Terms](./instructions/domain-terms.md) - Unified terminology
+- [Term Update Workflow](./instructions/domain-term-workflow.md) - New term proposals
 
-### Workflow
-- Break work into small, manageable Issues
-- Create feature branches for each Issue
-- Implement comprehensive testing for each feature
-- Submit PRs with detailed descriptions
+### Investigation & Search
 
-### Communication
-- Reference Issue numbers in commits
-- Update Issue status regularly
-- Provide clear PR descriptions
-- Request reviews from appropriate team members
+- [Search Patterns](./instructions/search-patterns.md) - Git search commands
+- [Troubleshooting](./instructions/troubleshooting.md) - Problem-solving procedures
 
-Remember: Quality over speed. Take time to implement robust, well-tested solutions that maintain the project's high standards.
+### Recording & Management
+
+- [Notes & Logs](./instructions/note.md) - Work record guidelines
+
+## 🔄 Execution Flow
+
+1. Load basic rules → Confirm absolute requirements
+2. Load situation-specific files → Confirm concrete execution rules
+
+- Example: During implementation → Refer to Project Documentation Index
+
+3. Show reference confirmation → Display `✅️:{filename.md}`
+4. Execute → Work according to rules

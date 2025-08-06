@@ -1,72 +1,55 @@
 # GitHub Copilot 自定义指令 - {{projectName}}
 
-## 🚨 核心开发原则
+## 🚨 核心原则（必须）
 
-### 绝对要求
-- 始终遵循测试驱动开发（TDD）实践
-- 在实现前编写全面的测试
-- 维护干净、可读、文档完善的代码
-- 质量优先于速度
+执行任何任务、命令或工具之前必须阅读
 
-### 项目上下文
-- 项目名称: {{projectName}}
-- 开发方法: 使用GitHub Flow的Issue驱动开发
-- 测试框架: Jest/TypeScript用于全面测试覆盖
+- [基本规则](./instructions/base.md) - 绝对要求
+- [深度思考](./instructions/deep-think.md)
+- [记忆](./instructions/memory.md)
 
-## 📋 代码生成指南
+## 项目特定的架构、规则和文档
 
-### TypeScript/JavaScript标准
-- 使用严格的TypeScript类型
-- 实施适当的错误处理
-- 遵循ESLint和Prettier配置
-- 创建模块化、可重用的组件
+- [项目文档索引](./docs/README.md)
 
-### 测试驱动开发
-- 始终先写测试（Red-Green-Refactor循环）
-- 追求高测试覆盖率（>90%）
-- 包括单元、集成和端到端测试
-- 适当模拟外部依赖
+## 📋 场景参考文件
 
-### Git工作流
-- 遵循GitHub Flow分支策略
-- 使用常规提交消息
-- 创建描述性的PR说明
-- 将所有工作链接到GitHub Issues
+### 执行环境
 
-## 🔧 架构模式
+- [命令执行](./instructions/command.md) - Shell、执行规则
 
-### 代码组织
-- 实施清洁架构原则
-- 在适当的地方使用依赖注入
-- 用清晰接口分离关注点
-- 一致地应用SOLID原则
+### Git和提交
 
-### 文档
-- 为所有公共方法包含JSDoc注释
-- 维护复杂模块的README文件
-- 用清晰示例记录API端点
-- 与代码更改一起更新文档
+- [Git规则](./instructions/git.md) - GitHub操作、Issues、分支策略
+- [提交约定](./instructions/commit-rules.md) - 提交消息格式
+- [PR规则](./instructions/pr-rules.md) - 拉取请求创建规则
 
-## 🎯 质量保证
+### 开发流程
 
-### 性能
-- 为开发和生产环境优化
-- 实施高效的算法和数据结构
-- 考虑内存使用和资源消耗
-- 分析关键代码路径
+- [开发风格](./instructions/develop.md) - Issue驱动、TDD、Scrum
+- [TDD规则](./instructions/KentBeck-tdd-rules.md) - 测试驱动开发
+- [Scrum开发](./instructions/scrum.md) - Sprint管理
 
-### 安全性
-- 验证所有输入
-- 适当地清理数据
-- 遵循安全最佳实践
-- 保持依赖项更新
+### 术语和标准化
 
-## 📊 Issue驱动开发
+- [领域术语](./instructions/domain-terms.md) - 统一术语
+- [术语更新工作流](./instructions/domain-term-workflow.md) - 新术语提案
 
-### 工作流
-- 将工作分解为小的可管理Issues
-- 为每个Issue创建功能分支
-- 为每个功能实施全面测试
-- 提交带有详细描述的PR
+### 调查和搜索
 
-记住: 质量优于速度。花时间实施robust、经过充分测试的解决方案，以维护项目的高标准。
+- [搜索模式](./instructions/search-patterns.md) - Git搜索命令
+- [故障排除](./instructions/troubleshooting.md) - 问题解决程序
+
+### 记录和管理
+
+- [笔记和日志](./instructions/note.md) - 工作记录指南
+
+## 🔄 执行流程
+
+1. 加载基本规则 → 确认绝对要求
+2. 加载特定场景文件 → 确认具体执行规则
+
+- 示例：实施期间 → 参考项目文档索引
+
+3. 显示参考确认 → 显示 `✅️:{filename.md}`
+4. 执行 → 根据规则工作

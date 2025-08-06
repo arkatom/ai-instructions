@@ -10,118 +10,58 @@ globs:
 alwaysApply: true
 ---
 
-# Cursor AI Development Rules - {{projectName}}
+# Cursor AI Development Instructions - {{projectName}}
 
-## 🚨 Absolute Requirements
+## 🚨 Core Principles (MANDATORY)
 
-### Test-Driven Development (TDD)
-- ALWAYS write tests first (Red-Green-Refactor)
-- Maintain test coverage above 90%
-- Write comprehensive unit, integration, and E2E tests
-- Mock external dependencies appropriately
+Must be read before executing any task, command, or tool
 
-### Code Quality Standards
-- Use strict TypeScript with proper typing
-- Follow clean architecture principles
-- Implement comprehensive error handling
-- Maintain consistent code formatting
+- [Basic Rules](./instructions/base.md) - Absolute requirements
+- [Deep Thinking](./instructions/deep-think.md)
+- [Memory](./instructions/memory.md)
 
-## 📋 Development Workflow
+## Project-Specific Architecture, Rules & Documentation
 
-### Issue-Driven Development
-- All work must be linked to GitHub Issues
-- Break large tasks into smaller, manageable Issues
-- Use GitHub Flow branch strategy
-- Create descriptive commit messages
+- [Project Documentation Index](./docs/README.md)
 
-### Git Best Practices
-- Branch naming: `feature/{issue-number}_{description}`
-- Conventional commits: `type(scope): #issue description`
-- Always create PRs for code review
-- Include comprehensive PR descriptions
+## 📋 Situational Reference Files
 
-## 🔧 TypeScript/JavaScript Guidelines
+### Execution Environment
 
-### Code Structure
-```typescript
-// Example function structure
-export async function processData(input: DataInput): Promise<ProcessedData> {
-  // Input validation
-  if (!input || !input.isValid()) {
-    throw new ValidationError('Invalid input data');
-  }
-  
-  try {
-    // Core logic
-    const result = await transformData(input);
-    return result;
-  } catch (error) {
-    // Error handling
-    throw new ProcessingError(`Failed to process data: ${error.message}`);
-  }
-}
-```
+- [Command Execution](./instructions/command.md) - Shell, execution rules
 
-### Testing Patterns
-```typescript
-// Test structure example
-describe('ProcessData', () => {
-  it('should process valid input successfully', async () => {
-    // Arrange
-    const input = createValidInput();
-    
-    // Act
-    const result = await processData(input);
-    
-    // Assert
-    expect(result).toBeDefined();
-    expect(result.status).toBe('success');
-  });
-});
-```
+### Git & Commit Related
 
-## 🎯 Architecture Principles
+- [Git Rules](./instructions/git.md) - GitHub operations, Issues, branch strategy
+- [Commit Conventions](./instructions/commit-rules.md) - Commit message format
+- [PR Rules](./instructions/pr-rules.md) - Pull request creation guidelines
 
-### SOLID Principles
-- Single Responsibility: Each class/function has one purpose
-- Open/Closed: Open for extension, closed for modification
-- Liskov Substitution: Derived classes must be substitutable
-- Interface Segregation: Use specific interfaces
-- Dependency Inversion: Depend on abstractions
+### Development Process
 
-### Clean Code
-- Use descriptive variable and function names
-- Keep functions small and focused
-- Avoid deep nesting (max 3 levels)
-- Extract complex logic into separate functions
+- [Development Style](./instructions/develop.md) - Issue-driven, TDD, Scrum
+- [TDD Rules](./instructions/KentBeck-tdd-rules.md) - Test-driven development
+- [Scrum Development](./instructions/scrum.md) - Sprint management
 
-## 📊 Performance & Security
+### Terminology & Standardization
 
-### Performance Optimization
-- Use efficient algorithms and data structures
-- Implement proper caching strategies
-- Avoid unnecessary re-renders in React
-- Profile performance-critical code
+- [Domain Glossary](./instructions/domain-terms.md) - Unified terminology
+- [Term Update Workflow](./instructions/domain-term-workflow.md) - New term proposals
 
-### Security Best Practices
-- Validate and sanitize all inputs
-- Use parameterized queries for database access
-- Keep dependencies updated
-- Follow OWASP security guidelines
+### Research & Search
 
-## 🚀 Quality Assurance
+- [Search Patterns](./instructions/search-patterns.md) - Git search commands
+- [Troubleshooting](./instructions/troubleshooting.md) - Problem-solving procedures
 
-### Before Committing
-- [ ] All tests pass
-- [ ] Code coverage meets threshold
-- [ ] ESLint/Prettier passes
-- [ ] Type checking passes
-- [ ] Manual testing completed
+### Record & Management
 
-### Documentation Requirements
-- JSDoc comments for all public APIs
-- README updates for new features
-- API documentation for endpoints
-- Inline comments for complex logic
+- [Notes & Journal](./instructions/note.md) - Work documentation guidelines
 
-Remember: Prioritize code quality and maintainability over development speed. Write code that your future self will thank you for.
+## 🔄 Execution Flow
+
+1. Load basic rules → Confirm absolute requirements
+2. Load situation-specific files → Confirm specific execution rules
+
+- Example: During implementation → Reference project documentation index
+
+3. Show reference confirmation → Display as `✅️:{filename.md}`
+4. Execute → Perform work according to rules

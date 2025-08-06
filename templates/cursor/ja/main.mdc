@@ -10,74 +10,58 @@ globs:
 alwaysApply: true
 ---
 
-# Cursor AI 開発ルール - {{projectName}}
+# Cursor AI 開発指示 - {{projectName}}
 
-## 🚨 絶対要件
+## 🚨 基本原則（必須）
 
-### テスト駆動開発 (TDD)
-- 常にテストを最初に書く（Red-Green-Refactor）
-- テストカバレッジ90%以上を維持
-- 包括的なunit、integration、E2Eテストを書く
-- 外部依存関係を適切にモック
+すべてのタスク・コマンド・ツール実行前に必ず読み込み
 
-### コード品質基準
-- 適切な型付けでstrict TypeScriptを使用
-- クリーンアーキテクチャ原則に従う
-- 包括的なエラーハンドリングを実装
-- 一貫したコードフォーマットを維持
+- [基本ルール](./instructions/base.md) - 絶対厳守事項
+- [深層思考](./instructions/deep-think.md)
+- [memory](./instructions/memory.md)
 
-## 📋 開発ワークフロー
+## プロジェクト固有のアーキテクチャ・ルール・ドキュメント
 
-### Issue駆動開発
-- すべての作業はGitHub Issuesにリンクする必要がある
-- 大きなタスクを小さく管理可能なIssuesに分割
-- GitHub Flowブランチ戦略を使用
-- 説明的なコミットメッセージを作成
+- [プロジェクトドキュメント索引](./docs/README.md)
 
-### Git ベストプラクティス
-- ブランチ命名: `feature/{issue番号}_{説明}`
-- 従来のコミット: `type(scope): #issue 説明`
-- コードレビューのため常にPRを作成
-- 包括的なPR説明を含める
+## 📋 場面別必須参照ファイル
 
-## 🔧 TypeScript/JavaScript ガイドライン
+### 実行環境
 
-### コード構造
-```typescript
-// 関数構造の例
-export async function processData(input: DataInput): Promise<ProcessedData> {
-  // 入力検証
-  if (!input || !input.isValid()) {
-    throw new ValidationError('無効な入力データ');
-  }
-  
-  try {
-    // コアロジック
-    const result = await transformData(input);
-    return result;
-  } catch (error) {
-    // エラーハンドリング
-    throw new ProcessingError(`データ処理に失敗: ${error.message}`);
-  }
-}
-```
+- [コマンド実行](./instructions/command.md) - シェル、実行ルール
 
-## 🎯 アーキテクチャ原則
+### Git・コミット関連
 
-### SOLID原則
-- 単一責任: 各クラス/関数は一つの目的を持つ
-- 開放閉鎖: 拡張に対して開かれ、修正に対して閉じている
-- リスコフ置換: 派生クラスは置換可能でなければならない
-- インターフェース分離: 特定のインターフェースを使用
-- 依存性逆転: 抽象に依存する
+- [Gitルール](./instructions/git.md) - GitHub操作、Issue、ブランチ戦略
+- [コミット規約](./instructions/commit-rules.md) - コミットメッセージ形式
+- [PRルール](./instructions/pr-rules.md) - プルリクエスト作成規約
 
-## 🚀 品質保証
+### 開発プロセス
 
-### コミット前
-- [ ] すべてのテストがパス
-- [ ] コードカバレッジがしきい値を満たす
-- [ ] ESLint/Prettierがパス
-- [ ] 型チェックがパス
-- [ ] 手動テストが完了
+- [開発スタイル](./instructions/develop.md) - Issue駆動、TDD、スクラム
+- [TDDルール](./instructions/KentBeck-tdd-rules.md) - テスト駆動開発
+- [スクラム開発](./instructions/scrum.md) - スプリント管理
 
-コード品質と保守性を開発速度より優先すること。未来の自分が感謝するコードを書く。
+### 用語・表記統一
+
+- [ドメイン用語集](./instructions/domain-terms.md) - 統一表記確認
+- [用語更新ワークフロー](./instructions/domain-term-workflow.md) - 新用語提案
+
+### 調査・検索
+
+- [検索パターン集](./instructions/search-patterns.md) - Git検索コマンド
+- [トラブルシューティング](./instructions/troubleshooting.md) - 問題解決手順
+
+### 記録・管理
+
+- [ノート・日誌](./instructions/note.md) - 作業記録の書き方
+
+## 🔄 実行フロー
+
+1. 基本ルール読み込み → 絶対厳守事項の確認
+2. 場面に応じた専用ファイル読み込み → 具体的な実行ルール確認
+
+- 例：実装時 → プロジェクトドキュメント索引 を参照
+
+3. 参照確認の明示 → `✅️:{filename.md}` で表示
+4. 実行 → ルールに従って作業実行
