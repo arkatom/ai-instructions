@@ -50,7 +50,7 @@ describe('ClaudeGenerator', () => {
   });
 
   describe('File Generation', () => {
-    const testOutputDir = join(__dirname, '../temp-test-output');
+    const testOutputDir = join(__dirname, './temp-test-output');
 
     afterEach(async () => {
       // テスト後のクリーンアップ

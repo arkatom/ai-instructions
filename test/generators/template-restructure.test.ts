@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import { rm, readFile } from 'fs/promises';
 
 describe('Template Restructure (Issue #19)', () => {
-  const testOutputDir = join(__dirname, '../temp-test-restructure');
+  const testOutputDir = join(__dirname, './temp-test-restructure');
 
   afterEach(async () => {
     // テスト後のクリーンアップ

@@ -83,7 +83,7 @@ describe('CLI Error Handling', () => {
   it('should validate project name and show error for invalid characters', () => {
     // Red: 無効なプロジェクト名文字でエラーメッセージを表示すべき  
     const invalidProjectName = 'invalid<>project|name';
-    const testOutputDir = join(__dirname, '../temp-invalid-test');
+    const testOutputDir = join(__dirname, './temp-invalid-test');
     
     try {
       execSync(`NODE_ENV=test npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${invalidProjectName}"`, { 
@@ -99,7 +99,7 @@ describe('CLI Error Handling', () => {
 
 describe('CLI Isolated Environment Testing', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const isolatedTestDir = join(__dirname, '../temp-isolated-test');
+  const isolatedTestDir = join(__dirname, './temp-isolated-test');
 
   afterEach(async () => {
     // 完全にクリーンアップ
@@ -144,7 +144,7 @@ describe('CLI Isolated Environment Testing', () => {
 
 describe('CLI Edge Case Project Names', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const edgeCaseTestDir = join(__dirname, '../temp-edge-case-test');
+  const edgeCaseTestDir = join(__dirname, './temp-edge-case-test');
 
   afterEach(async () => {
     if (existsSync(edgeCaseTestDir)) {
@@ -226,7 +226,7 @@ describe('CLI Edge Case Project Names', () => {
 
 describe('CLI Deep Content Verification', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const contentTestDir = join(__dirname, '../temp-content-test');
+  const contentTestDir = join(__dirname, './temp-content-test');
 
   afterEach(async () => {
     if (existsSync(contentTestDir)) {
@@ -355,7 +355,7 @@ describe('CLI Deep Content Verification', () => {
 
 describe('CLI Init Command Integration', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const testOutputDir = join(__dirname, '../temp-cli-test');
+  const testOutputDir = join(__dirname, './temp-cli-test');
 
   afterEach(async () => {
     // テスト後のクリーンアップ
@@ -380,7 +380,7 @@ describe('CLI Init Command Integration', () => {
 
 describe('CLI Multi-Tool Support', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const testOutputDir = join(__dirname, '../temp-cli-multi-tool-test');
+  const testOutputDir = join(__dirname, './temp-cli-multi-tool-test');
 
   afterEach(async () => {
     // テスト後のクリーンアップ
@@ -467,7 +467,7 @@ describe('CLI Multi-Tool Support', () => {
 
 describe('CLI Multi-Language Support', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const testOutputDir = join(__dirname, '../temp-cli-lang-test');
+  const testOutputDir = join(__dirname, './temp-cli-lang-test');
 
   afterEach(async () => {
     // テスト後のクリーンアップ
@@ -603,7 +603,7 @@ describe('CLI Multi-Language Support', () => {
 
 describe('CLI Output Format Support', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const testOutputDir = join(__dirname, '../temp-cli-output-format-test');
+  const testOutputDir = join(__dirname, './temp-cli-output-format-test');
 
   afterEach(async () => {
     // テスト後のクリーンアップ
