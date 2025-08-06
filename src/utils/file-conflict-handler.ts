@@ -32,6 +32,14 @@ export interface ConflictInfo {
 }
 
 export class FileConflictHandler {
+  private backupBaseDir: string | undefined;
+  private isTestEnvironment: boolean;
+
+  constructor(options?: { backupBaseDir?: string; isTestEnvironment?: boolean }) {
+    this.backupBaseDir = options?.backupBaseDir;
+    this.isTestEnvironment = options?.isTestEnvironment || process.env.NODE_ENV === 'test';
+  }
+
   /**
    * Detect if a file conflict exists
    */
@@ -66,9 +74,11 @@ export class FileConflictHandler {
   async promptForResolution(filePath: string, existingContent: string, newContent: string): Promise<ConflictResolution> {
     const stats = require('fs').statSync(filePath);
     
-    console.log(`\n🚨 File conflict detected: ${filePath}`);
-    console.log(`📊 Existing file: ${stats.size} bytes, modified ${stats.mtime.toLocaleString()}`);
-    console.log(`📊 New content: ${newContent.length} bytes`);
+    if (!this.isTestEnvironment) {
+      console.log(`\n🚨 File conflict detected: ${filePath}`);
+      console.log(`📊 Existing file: ${stats.size} bytes, modified ${stats.mtime.toLocaleString()}`);
+      console.log(`📊 New content: ${newContent.length} bytes`);
+    }
     
     const { resolution } = await inquirer.prompt([
       {
@@ -119,28 +129,38 @@ export class FileConflictHandler {
       case ConflictResolution.BACKUP:
         await this.createTimestampedBackup(filePath);
         await writeFile(filePath, newContent, 'utf-8');
-        console.log(`✅ Backup created and new file written: ${filePath}`);
+        if (!this.isTestEnvironment) {
+          console.log(`✅ Backup created and new file written: ${filePath}`);
+        }
         break;
 
       case ConflictResolution.MERGE:
         const mergedContent = await this.mergeContent(existingContent, newContent, filePath);
         await writeFile(filePath, mergedContent, 'utf-8');
-        console.log(`✅ Content merged: ${filePath}`);
+        if (!this.isTestEnvironment) {
+          console.log(`✅ Content merged: ${filePath}`);
+        }
         break;
 
       case ConflictResolution.INTERACTIVE:
         const selectedContent = await this.promptForLineSelection(existingContent, newContent);
         await writeFile(filePath, selectedContent, 'utf-8');
-        console.log(`✅ Interactive selection applied: ${filePath}`);
+        if (!this.isTestEnvironment) {
+          console.log(`✅ Interactive selection applied: ${filePath}`);
+        }
         break;
 
       case ConflictResolution.SKIP:
-        console.log(`⏭️  Skipped: ${filePath}`);
+        if (!this.isTestEnvironment) {
+          console.log(`⏭️  Skipped: ${filePath}`);
+        }
         break;
 
       case ConflictResolution.OVERWRITE:
         await writeFile(filePath, newContent, 'utf-8');
-        console.log(`✅ File overwritten: ${filePath}`);
+        if (!this.isTestEnvironment) {
+          console.log(`✅ File overwritten: ${filePath}`);
+        }
         break;
 
       default:
@@ -157,20 +177,30 @@ export class FileConflictHandler {
       .replace(/\..+/, '')
       .replace(/(\d{8})(\d{6})/, '$1_$2');
     
-    // Create backup directory structure
+    // Determine backup base directory
     const projectRoot = process.cwd();
-    const backupDir = join(projectRoot, 'backups');
+    const backupBaseDir = this.backupBaseDir || (this.isTestEnvironment 
+      ? join(dirname(filePath), 'test-backups')  // For tests: put backups in test directory
+      : join(projectRoot, 'backups'));           // For production: use project backups/ dir
     
     // Ensure backup directory exists
-    await mkdir(backupDir, { recursive: true });
+    await mkdir(backupBaseDir, { recursive: true });
     
-    // Preserve relative path structure within backup directory
-    const relativePath = relative(projectRoot, filePath);
-    const backupFileName = `${basename(filePath)}.backup.${timestamp}`;
-    const backupFilePath = join(backupDir, dirname(relativePath), backupFileName);
-    
-    // Ensure backup subdirectory exists
-    await mkdir(dirname(backupFilePath), { recursive: true });
+    // Create backup file path
+    let backupFilePath: string;
+    if (this.isTestEnvironment && !this.backupBaseDir) {
+      // For test environment: simple backup in test-backups directory
+      const backupFileName = `${basename(filePath)}.backup.${timestamp}`;
+      backupFilePath = join(backupBaseDir, backupFileName);
+    } else {
+      // For production or custom backup dir: preserve relative path structure
+      const relativePath = relative(projectRoot, filePath);
+      const backupFileName = `${basename(filePath)}.backup.${timestamp}`;
+      backupFilePath = join(backupBaseDir, dirname(relativePath), backupFileName);
+      
+      // Ensure backup subdirectory exists
+      await mkdir(dirname(backupFilePath), { recursive: true });
+    }
     
     await copyFile(filePath, backupFilePath);
     return backupFilePath;
