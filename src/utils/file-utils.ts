@@ -1,9 +1,17 @@
 import { mkdir, writeFile, readdir, stat } from 'fs/promises';
 import { existsSync, statSync } from 'fs';
 import { join } from 'path';
+import { FileConflictHandler, ConflictResolution } from './file-conflict-handler';
 
 export interface FileUtilsOptions {
   recursive?: boolean;
+}
+
+export interface AdvancedFileWriteOptions {
+  force?: boolean;
+  interactive?: boolean;
+  defaultResolution?: ConflictResolution;
+  backup?: boolean;
 }
 
 export class FileUtils {
@@ -86,6 +94,60 @@ export class FileUtils {
     const dirPath = join(filePath, '..');
     await this.ensureDirectory(dirPath);
     await writeFile(filePath, content, 'utf-8');
+  }
+
+  /**
+   * 🚀 ADVANCED FILE SAFETY v0.5.0: Intelligent conflict resolution
+   * Writes files with comprehensive conflict resolution options
+   * Issue #26: Replaces basic safety with full interactive system
+   */
+  static async writeFileContentAdvanced(
+    filePath: string, 
+    content: string, 
+    options: AdvancedFileWriteOptions = {}
+  ): Promise<void> {
+    const {
+      force = false,
+      interactive = true,
+      defaultResolution = ConflictResolution.BACKUP,
+      backup = true
+    } = options;
+
+    // Ensure directory exists
+    const dirPath = join(filePath, '..');
+    await this.ensureDirectory(dirPath);
+
+    const conflictHandler = new FileConflictHandler();
+    const hasConflict = await conflictHandler.detectConflict(filePath);
+
+    if (!hasConflict) {
+      // No conflict, write file normally
+      await writeFile(filePath, content, 'utf-8');
+      try {
+        const chalk = (await import('chalk')).default;
+        console.log(chalk.green(`✅ File created: ${filePath}`));
+      } catch (error) {
+        console.log(`✅ File created: ${filePath}`);
+      }
+      return;
+    }
+
+    // Handle conflict based on options
+    let resolution: ConflictResolution;
+
+    if (force) {
+      resolution = ConflictResolution.OVERWRITE;
+    } else if (interactive && process.env.NODE_ENV !== 'test') {
+      // In interactive mode and not in test environment
+      const existingContent = require('fs').readFileSync(filePath, 'utf-8');
+      resolution = await conflictHandler.promptForResolution(filePath, existingContent, content);
+    } else {
+      // Use default resolution (useful for automated scenarios or testing)
+      resolution = backup ? ConflictResolution.BACKUP : defaultResolution;
+    }
+
+    // Resolve the conflict using the selected strategy
+    await conflictHandler.resolveConflict(filePath, content, resolution);
   }
 
   static async copyDirectory(sourcePath: string, targetPath: string): Promise<void> {

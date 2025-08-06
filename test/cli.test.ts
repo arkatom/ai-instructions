@@ -47,7 +47,7 @@ describe('CLI Basic Functionality', () => {
     ];
     
     // Act
-    const result = execSync(`npx ts-node "${cliPath}" init`, { 
+    const result = execSync(`npx ts-node "${cliPath}" init --no-interactive --conflict-resolution skip`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..'),
       env: { ...process.env, NODE_ENV: 'cli-test' }
@@ -67,12 +67,17 @@ describe('CLI Error Handling', () => {
     // Red: 無効なディレクトリパスでエラーメッセージを表示すべき
     const invalidPath = '/invalid/readonly/path/that/does/not/exist';
     
-    expect(() => {
-      execSync(`npx ts-node "${cliPath}" init --output "${invalidPath}"`, { 
+    try {
+      execSync(`NODE_ENV=test npx ts-node "${cliPath}" init --output "${invalidPath}"`, { 
         encoding: 'utf-8',
         cwd: join(__dirname, '..')
       });
-    }).toThrow();
+      // If we reach here, the command didn't fail as expected
+      throw new Error('Expected command to throw an error');
+    } catch (error: any) {
+      // In test environment, execSync throws with the CLI validation error
+      expect(error.message).toContain('Invalid output directory');
+    }
   });
 
   it('should validate project name and show error for invalid characters', () => {
@@ -80,12 +85,15 @@ describe('CLI Error Handling', () => {
     const invalidProjectName = 'invalid<>project|name';
     const testOutputDir = join(__dirname, '../temp-invalid-test');
     
-    expect(() => {
-      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${invalidProjectName}"`, { 
+    try {
+      execSync(`NODE_ENV=test npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${invalidProjectName}"`, { 
         encoding: 'utf-8',
         cwd: join(__dirname, '..')
       });
-    }).toThrow();
+      throw new Error('Expected command to throw an error');
+    } catch (error: any) {
+      expect(error.message).toContain('Invalid project name');
+    }
   });
 });
 
@@ -191,12 +199,15 @@ describe('CLI Edge Case Project Names', () => {
 
   it('should reject empty project names', () => {
     // Red: 空文字プロジェクト名拒否確認
-    expect(() => {
-      execSync(`npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name ""`, { 
+    try {
+      execSync(`NODE_ENV=test npx ts-node "${cliPath}" init --output "${edgeCaseTestDir}" --project-name ""`, { 
         encoding: 'utf-8',
         cwd: join(__dirname, '..')
       });
-    }).toThrow();
+      throw new Error('Expected command to throw an error');
+    } catch (error: any) {
+      expect(error.message).toContain('Invalid project name');
+    }
   });
 
   it('should handle very long project names appropriately', () => {
@@ -380,7 +391,7 @@ describe('CLI Multi-Tool Support', () => {
 
   it('should generate GitHub Copilot files with --tool github-copilot', () => {
     // Act
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-project" --tool github-copilot`, { 
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-project" --tool github-copilot --lang en`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..'),
       env: { ...process.env, NODE_ENV: 'cli-test' }
@@ -641,7 +652,7 @@ describe('CLI Output Format Support', () => {
 
   it('should accept --output-format copilot and generate GitHub Copilot 2024 format', () => {
     // RED PHASE: Test for copilot output format
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-format-test" --output-format copilot`, { 
+    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-format-test" --output-format copilot --lang en`, { 
       encoding: 'utf-8',
       cwd: join(__dirname, '..'),
       env: { ...process.env, NODE_ENV: 'cli-test' }
@@ -706,12 +717,15 @@ describe('CLI Output Format Support', () => {
 
   it('should show error for unsupported output format', () => {
     // RED PHASE: Test validation for unsupported output formats
-    expect(() => {
-      execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --output-format unsupported-format`, {
+    try {
+      execSync(`NODE_ENV=test npx ts-node "${cliPath}" init --output "${testOutputDir}" --output-format unsupported-format`, {
         cwd: join(__dirname, '..'), 
         stdio: 'pipe'
       });
-    }).toThrow();
+      throw new Error('Expected command to throw an error');
+    } catch (error: any) {
+      expect(error.message).toContain('Unsupported output format');
+    }
   });
 
   it('should display output-format option in help with supported formats', () => {
@@ -769,7 +783,23 @@ describe('CLI Output Format Support', () => {
   it('should generate format-specific file structures correctly', () => {
     // RED PHASE: Test that each format generates the correct file structure
     const formats = [
-      { format: 'claude', expectedFiles: ['CLAUDE.md', 'instructions/base.md'] },
+      { format: 'claude', expectedFiles: [
+        'CLAUDE.md', 
+        'instructions/base.md',
+        'instructions/anytime.md',
+        'instructions/command.md', 
+        'instructions/commit-rules.md',
+        'instructions/deep-think.md',
+        'instructions/develop.md',
+        'instructions/git.md',
+        'instructions/KentBeck-tdd-rules.md',
+        'instructions/memory.md',
+        'instructions/note.md',
+        'instructions/notion-retrospective.md',
+        'instructions/pr-rules.md',
+        'instructions/search-patterns.md',
+        'instructions/troubleshooting.md'
+      ] },
       { format: 'cursor', expectedFiles: ['.cursor/rules/main.mdc'] },
       { format: 'copilot', expectedFiles: ['.github/copilot-instructions.md'] },
       { format: 'windsurf', expectedFiles: ['.windsurfrules'] }

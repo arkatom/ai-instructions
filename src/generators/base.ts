@@ -11,6 +11,10 @@ export interface GenerateFilesOptions {
   force?: boolean;  // 🚨 EMERGENCY PATCH v0.2.1: Force overwrite flag
   lang?: 'en' | 'ja' | 'ch';  // Issue #11: Multi-language support
   outputFormat?: OutputFormat;  // Issue #19: Multi-format output support
+  // 🚀 v0.5.0: Advanced file conflict resolution options (Issue #26)
+  conflictResolution?: string;
+  interactive?: boolean;
+  backup?: boolean;
 }
 
 /**
@@ -111,9 +115,22 @@ export abstract class BaseGenerator {
 
   /**
    * 🚨 EMERGENCY PATCH v0.2.1: Safe file writing with conflict warnings
+   * 🚀 v0.5.0: Enhanced with advanced conflict resolution (Issue #26)
    */
-  protected async safeWriteFile(targetPath: string, content: string, force: boolean = false): Promise<void> {
-    await FileUtils.writeFileContentSafe(targetPath, content, force);
+  protected async safeWriteFile(targetPath: string, content: string, force: boolean = false, options?: GenerateFilesOptions): Promise<void> {
+    if (options && (options.conflictResolution || options.interactive !== undefined || options.backup !== undefined)) {
+      // Use advanced file writing with conflict resolution
+      const { conflictResolution, interactive, backup } = options;
+      await FileUtils.writeFileContentAdvanced(targetPath, content, {
+        force,
+        interactive: interactive !== false,
+        defaultResolution: conflictResolution as any || 'backup',
+        backup: backup !== false
+      });
+    } else {
+      // Fallback to legacy safe writing for backward compatibility
+      await FileUtils.writeFileContentSafe(targetPath, content, force);
+    }
   }
 
   /**
