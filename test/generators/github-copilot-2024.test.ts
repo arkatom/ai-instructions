@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import { rm, readFile } from 'fs/promises';
 
 describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
-  const testOutputDir = join(__dirname, '../temp-test-copilot-2024');
+  const testOutputDir = join(__dirname, './temp-test-copilot-2024');
 
   afterEach(async () => {
     // テスト後のクリーンアップ
