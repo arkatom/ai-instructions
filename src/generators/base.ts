@@ -82,6 +82,75 @@ export abstract class BaseGenerator {
   }
 
   /**
+   * Load dynamic template from core templates with tool-specific customization
+   * TDD Implementation: Green Phase - Minimal implementation to make tests pass
+   */
+  async loadDynamicTemplate(templateName: string, options?: GenerateFilesOptions): Promise<string> {
+    const lang = options?.lang || 'en';
+    
+    try {
+      // Load core template from templates/core/{lang}/templateName
+      const coreTemplatePath = join(__dirname, '../../templates/core', lang, templateName);
+      
+      // Check if core template exists
+      if (!await FileUtils.fileExists(coreTemplatePath)) {
+        // Handle missing core template directory
+        const coreDir = join(__dirname, '../../templates/core', lang);
+        if (!await FileUtils.fileExists(coreDir)) {
+          throw new Error(`Core template directory not found for language ${lang}`);
+        }
+        throw new Error(`Core template ${templateName} not found for language ${lang}`);
+      }
+      
+      const coreTemplate = await readFile(coreTemplatePath, 'utf-8');
+      
+      // Apply basic placeholder replacement for now (minimal implementation)
+      let processedContent = coreTemplate;
+      
+      // Replace project name
+      if (options?.projectName) {
+        processedContent = processedContent.replace(/\{\{projectName\}\}/g, options.projectName);
+      }
+      
+      // Replace tool name with a basic implementation
+      const toolName = this.getToolDisplayName();
+      processedContent = processedContent.replace(/\{\{toolName\}\}/g, toolName);
+      
+      // For now, just remove other placeholders to make tests pass
+      // (These will be properly implemented in later TDD cycles)
+      processedContent = processedContent.replace(/\{\{toolSpecificFeatures\}\}/g, '');
+      processedContent = processedContent.replace(/\{\{additionalInstructions\}\}/g, '');
+      processedContent = processedContent.replace(/\{\{dynamicGlobs\}\}/g, '["**/*.ts", "**/*.js", "**/*.md"]');
+      
+      return processedContent;
+    } catch (error) {
+      if (error instanceof Error && (
+        error.message.includes('not found for language') ||
+        error.message.includes('Core template directory not found')
+      )) {
+        throw error;
+      }
+      throw new Error(`Failed to load dynamic template ${templateName}: ${error}`);
+    }
+  }
+
+  /**
+   * Get display name for the tool (helper method for dynamic template generation)
+   */
+  private getToolDisplayName(): string {
+    switch (this.toolConfig.name) {
+      case 'cursor':
+        return 'Cursor AI';
+      case 'github-copilot':
+        return 'GitHub Copilot';
+      case 'claude':
+        return 'Claude AI';
+      default:
+        return this.toolConfig.name;
+    }
+  }
+
+  /**
    * Replace template variables in content
    */
   protected replaceTemplateVariables(content: string, options: GenerateFilesOptions): string {
