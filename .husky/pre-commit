@@ -9,11 +9,14 @@ if ! npm run build > /dev/null 2>&1; then
 fi
 echo "✅ TypeScript OK"
 
-# Lint check (when available)
-if ! npm run lint > /dev/null 2>&1; then
-  echo "⚠️ Lint check skipped (not configured)"
-else
+# Lint check (MUST PASS - no failures allowed)
+echo "🔍 Lint check..."
+if npm run lint > /dev/null 2>&1; then
   echo "✅ Lint OK"
+else
+  echo "❌ Lint failed - blocking commit:"
+  npm run lint  # Show errors
+  exit 1
 fi
 
 # Test check (MUST PASS - no failures allowed)
