@@ -138,7 +138,7 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
     // Convert file references to GitHub-relative paths
     transformed = transformed.replace(
       /\[([^\]]+)\]\(\.\/instructions\/([^)]+)\)/g,
-      '[$1](instructions/$2)'
+      '[$1](../instructions/$2)'
     );
     
     // Add GitHub-specific context hints

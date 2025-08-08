@@ -113,8 +113,9 @@ export class ClaudeGenerator extends BaseGenerator {
       case OutputFormat.CURSOR:
       case OutputFormat.COPILOT:  
       case OutputFormat.WINDSURF:
+        return true; // These formats also need instructions directory for references
       default:
-        return false; // These formats are typically self-contained
+        return false;
     }
   }
 

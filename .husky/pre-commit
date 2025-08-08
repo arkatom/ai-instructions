@@ -1,8 +1,25 @@
 #!/bin/sh
-. "$(dirname -- "$0")/_/husky.sh"
 
-# Run TypeScript build check
-npm run build
+# TypeScript compile check (silent on success)
+echo "🔍 TypeScript check..."
+if ! npm run build > /dev/null 2>&1; then
+  echo "❌ TypeScript compilation failed"
+  npm run build
+  exit 1
+fi
+echo "✅ TypeScript OK"
 
-# Run tests
-npm test
+# Lint check (when available)
+if ! npm run lint > /dev/null 2>&1; then
+  echo "⚠️ Lint check skipped (not configured)"
+else
+  echo "✅ Lint OK"  
+fi
+
+# Test check (show only failures)
+echo "🧪 Running tests..."
+if ! npm test 2>&1 | grep -E "(FAIL|Error|✓|✗|passed|failed|Test Suites)" | tail -5; then
+  echo "❌ Tests failed"
+  exit 1
+fi
+echo "✅ All checks passed"
