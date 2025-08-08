@@ -21,11 +21,11 @@ export class WindsurfConverter extends BaseFormatConverter {
     return OutputFormat.WINDSURF;
   }
 
-  async convert(metadata: ConversionMetadata): Promise<ConversionResult> {
-    const { sourceContent, projectName, lang = 'en' } = metadata;
+  async convert(_metadata: ConversionMetadata): Promise<ConversionResult> {
+    const { sourceContent, projectName, lang: _lang = 'en' } = _metadata;
     
     // Process the content
-    let processedContent = this.replaceTemplateVariables(sourceContent, metadata);
+    let processedContent = this.replaceTemplateVariables(sourceContent, _metadata);
     
     // Remove existing YAML frontmatter (Windsurf uses custom format)
     processedContent = this.removeYamlFrontmatter(processedContent);
@@ -40,13 +40,13 @@ export class WindsurfConverter extends BaseFormatConverter {
     
     return {
       content: processedContent,
-      targetPath: this.getTargetPath('', metadata),
+      targetPath: this.getTargetPath('', _metadata),
       format: OutputFormat.WINDSURF,
-      metadata
+      metadata: _metadata
     };
   }
 
-  getTargetPath(outputDir: string, metadata: ConversionMetadata): string {
+  getTargetPath(outputDir: string, _metadata: ConversionMetadata): string {
     // Windsurf expects .windsurfrules in project root
     return join(outputDir, '.windsurfrules');
   }

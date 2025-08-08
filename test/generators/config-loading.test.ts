@@ -7,7 +7,7 @@
  */
 
 import { GeneratorFactory } from '../../src/generators/factory';
-import { BaseGenerator } from '../../src/generators/base';
+// BaseGenerator import removed - not used
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { tmpdir } from 'os';
 import { mkdtemp, rm } from 'fs/promises';
@@ -182,6 +182,7 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       const generator = GeneratorFactory.createGenerator('cursor');
       
       // Mock broken config loading to test JSON parsing error handling
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       jest.spyOn(require('fs/promises'), 'readFile').mockResolvedValue('invalid json content');
       
       // ACT & ASSERT - Should throw JSON parsing error

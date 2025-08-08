@@ -1,5 +1,5 @@
 import { mkdir, writeFile, readdir, stat } from 'fs/promises';
-import { existsSync, statSync } from 'fs';
+import { existsSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { FileConflictHandler, ConflictResolution } from './file-conflict-handler';
 
@@ -52,7 +52,7 @@ export class FileUtils {
         console.log(chalk.yellow('💡 Use --force flag to suppress this warning'));
         console.log(chalk.yellow('💡 Or wait for v0.3.0 for interactive conflict resolution'));
         console.log('');
-      } catch (error) {
+      } catch {
         // Fallback to plain console if chalk not available
         console.log('⚠️  WARNING: File already exists and will be OVERWRITTEN!');
         console.log(`📄 Target: ${filePath}`);
@@ -70,14 +70,14 @@ export class FileUtils {
       try {
         const chalk = (await import('chalk')).default;
         console.log(chalk.green(`✅ File overwritten: ${filePath}`));
-      } catch (error) {
+      } catch {
         console.log(`✅ File overwritten: ${filePath}`);
       }
     } else {
       try {
         const chalk = (await import('chalk')).default;
         console.log(chalk.green(`✅ File created: ${filePath}`));
-      } catch (error) {
+      } catch {
         console.log(`✅ File created: ${filePath}`);
       }
     }
@@ -126,7 +126,7 @@ export class FileUtils {
       try {
         const chalk = (await import('chalk')).default;
         console.log(chalk.green(`✅ File created: ${filePath}`));
-      } catch (error) {
+      } catch {
         console.log(`✅ File created: ${filePath}`);
       }
       return;
@@ -139,7 +139,7 @@ export class FileUtils {
       resolution = ConflictResolution.OVERWRITE;
     } else if (interactive && process.env.NODE_ENV !== 'test') {
       // In interactive mode and not in test environment
-      const existingContent = require('fs').readFileSync(filePath, 'utf-8');
+      const existingContent = readFileSync(filePath, 'utf-8');
       resolution = await conflictHandler.promptForResolution(filePath, existingContent, content);
     } else {
       // Use default resolution (useful for automated scenarios or testing)

@@ -15,7 +15,7 @@ describe('ClaudeGenerator OutputFormat Support', () => {
     // Ensure clean test environment
     try {
       await rm(tempDir, { recursive: true });
-    } catch (error) {
+    } catch {
       // Directory might not exist, ignore
     }
     await mkdir(tempDir, { recursive: true });
@@ -25,7 +25,7 @@ describe('ClaudeGenerator OutputFormat Support', () => {
     // Cleanup test directory
     try {
       await rm(tempDir, { recursive: true });
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   });
@@ -195,8 +195,10 @@ describe('ClaudeGenerator OutputFormat Support', () => {
   describe('Error Handling', () => {
     it('should throw meaningful error when conversion fails', async () => {
       // Mock the ConverterFactory to throw an error
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const originalConvert = require('../../src/converters').ConverterFactory.convert;
       const mockConvert = jest.fn().mockRejectedValue(new Error('Conversion failed'));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('../../src/converters').ConverterFactory.convert = mockConvert;
 
       await expect(generator.generateFiles(tempDir, {
@@ -206,6 +208,7 @@ describe('ClaudeGenerator OutputFormat Support', () => {
       })).rejects.toThrow('Failed to generate cursor format');
 
       // Restore original function
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('../../src/converters').ConverterFactory.convert = originalConvert;
     });
 

@@ -16,12 +16,12 @@ export class GitHubCopilotGenerator extends BaseGenerator {
   }
 
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
-    const force = options.force || false;
+    const _force = options.force || false;
     
     try {
       const chalk = (await import('chalk')).default;
       console.log(chalk.blue('🤖 Generating GitHub Copilot instruction files...'));
-    } catch (error) {
+    } catch {
       console.log('🤖 Generating GitHub Copilot instruction files...');
     }
 
@@ -38,7 +38,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
     try {
       const chalk = (await import('chalk')).default;
       console.log(chalk.green('✅ GitHub Copilot template generation completed!'));
-    } catch (error) {
+    } catch {
       console.log('✅ GitHub Copilot template generation completed!');
     }
   }
@@ -47,7 +47,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
    * Language-aware additional instructions copying for GitHub Copilot (2024 standard)
    * Note: With 2024 standard, additional instructions are rare since main file is self-contained
    */
-  private async safeCopyInstructionsDirectory(githubTargetPath: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
+  private async safeCopyInstructionsDirectory(githubTargetPath: string, options: GenerateFilesOptions, _force: boolean): Promise<void> {
     const lang = options.lang || 'en';
     
     try {
@@ -81,7 +81,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
       
       // No additional instructions found - this is normal for GitHub Copilot 2024 standard
       console.warn('No additional instructions directory found for GitHub Copilot');
-    } catch (error) {
+    } catch {
       console.warn('No additional instructions directory found for GitHub Copilot');
     }
   }

@@ -21,11 +21,11 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
     return OutputFormat.COPILOT;
   }
 
-  async convert(metadata: ConversionMetadata): Promise<ConversionResult> {
-    const { sourceContent, projectName, lang = 'en' } = metadata;
+  async convert(_metadata: ConversionMetadata): Promise<ConversionResult> {
+    const { sourceContent, projectName, lang: _lang = 'en' } = _metadata;
     
     // Process the content
-    let processedContent = this.replaceTemplateVariables(sourceContent, metadata);
+    let processedContent = this.replaceTemplateVariables(sourceContent, _metadata);
     
     // Remove existing YAML frontmatter (Copilot doesn't use it)
     processedContent = this.removeYamlFrontmatter(processedContent);
@@ -40,13 +40,13 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
     
     return {
       content: processedContent,
-      targetPath: this.getTargetPath('', metadata),
+      targetPath: this.getTargetPath('', _metadata),
       format: OutputFormat.COPILOT,
-      metadata
+      metadata: _metadata
     };
   }
 
-  getTargetPath(outputDir: string, metadata: ConversionMetadata): string {
+  getTargetPath(outputDir: string, _metadata: ConversionMetadata): string {
     // 2024 GitHub Copilot standard path
     return join(outputDir, '.github', 'copilot-instructions.md');
   }
@@ -236,6 +236,7 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
    * Optimize content for inline code completion
    */
   private optimizeForInlineCompletion(content: string): string {
+    // eslint-disable-next-line prefer-const
     let optimized = content;
     
     // Add context for common code patterns

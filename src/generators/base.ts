@@ -264,7 +264,7 @@ export abstract class BaseGenerator {
       const instructionsPath = join(this.templateDir, 'instructions');
       const files = await readdir(instructionsPath);
       return files.filter(file => file.endsWith('.md'));
-    } catch (error) {
+    } catch {
       throw new Error('Instructions directory not found');
     }
   }

@@ -20,13 +20,13 @@ export class ClaudeGenerator extends BaseGenerator {
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
     const force = options.force || false;
     const outputFormat = options.outputFormat || OutputFormat.CLAUDE;
-    const projectName = options.projectName || 'ai-project';
+    const _projectName = options.projectName || 'ai-project';
     
     // 🚨 EMERGENCY PATCH v0.2.1: Safe file generation with warnings
     try {
       const chalk = (await import('chalk')).default;
       console.log(chalk.blue(`🤖 Generating ${outputFormat} AI instruction files...`));
-    } catch (error) {
+    } catch {
       console.log(`🤖 Generating ${outputFormat} AI instruction files...`);
     }
 
@@ -51,7 +51,7 @@ export class ClaudeGenerator extends BaseGenerator {
       if (outputFormat !== OutputFormat.CLAUDE) {
         console.log(chalk.yellow(`🔄 Converted from Claude format to ${outputFormat}`));
       }
-    } catch (error) {
+    } catch {
       console.log(`✅ ${outputFormat} template generation completed!`);
       if (outputFormat !== OutputFormat.CLAUDE) {
         console.log(`🔄 Converted from Claude format to ${outputFormat}`);
@@ -69,13 +69,13 @@ export class ClaudeGenerator extends BaseGenerator {
     options: GenerateFilesOptions,
     force: boolean
   ): Promise<void> {
-    const projectName = options.projectName || 'ai-project';
+    const _projectName = options.projectName || 'ai-project';
     const lang = options.lang || 'en';
 
     try {
       // Prepare conversion metadata
       const metadata: ConversionMetadata = {
-        projectName,
+        projectName: _projectName,
         lang,
         sourceContent,
         targetFormat: outputFormat,
@@ -97,8 +97,8 @@ export class ClaudeGenerator extends BaseGenerator {
         await this.safeCopyInstructionsDirectory(targetDir, options, force);
       }
 
-    } catch (error) {
-      throw new Error(`Failed to generate ${outputFormat} format: ${error}`);
+    } catch (_error) {
+      throw new Error(`Failed to generate ${outputFormat} format: ${_error}`);
     }
   }
 
@@ -186,8 +186,8 @@ export class ClaudeGenerator extends BaseGenerator {
       }
       
       throw new Error(`Instructions directory not found for language ${lang}`);
-    } catch (error) {
-      throw new Error(`Failed to copy instructions directory: ${error}`);
+    } catch (_error) {
+      throw new Error(`Failed to copy instructions directory: ${_error}`);
     }
   }
 }
