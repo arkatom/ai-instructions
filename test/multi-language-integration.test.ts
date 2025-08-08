@@ -262,7 +262,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
         
         // If it succeeds, it should have generated some files
         expect(existsSync(tempDir)).toBe(true);
-      } catch (error) {
+      } catch {
         // If it throws, that's also acceptable behavior
         expect(error).toBeDefined();
       }

@@ -75,7 +75,7 @@ export abstract class BaseGenerator {
       }
       
       throw new Error(`Template ${templateName} not found for language ${lang}`);
-    } catch (error) {
+    } catch {
       if (error instanceof Error && error.message.includes('not found for language')) {
         throw error;
       }
@@ -116,7 +116,7 @@ export abstract class BaseGenerator {
       // Apply advanced dynamic replacements
       return this.applyDynamicReplacements(coreTemplate, toolConfig, languageConfig, options);
       
-    } catch (error) {
+    } catch {
       if (error instanceof Error && (
         error.message.includes('not found for language') ||
         error.message.includes('Core template directory not found') ||
@@ -213,7 +213,7 @@ export abstract class BaseGenerator {
       
       const configContent = await readFile(toolConfigPath, 'utf-8');
       return JSON.parse(configContent);
-    } catch (error) {
+    } catch {
       if (error instanceof Error && error.message.includes('Tool configuration not found')) {
         throw error;
       }
@@ -235,7 +235,7 @@ export abstract class BaseGenerator {
       
       const configContent = await readFile(langConfigPath, 'utf-8');
       return JSON.parse(configContent);
-    } catch (error) {
+    } catch {
       if (error instanceof Error && error.message.includes('Language configuration not found')) {
         throw error;
       }
@@ -264,7 +264,7 @@ export abstract class BaseGenerator {
       const instructionsPath = join(this.templateDir, 'instructions');
       const files = await readdir(instructionsPath);
       return files.filter(file => file.endsWith('.md'));
-    } catch (error) {
+    } catch {
       throw new Error('Instructions directory not found');
     }
   }

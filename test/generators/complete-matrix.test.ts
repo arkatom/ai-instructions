@@ -7,7 +7,7 @@
  */
 
 import { GeneratorFactory } from '../../src/generators/factory';
-import { BaseGenerator } from '../../src/generators/base';
+// BaseGenerator import removed - not used
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { tmpdir } from 'os';
 import { mkdtemp, rm } from 'fs/promises';
@@ -140,7 +140,7 @@ describe('Dynamic Template Generation - Complete Matrix Test', () => {
       expect(results.size).toBe(9);
       
       // All results should have similar structure
-      results.forEach((result, key) => {
+      results.forEach((result, _key) => {
         expect(result).toContain('🚨'); // Core principles marker
         expect(result).toContain('📋'); // Reference files marker
         expect(result).toContain('🔄'); // Execution flow marker
@@ -286,8 +286,8 @@ describe('Dynamic Template Generation - Complete Matrix Test', () => {
   describe('Error Handling Matrix', () => {
     test('should handle invalid tool-language combinations gracefully', async () => {
       // ARRANGE
-      const validTools = ['cursor', 'github-copilot', 'claude'];
-      const validLanguages = ['ja', 'en', 'ch'];
+      const _validTools = ['cursor', 'github-copilot', 'claude'];
+      const _validLanguages = ['ja', 'en', 'ch'];
       
       // ACT & ASSERT - Invalid tool
       expect(() => GeneratorFactory.createGenerator('invalid-tool' as any))

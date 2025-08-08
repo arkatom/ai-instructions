@@ -15,12 +15,12 @@ export class CursorGenerator extends BaseGenerator {
   }
 
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
-    const force = options.force || false;
+    const _force = options.force || false;
     
     try {
       const chalk = (await import('chalk')).default;
       console.log(chalk.blue(`🤖 Generating cursor AI instruction files...`));
-    } catch (error) {
+    } catch {
       console.log(`🤖 Generating cursor AI instruction files...`);
     }
 
@@ -37,7 +37,7 @@ export class CursorGenerator extends BaseGenerator {
     try {
       const chalk = (await import('chalk')).default;
       console.log(chalk.green(`✅ Cursor template generation completed!`));
-    } catch (error) {
+    } catch {
       console.log(`✅ Cursor template generation completed!`);
     }
   }
@@ -45,7 +45,7 @@ export class CursorGenerator extends BaseGenerator {
   /**
    * Language-aware rules directory copying for Cursor
    */
-  private async safeCopyRulesDirectory(rulesTargetPath: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
+  private async safeCopyRulesDirectory(rulesTargetPath: string, options: GenerateFilesOptions, _force: boolean): Promise<void> {
     const lang = options.lang || 'en';
     
     try {
@@ -78,7 +78,7 @@ export class CursorGenerator extends BaseGenerator {
       
       // No rules directory found - this is normal for Cursor
       console.warn('No additional rules directory found for Cursor');
-    } catch (error) {
+    } catch {
       console.warn('No additional rules directory found for Cursor');
     }
   }

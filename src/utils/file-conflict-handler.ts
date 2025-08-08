@@ -10,9 +10,9 @@
  * - Overwrite: Replace existing file (current behavior)
  */
 
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, statSync } from 'fs';
 import { copyFile, writeFile, mkdir } from 'fs/promises';
-import { extname, join, dirname, basename, resolve, relative } from 'path';
+import { extname, join, dirname, basename, relative } from 'path';
 import inquirer from 'inquirer';
 
 export enum ConflictResolution {
@@ -38,7 +38,7 @@ export class FileConflictHandler {
   async detectConflict(filePath: string): Promise<boolean> {
     try {
       return existsSync(filePath);
-    } catch (error) {
+    } catch {
       // If we can't access the file, assume no conflict
       return false;
     }
@@ -49,7 +49,7 @@ export class FileConflictHandler {
    */
   async getConflictInfo(filePath: string, newContent: string): Promise<ConflictInfo> {
     const existingContent = readFileSync(filePath, 'utf-8');
-    const stats = require('fs').statSync(filePath);
+    const stats = statSync(filePath);
     
     return {
       filePath,
@@ -64,7 +64,7 @@ export class FileConflictHandler {
    * Prompt user for conflict resolution strategy
    */
   async promptForResolution(filePath: string, existingContent: string, newContent: string): Promise<ConflictResolution> {
-    const stats = require('fs').statSync(filePath);
+    const stats = statSync(filePath);
     
     console.log(`\n🚨 File conflict detected: ${filePath}`);
     console.log(`📊 Existing file: ${stats.size} bytes, modified ${stats.mtime.toLocaleString()}`);
@@ -122,17 +122,19 @@ export class FileConflictHandler {
         console.log(`✅ Backup created and new file written: ${filePath}`);
         break;
 
-      case ConflictResolution.MERGE:
+      case ConflictResolution.MERGE: {
         const mergedContent = await this.mergeContent(existingContent, newContent, filePath);
         await writeFile(filePath, mergedContent, 'utf-8');
         console.log(`✅ Content merged: ${filePath}`);
         break;
+      }
 
-      case ConflictResolution.INTERACTIVE:
+      case ConflictResolution.INTERACTIVE: {
         const selectedContent = await this.promptForLineSelection(existingContent, newContent);
         await writeFile(filePath, selectedContent, 'utf-8');
         console.log(`✅ Interactive selection applied: ${filePath}`);
         break;
+      }
 
       case ConflictResolution.SKIP:
         console.log(`⏭️  Skipped: ${filePath}`);
@@ -333,7 +335,7 @@ export class FileConflictHandler {
         type: 'checkbox',
         name: 'selectedLines',
         message: 'Select which lines to keep:',
-        choices: allLines.map((item, index) => ({
+        choices: allLines.map((item, _index) => ({
           name: `${this.getSourcePrefix(item.source)} ${item.line || '(empty line)'}`,
           value: item.line,
           checked: true // Default to keeping all lines

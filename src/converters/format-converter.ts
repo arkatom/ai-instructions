@@ -42,7 +42,7 @@ export interface FormatConverter {
   /**
    * Get the target file path for the converted content
    */
-  getTargetPath(outputDir: string, metadata: ConversionMetadata): string;
+  getTargetPath(outputDir: string, _metadata: ConversionMetadata): string;
   
   /**
    * Validate content before/after conversion
@@ -60,13 +60,13 @@ export interface FormatConverter {
  */
 export abstract class BaseFormatConverter implements FormatConverter {
   abstract convert(metadata: ConversionMetadata): Promise<ConversionResult>;
-  abstract getTargetPath(outputDir: string, metadata: ConversionMetadata): string;
+  abstract getTargetPath(outputDir: string, _metadata: ConversionMetadata): string;
   abstract getSupportedFormat(): OutputFormat;
 
   /**
    * Basic content validation - checks for non-empty content
    */
-  validateContent(content: string, format: OutputFormat): boolean {
+  validateContent(content: string, _format: OutputFormat): boolean {
     if (!content || content.trim().length === 0) {
       return false;
     }
@@ -116,7 +116,7 @@ export abstract class BaseFormatConverter implements FormatConverter {
             metadata[match[1]] = match[2].trim();
           }
         }
-      } catch (error) {
+      } catch {
         console.warn('Failed to parse YAML frontmatter:', error);
       }
     }

@@ -7,7 +7,7 @@
  */
 
 import { GeneratorFactory } from '../../src/generators/factory';
-import { BaseGenerator } from '../../src/generators/base';
+// BaseGenerator import removed - not used
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { tmpdir } from 'os';
 import { mkdtemp, rm } from 'fs/promises';
@@ -149,7 +149,9 @@ describe('Dynamic Template Generation - Core Template Loading', () => {
 
     test('should contain placeholder markers in raw core template', async () => {
       // ARRANGE
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs/promises');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const path = require('path');
       
       // ACT - Read raw core template directly (not processed)
