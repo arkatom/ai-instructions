@@ -116,7 +116,7 @@ export abstract class BaseFormatConverter implements FormatConverter {
             metadata[match[1]] = match[2].trim();
           }
         }
-      } catch {
+      } catch (error) {
         console.warn('Failed to parse YAML frontmatter:', error);
       }
     }

@@ -97,8 +97,8 @@ export class ClaudeGenerator extends BaseGenerator {
         await this.safeCopyInstructionsDirectory(targetDir, options, force);
       }
 
-    } catch {
-      throw new Error(`Failed to generate ${outputFormat} format: ${error}`);
+    } catch (_error) {
+      throw new Error(`Failed to generate ${outputFormat} format: ${_error}`);
     }
   }
 
@@ -186,8 +186,8 @@ export class ClaudeGenerator extends BaseGenerator {
       }
       
       throw new Error(`Instructions directory not found for language ${lang}`);
-    } catch {
-      throw new Error(`Failed to copy instructions directory: ${error}`);
+    } catch (_error) {
+      throw new Error(`Failed to copy instructions directory: ${_error}`);
     }
   }
 }

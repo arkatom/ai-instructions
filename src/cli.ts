@@ -143,7 +143,7 @@ program
           console.log(`📦 Project name: ${options.projectName}`);
           console.log(`🌍 Language: ${options.lang}`);
           return;
-        } catch {
+        } catch (error) {
           console.log('🔍 Preview mode: Analyzing potential file conflicts...');
           console.log('⚠️  Preview functionality will be enhanced in v0.3.0');
           console.log('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
@@ -161,7 +161,7 @@ program
           const chalk = (await import('chalk')).default;
           console.log(chalk.red('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!'));
           console.log(chalk.red('💣 Proceeding in 2 seconds...'));
-        } catch {
+        } catch (error) {
           console.log('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!');
           console.log('💣 Proceeding in 2 seconds...');
         }
@@ -191,12 +191,12 @@ program
           const chalk = (await import('chalk')).default;
           console.log(chalk.cyan('💡 Tip: Use --preview to check for conflicts before generating'));
           console.log(chalk.cyan('💡 Tip: Use --force to skip warnings (be careful!)'));
-        } catch {
+        } catch (error) {
           console.log('💡 Tip: Use --preview to check for conflicts before generating');
           console.log('💡 Tip: Use --force to skip warnings (be careful!)');
         }
       }
-    } catch {
+    } catch (error) {
       if (process.env.NODE_ENV === 'test') {
         // In test environment, throw the error so tests can catch it
         throw error;
