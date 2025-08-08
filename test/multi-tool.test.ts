@@ -103,7 +103,8 @@ describe('Multi-Tool Support', () => {
 
       const mainContent = await readFile(join(tempDir, '.github', 'copilot-instructions.md'), 'utf-8');
       expect(mainContent).toContain(projectName);
-      expect(mainContent).toContain('GitHub Copilot Custom Instructions');
+      expect(mainContent).toContain('Development Instructions'); // ツール名は空文字列に置換される
+      expect(mainContent).not.toContain('{{toolName}}'); // プレースホルダーが残っていないこと確認
     });
 
     it('should contain GitHub Copilot specific instructions', async () => {

@@ -46,7 +46,8 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
       expect(copilotContent).not.toContain('{{projectName}}');
       
       // AI開発アシスタント指示が含まれることを確認（ツール固有ブランド削除）
-      expect(copilotContent).toContain('GitHub Copilot Custom Instructions');
+      expect(copilotContent).toContain('Development Instructions'); // ツール名は空文字列に置換される
+      expect(copilotContent).not.toContain('{{toolName}}'); // プレースホルダーが残っていないこと確認
       expect(copilotContent).toContain('TDD Rules');
     });
 

@@ -1,4 +1,10 @@
-# AI Development Assistant Instructions - {{projectName}}
+---
+description: Main development instructions for {{projectName}}
+globs: {{dynamicGlobs}}
+alwaysApply: true
+---
+
+# {{toolName}} Development Instructions - {{projectName}}
 
 ## 🚨 Core Principles (MANDATORY)
 

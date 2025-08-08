@@ -36,8 +36,7 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       
       expect(config.displayName).toBe('Cursor AI');
       expect(config.fileExtension).toBe('.mdc');
-      expect(config.customSections).toHaveProperty('toolSpecificFeatures');
-      expect(config.customSections).toHaveProperty('additionalInstructions');
+      // customSections removed in dynamic template system - features now handled via converters
       expect(config.globs).toHaveProperty('inherit');
       expect(config.globs.inherit).toBe('javascript');
       expect(config.globs.additional).toContain('**/*.mdc');
@@ -53,8 +52,7 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       
       expect(config.displayName).toBe('GitHub Copilot');
       expect(config.fileExtension).toBe('.md');
-      expect(config.customSections.toolSpecificFeatures).toContain('GitHub Copilot 固有機能');
-      expect(config.customSections.additionalInstructions).toContain('GitHub Copilot Chat');
+      // customSections removed in dynamic template system - features handled via converters
       expect(config.globs.inherit).toBe('universal');
       expect(config.description).toContain('GitHub Copilot用の設定ファイル');
     });
@@ -68,9 +66,7 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       
       expect(config.displayName).toBe('Claude AI');
       expect(config.fileExtension).toBe('.md');
-      expect(config.customSections.toolSpecificFeatures).toContain('深層推論');
-      expect(config.customSections.toolSpecificFeatures).toContain('200K tokens');
-      expect(config.customSections.additionalInstructions).toContain('分析能力');
+      // customSections removed in dynamic template system - features handled via converters
       expect(config.globs.inherit).toBe('universal');
     });
   });
@@ -83,16 +79,15 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       // ACT & ASSERT - This will FAIL initially (Red Phase)
       const jsConfig = await generator.loadLanguageConfig('javascript');
       
-      expect(jsConfig.globs).toContain('**/*.ts');
-      expect(jsConfig.globs).toContain('**/*.tsx');
+      // TypeScript globs should be in typescript.json, not javascript.json
       expect(jsConfig.globs).toContain('**/*.js');
       expect(jsConfig.globs).toContain('**/*.jsx');
       expect(jsConfig.globs).toContain('**/*.json');
       expect(jsConfig.globs).toContain('**/*.md');
       expect(jsConfig.globs).toContain('**/package.json');
-      expect(jsConfig.globs).toContain('**/tsconfig.json');
-      expect(jsConfig.description).toContain('JavaScript/TypeScript');
-      expect(jsConfig.languageFeatures).toContain('TypeScript 型システム');
+      // tsconfig.json and TypeScript features should be in typescript.json
+      expect(jsConfig.description).toContain('JavaScript');
+      expect(jsConfig.languageFeatures).toContain('ES6/ES2015+ 構文');
     });
 
     test('should load python language configuration', async () => {
@@ -210,7 +205,7 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       
       // ASSERT - Both configs should load successfully
       expect(toolConfig.displayName).toBe('Cursor AI');
-      expect(jsConfig.description).toContain('JavaScript/TypeScript');
+      expect(jsConfig.description).toContain('JavaScript');
       
       // Configs should be independent
       expect(toolConfig).not.toHaveProperty('languageFeatures');
@@ -228,7 +223,7 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       
       // ASSERT - Inheritance relationship should work
       expect(inheritedLanguage).toBe('javascript');
-      expect(langConfig.globs).toContain('**/*.ts');
+      expect(langConfig.globs).toContain('**/*.js'); // JavaScript config should contain JS files
       expect(langConfig.globs).toContain('**/*.js');
     });
   });

@@ -16,10 +16,11 @@ else
   echo "✅ Lint OK"  
 fi
 
-# Test check (show only failures)
+# Test check (MUST PASS - no failures allowed)
 echo "🧪 Running tests..."
-if ! npm test 2>&1 | grep -E "(FAIL|Error|✓|✗|passed|failed|Test Suites)" | tail -5; then
-  echo "❌ Tests failed"
+if ! npm test > /dev/null 2>&1; then
+  echo "❌ Tests failed - blocking commit:"
+  npm test | grep -E "(FAIL|failed|Test Suites:)" || npm test
   exit 1
 fi
-echo "✅ All checks passed"
+echo "✅ All tests passed"

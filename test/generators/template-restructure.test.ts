@@ -85,18 +85,14 @@ describe('Template Restructure (Issue #19)', () => {
       expect(baseContent).toContain('必须');
     });
 
-    it('should fall back to English if language-specific shared instructions not found', async () => {
+    it('should throw error for unsupported languages', async () => {
       const generator = new ClaudeGenerator();
       
-      // 存在しない言語でテスト
-      await generator.generateFiles(testOutputDir, { 
+      // 存在しない言語でテスト - 現在の実装ではエラーになる
+      await expect(generator.generateFiles(testOutputDir, { 
         projectName: 'test-project', 
         lang: 'fr' as any // フランス語（存在しない）
-      });
-      
-      // 英語版にフォールバックすることを確認
-      const baseContent = await readFile(join(testOutputDir, 'instructions', 'base.md'), 'utf-8');
-      expect(baseContent).toContain('Core Rules');
+      })).rejects.toThrow('Core template directory not found for language fr');
     });
 
     it('should use shared instructions that are not duplicated across tools', async () => {

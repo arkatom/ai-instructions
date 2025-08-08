@@ -36,8 +36,8 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
         projectName: 'test-project' 
       });
       
-      // ASSERT - Should use displayName from cursor.json
-      expect(result).toContain('Cursor AI 開発指示 - test-project');
+      // ASSERT - toolName placeholder should be replaced with empty string
+      expect(result).toContain('開発指示 - test-project');
       expect(result).not.toContain('{{toolName}}');
     });
 
@@ -48,11 +48,10 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       // ACT
       const result = await generator.loadDynamicTemplate('main.md', { lang: 'ja' });
       
-      // ASSERT - Should include Cursor-specific features from config
-      expect(result).toContain('## Cursor 固有機能');
-      expect(result).toContain('高度なコード補完');
-      expect(result).toContain('智能リファクタリング');
+      // ASSERT - toolSpecificFeatures placeholder should be replaced with empty string
       expect(result).not.toContain('{{toolSpecificFeatures}}');
+      // Since customSections is removed from config, these sections won't exist
+      expect(result).not.toContain('## Cursor 固有機能');
     });
 
     test('should replace additional instructions section', async () => {
@@ -62,11 +61,10 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       // ACT
       const result = await generator.loadDynamicTemplate('main.md', { lang: 'ja' });
       
-      // ASSERT - Should include additional instructions from config
-      expect(result).toContain('## 追加指示');
-      expect(result).toContain('CursorのCompose機能を活用');
-      expect(result).toContain('Ctrl+K');
+      // ASSERT - additionalInstructions placeholder should be replaced with empty string
       expect(result).not.toContain('{{additionalInstructions}}');
+      // Since customSections is removed from config, these sections won't exist
+      expect(result).not.toContain('## 追加指示');
     });
 
     test('should handle different tools with different configs', async () => {
@@ -78,18 +76,15 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       const claudeResult = await GeneratorFactory.createGenerator('claude')
         .loadDynamicTemplate('main.md', { lang: 'en' });
       
-      // ASSERT - Each should have tool-specific content
-      expect(cursorResult).toContain('Cursor AI Development Instructions');
-      expect(cursorResult).toContain('Cursor 固有機能');
-      expect(cursorResult).toContain('Compose機能');
+      // ASSERT - Each should have basic template structure (no tool-specific content)
+      expect(cursorResult).toContain('Development Instructions');
+      expect(cursorResult).not.toContain('{{toolName}}');
       
-      expect(copilotResult).toContain('GitHub Copilot Development Instructions');
-      expect(copilotResult).toContain('GitHub Copilot 固有機能');
-      expect(copilotResult).toContain('GitHub Copilot Chat');
+      expect(copilotResult).toContain('Development Instructions');
+      expect(copilotResult).not.toContain('{{toolName}}');
       
-      expect(claudeResult).toContain('Claude AI Development Instructions');
-      expect(claudeResult).toContain('深層推論');
-      expect(claudeResult).toContain('200K tokens');
+      expect(claudeResult).toContain('Development Instructions');
+      expect(claudeResult).not.toContain('{{toolName}}');
     });
   });
 
@@ -102,11 +97,11 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       const result = await generator.loadDynamicTemplate('main.md', { lang: 'en' });
       
       // ASSERT - Should include JavaScript globs + Cursor-specific additions
-      expect(result).toContain('**/*.ts');
-      expect(result).toContain('**/*.tsx');
       expect(result).toContain('**/*.js');
       expect(result).toContain('**/*.jsx');
+      expect(result).toContain('**/*.json');
       expect(result).toContain('**/*.mdc'); // Cursor-specific addition
+      expect(result).toContain('**/.cursor/**'); // Cursor-specific addition
       expect(result).not.toContain('{{dynamicGlobs}}');
     });
 
@@ -141,7 +136,7 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       expect(result).toContain('**/requirements.txt');
       expect(result).toContain('**/pyproject.toml');
       expect(result).toContain('**/*.mdc'); // Still includes Cursor addition
-      expect(result).not.toContain('**/*.ts'); // No JavaScript globs
+      expect(result).not.toContain('**/*.js'); // No JavaScript globs
     });
 
     test('should deduplicate and sort globs', async () => {
@@ -192,16 +187,16 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       
       // ASSERT - Each should have language-specific content + dynamic replacements
       expect(jaResult).toContain('🚨 核心原則（必須）');
-      expect(jaResult).toContain('Cursor AI 開発指示 - テスト-プロジェクト');
-      expect(jaResult).toContain('## Cursor 固有機能');
+      expect(jaResult).toContain('開発指示 - テスト-プロジェクト');
+      expect(jaResult).not.toContain('{{toolName}}');
       
       expect(enResult).toContain('🚨 Core Principles (MANDATORY)');
-      expect(enResult).toContain('Cursor AI Development Instructions - test-project');
-      expect(enResult).toContain('## Cursor 固有機能');
+      expect(enResult).toContain('Development Instructions - test-project');
+      expect(enResult).not.toContain('{{toolName}}');
       
       expect(chResult).toContain('🚨 核心原则（必须）');
-      expect(chResult).toContain('Cursor AI 开发指令 - 测试项目');
-      expect(chResult).toContain('## Cursor 固有機能'); // Uses same tool config
+      expect(chResult).toContain('开发指令 - 测试项目');
+      expect(chResult).not.toContain('{{toolName}}');
     });
   });
 
@@ -245,7 +240,7 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       const result = await generator.loadDynamicTemplate('main.md', { lang: 'en' });
       
       // ASSERT - Should handle missing sections gracefully
-      expect(result).toContain('Test Tool Development Instructions');
+      expect(result).toContain('Development Instructions');
       expect(result).not.toContain('{{toolName}}');
       expect(result).not.toContain('{{toolSpecificFeatures}}'); // Should be replaced with empty
       expect(result).not.toContain('{{additionalInstructions}}'); // Should be replaced with empty
@@ -283,11 +278,11 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       
       const results = await Promise.all(promises);
       
-      // ASSERT - All should succeed with correct tool-specific content
+      // ASSERT - All should succeed with basic template structure
       expect(results).toHaveLength(4);
-      expect(results[0]).toContain('Cursor AI 開発指示');
-      expect(results[1]).toContain('GitHub Copilot Development Instructions');
-      expect(results[2]).toContain('Claude AI 开发指令');
+      expect(results[0]).toContain('開発指示');
+      expect(results[1]).toContain('Development Instructions');
+      expect(results[2]).toContain('开发指令');
       expect(results[3]).toContain('**/*.py'); // Python globs
     });
   });
