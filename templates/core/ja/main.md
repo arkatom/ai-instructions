@@ -1,10 +1,4 @@
----
-description: {{projectName}}の主要開発指示
-globs: {{dynamicGlobs}}
-alwaysApply: true
----
-
-# {{toolName}} 開発指示 - {{projectName}}
+# AI開発アシスタント 行動指示 - {{projectName}}
 
 ## 🚨 核心原則（必須）
 

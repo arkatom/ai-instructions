@@ -1,0 +1,8 @@
+{
+  "displayName": "GitHub Copilot",
+  "fileExtension": ".md",
+  "globs": {
+    "inherit": "universal"
+  },
+  "description": "GitHub Copilot用の設定ファイル - 汎用的なMarkdown形式"
+}

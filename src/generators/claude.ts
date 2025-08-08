@@ -8,7 +8,7 @@ export class ClaudeGenerator extends BaseGenerator {
   constructor() {
     const config: ToolConfig = {
       name: 'claude',
-      templateDir: 'claude',
+      templateDir: 'core',
       outputStructure: {
         mainFile: 'CLAUDE.md',
         directory: 'instructions'
@@ -31,19 +31,18 @@ export class ClaudeGenerator extends BaseGenerator {
     }
 
     // Generate CLAUDE.md content first (always the source format)
-    const claudeContent = await this.loadTemplate('CLAUDE.md', options);
-    const processedClaudeContent = this.replaceTemplateVariables(claudeContent, options);
+    const claudeContent = await this.loadDynamicTemplate('main.md', options);
     
     if (outputFormat === OutputFormat.CLAUDE) {
       // Standard Claude format generation
       const claudePath = join(targetDir, 'CLAUDE.md');
-      await this.safeWriteFile(claudePath, processedClaudeContent, force, options);
+      await this.safeWriteFile(claudePath, claudeContent, force, options);
 
       // instructions/ ディレクトリをコピー（言語対応版で）
       await this.safeCopyInstructionsDirectory(targetDir, options, force);
     } else {
       // Convert to target format using FormatConverter system
-      await this.generateConvertedFormat(targetDir, processedClaudeContent, outputFormat, options, force);
+      await this.generateConvertedFormat(targetDir, claudeContent, outputFormat, options, force);
     }
     
     try {
@@ -114,8 +113,9 @@ export class ClaudeGenerator extends BaseGenerator {
       case OutputFormat.CURSOR:
       case OutputFormat.COPILOT:  
       case OutputFormat.WINDSURF:
+        return true; // These formats also need instructions directory for references
       default:
-        return false; // These formats are typically self-contained
+        return false;
     }
   }
 
@@ -145,26 +145,26 @@ export class ClaudeGenerator extends BaseGenerator {
 
   /**
    * Language-aware instructions directory copying (Issue #19: Templates restructure)
-   * Uses templates/shared/instructions/(lang)/ structure
+   * Uses templates/instructions/(lang)/ structure
    */
   private async safeCopyInstructionsDirectory(targetDir: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
     const lang = options.lang || 'en';
     const instructionsTargetPath = join(targetDir, 'instructions');
     
     try {
-      // NEW: Try shared language-specific instructions directory first (templates/shared/instructions/(lang)/)
-      const sharedInstructionsPath = join(__dirname, '../../templates/shared/instructions', lang);
-      if (await FileUtils.fileExists(sharedInstructionsPath)) {
-        await this.safeCopyDirectory(sharedInstructionsPath, instructionsTargetPath, force, options);
+      // NEW: Try language-specific instructions directory first (templates/instructions/(lang)/)
+      const instructionsPath = join(__dirname, '../../templates/instructions', lang);
+      if (await FileUtils.fileExists(instructionsPath)) {
+        await this.safeCopyDirectory(instructionsPath, instructionsTargetPath, force, options);
         return;
       }
       
-      // Fallback to English shared instructions
+      // Fallback to English instructions
       if (lang !== 'en') {
-        const enSharedInstructionsPath = join(__dirname, '../../templates/shared/instructions/en');
-        if (await FileUtils.fileExists(enSharedInstructionsPath)) {
-          console.warn(`⚠️  Shared instructions directory not found for ${lang}, using English version`);
-          await this.safeCopyDirectory(enSharedInstructionsPath, instructionsTargetPath, force, options);
+        const enInstructionsPath = join(__dirname, '../../templates/instructions/en');
+        if (await FileUtils.fileExists(enInstructionsPath)) {
+          console.warn(`⚠️  Instructions directory not found for ${lang}, using English version`);
+          await this.safeCopyDirectory(enInstructionsPath, instructionsTargetPath, force, options);
           return;
         }
       }

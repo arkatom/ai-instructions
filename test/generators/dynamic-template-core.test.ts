@@ -157,7 +157,6 @@ describe('Dynamic Template Generation - Core Template Loading', () => {
       const rawTemplate = await fs.readFile(templatePath, 'utf-8');
       
       // ASSERT - Raw template should contain placeholders for dynamic replacement
-      expect(rawTemplate).toContain('{{toolName}}');
       expect(rawTemplate).toContain('{{projectName}}');
       expect(rawTemplate).toContain('{{toolSpecificFeatures}}');
       expect(rawTemplate).toContain('{{additionalInstructions}}');

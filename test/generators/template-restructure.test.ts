@@ -37,7 +37,7 @@ describe('Template Restructure (Issue #19)', () => {
       expect(existsSync(join(testOutputDir, 'instructions', 'deep-think.md'))).toBe(true);
     });
 
-    it('should copy instructions from templates/shared/instructions/ja/ instead of templates/claude/ja/instructions/', async () => {
+    it('should copy instructions from templates/instructions/ja/ instead of templates/claude/ja/instructions/', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -53,7 +53,7 @@ describe('Template Restructure (Issue #19)', () => {
       expect(baseContent).toContain('絶対厳守');
     });
 
-    it('should copy instructions from templates/shared/instructions/en/ for English', async () => {
+    it('should copy instructions from templates/instructions/en/ for English', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -69,7 +69,7 @@ describe('Template Restructure (Issue #19)', () => {
       expect(baseContent).toContain('Absolute Requirements');
     });
 
-    it('should copy instructions from templates/shared/instructions/ch/ for Chinese', async () => {
+    it('should copy instructions from templates/instructions/ch/ for Chinese', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -102,7 +102,7 @@ describe('Template Restructure (Issue #19)', () => {
     it('should use shared instructions that are not duplicated across tools', async () => {
       // この test は実装後に有効になる
       // 現在は claude/ja/instructions/ と claude/en/instructions/ が存在するが
-      // 新しい構造では templates/shared/instructions/ja/ と templates/shared/instructions/en/ のみが存在する
+      // 新しい構造では templates/instructions/ja/ と templates/instructions/en/ のみが存在する
       
       const generator = new ClaudeGenerator();
       

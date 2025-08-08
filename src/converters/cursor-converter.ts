@@ -183,7 +183,7 @@ export class CursorMDCConverter extends BaseFormatConverter {
     // Convert file references to be more explicit for Cursor
     optimized = optimized.replace(
       /\[([^\]]+)\]\(\.\/instructions\/([^)]+)\)/g,
-      '[$1](./instructions/$2) - Reference this file for $1'
+      '[$1](../../instructions/$2) - Reference this file for $1'
     );
     
     // Add context hints for better AI understanding
