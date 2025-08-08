@@ -6,7 +6,7 @@ export class CursorGenerator extends BaseGenerator {
   constructor() {
     const config: ToolConfig = {
       name: 'cursor',
-      templateDir: 'cursor',
+      templateDir: 'core',
       outputStructure: {
         directory: '.cursor/rules'
       }
@@ -21,9 +21,8 @@ export class CursorGenerator extends BaseGenerator {
     const rulesTargetPath = join(targetDir, '.cursor', 'rules');
     
     // メインルールファイルを生成（言語対応版）
-    const mainRuleContent = await this.loadTemplate('main.mdc', options);
-    const processedContent = this.replaceTemplateVariables(mainRuleContent, options);
-    await this.safeWriteFile(join(rulesTargetPath, 'main.mdc'), processedContent, force, options);
+    const mainRuleContent = await this.loadDynamicTemplate('main.md', options);
+    await this.safeWriteFile(join(rulesTargetPath, 'main.mdc'), mainRuleContent, force, options);
 
     // 追加のルールファイルをコピー（言語対応版）
     await this.safeCopyRulesDirectory(rulesTargetPath, options, force);

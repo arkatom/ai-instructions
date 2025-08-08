@@ -281,7 +281,7 @@ describe('CLI Deep Content Verification', () => {
     // CLAUDE.md構造確認
     const claudeContent = readFileSync(join(contentTestDir, 'CLAUDE.md'), 'utf-8');
     expect(claudeContent).toContain('# AI開発アシスタント 行動指示');
-    expect(claudeContent).toContain('## 🚨 基本原則（必須）');
+    expect(claudeContent).toContain('## 🚨 核心原則（必須）');
     expect(claudeContent).toContain('[基本ルール](./instructions/base.md)');
     expect(claudeContent).toContain('[深層思考](./instructions/deep-think.md)');
 
@@ -404,7 +404,7 @@ describe('CLI Multi-Tool Support', () => {
     // Verify content
     const mainContent = readFileSync(join(testOutputDir, '.github', 'copilot-instructions.md'), 'utf-8');
     expect(mainContent).toContain('copilot-project');
-    expect(mainContent).toContain('GitHub Copilot Custom Instructions');
+    expect(mainContent).toContain('AI Development Assistant Instructions');
   });
 
   it('should generate Cursor files with --tool cursor', () => {

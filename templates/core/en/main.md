@@ -4,7 +4,7 @@ globs: {{dynamicGlobs}}
 alwaysApply: true
 ---
 
-# {{toolName}} Development Instructions - {{projectName}}
+# AI Development Assistant Instructions - {{projectName}}
 
 ## 🚨 Core Principles (MANDATORY)
 

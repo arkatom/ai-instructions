@@ -1,6 +1,28 @@
+---
+description: my-projectの主要開発指示
+globs: [
+  \"**/*.css\",
+  \"**/*.html\",
+  \"**/*.json\",
+  \"**/*.md\",
+  \"**/*.txt\",
+  \"**/*.xml\",
+  \"**/*.yaml\",
+  \"**/*.yml\",
+  \"**/.env\",
+  \"**/.gitignore\",
+  \"**/CHANGELOG*\",
+  \"**/Dockerfile\",
+  \"**/LICENSE*\",
+  \"**/README*\",
+  \"**/docker-compose.yml\"
+]
+alwaysApply: true
+---
+
 # AI開発アシスタント 行動指示 - my-project
 
-## 🚨 基本原則（必須）
+## 🚨 核心原則（必須）
 
 すべてのタスク・コマンド・ツール実行前に必ず読み込み
 
@@ -8,7 +30,9 @@
 - [深層思考](./instructions/deep-think.md)
 - [memory](./instructions/memory.md)
 
-## プロジェクト 固有のアーキテクチャ・ルール・ドキュメント
+
+
+## プロジェクト固有のアーキテクチャ・ルール・ドキュメント
 
 - [プロジェクトドキュメント索引](./docs/README.md)
 
@@ -43,6 +67,8 @@
 ### 記録・管理
 
 - [ノート・日誌](./instructions/note.md) - 作業記録の書き方
+
+
 
 ## 🔄 実行フロー
 

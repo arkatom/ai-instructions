@@ -6,7 +6,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
   constructor() {
     const config: ToolConfig = {
       name: 'github-copilot',
-      templateDir: 'github-copilot',
+      templateDir: 'core',
       outputStructure: {
         mainFile: 'copilot-instructions.md',
         directory: '.github'
@@ -29,9 +29,8 @@ export class GitHubCopilotGenerator extends BaseGenerator {
     const githubTargetPath = join(targetDir, '.github');
     
     // メインインストラクションファイルを生成（言語対応版）
-    const mainInstructionContent = await this.loadTemplate('main.md', options);
-    const processedContent = this.replaceTemplateVariables(mainInstructionContent, options);
-    await this.safeWriteFile(join(githubTargetPath, 'copilot-instructions.md'), processedContent, force, options);
+    const mainInstructionContent = await this.loadDynamicTemplate('main.md', options);
+    await this.safeWriteFile(join(githubTargetPath, 'copilot-instructions.md'), mainInstructionContent, force, options);
 
     // 追加のインストラクションファイルをコピー（言語対応版）
     await this.safeCopyInstructionsDirectory(githubTargetPath, options, force);

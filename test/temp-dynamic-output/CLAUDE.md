@@ -1,12 +1,40 @@
-# GitHub Copilot カスタム指示 - {{projectName}}
+---
+description: sample-projectの主要開発指示
+globs: [
+  \"**/*.css\",
+  \"**/*.html\",
+  \"**/*.json\",
+  \"**/*.md\",
+  \"**/*.txt\",
+  \"**/*.xml\",
+  \"**/*.yaml\",
+  \"**/*.yml\",
+  \"**/.env\",
+  \"**/.gitignore\",
+  \"**/CHANGELOG*\",
+  \"**/Dockerfile\",
+  \"**/LICENSE*\",
+  \"**/README*\",
+  \"**/docker-compose.yml\"
+]
+alwaysApply: true
+---
 
-## 🚨 基本原則（必須）
+# Claude AI 開発指示 - sample-project
+
+## 🚨 核心原則（必須）
 
 すべてのタスク・コマンド・ツール実行前に必ず読み込み
 
 - [基本ルール](./instructions/base.md) - 絶対厳守事項
 - [深層思考](./instructions/deep-think.md)
 - [memory](./instructions/memory.md)
+
+## Claude AI 固有機能
+
+- 深層推論と論理的分析能力
+- 拡張コンテキスト理解（200K tokens）
+- 段階的思考プロセス
 
 ## プロジェクト固有のアーキテクチャ・ルール・ドキュメント
 
@@ -43,6 +71,13 @@
 ### 記録・管理
 
 - [ノート・日誌](./instructions/note.md) - 作業記録の書き方
+
+
+## 追加指示
+
+- 複雑な問題ではClaudeの分析能力を活用してください
+- 長文の指示や複雑な要求に適しています
+- ステップバイステップの解決アプローチを提供します
 
 ## 🔄 実行フロー
 

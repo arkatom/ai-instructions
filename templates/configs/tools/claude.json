@@ -1,0 +1,8 @@
+{
+  "displayName": "Claude AI",
+  "fileExtension": ".md",
+  "globs": {
+    "inherit": "universal"
+  },
+  "description": "Claude AI用の設定ファイル - 汎用的なMarkdown形式"
+}

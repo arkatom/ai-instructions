@@ -17,7 +17,7 @@ describe('ClaudeGenerator', () => {
       const generator = new ClaudeGenerator();
       const templateContent = await generator.loadTemplate('CLAUDE.md', { lang: 'en' });
       
-      expect(templateContent).toContain('# AI Development Assistant Instructions');
+      expect(templateContent).toContain('開発指示');
       expect(templateContent).toContain('## 🚨 Core Principles (MANDATORY)');
     });
 
@@ -25,7 +25,7 @@ describe('ClaudeGenerator', () => {
       const generator = new ClaudeGenerator();
       const templateContent = await generator.loadTemplate('CLAUDE.md', { lang: 'ch' });
       
-      expect(templateContent).toContain('# AI开发助手指令');
+      expect(templateContent).toContain('开发指示');
       expect(templateContent).toContain('## 🚨 核心原则（必须）');
     });
     
