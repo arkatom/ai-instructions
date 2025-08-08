@@ -1,0 +1,23 @@
+{
+  "globs": [
+    "**/*.py",
+    "**/*.pyx",
+    "**/*.pyi",
+    "**/*.pyw",
+    "**/requirements.txt",
+    "**/setup.py",
+    "**/pyproject.toml",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.md",
+    "**/.env",
+    "**/Dockerfile"
+  ],
+  "description": "Python プロジェクト用ファイルグロブ設定",
+  "languageFeatures": [
+    "Python 3.8+ 構文",
+    "Type hints サポート",
+    "Django/Flask/FastAPI フレームワーク",
+    "データサイエンス・機械学習ライブラリ"
+  ]
+}

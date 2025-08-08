@@ -43,6 +43,9 @@ Thumbs.db
 dist/
 build/
 
+# Test output
+test/output/
+
 # Package files
 *.tgz
 

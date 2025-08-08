@@ -1,0 +1,23 @@
+{
+  "globs": [
+    "**/*.rb",
+    "**/*.rake",
+    "**/Gemfile",
+    "**/Gemfile.lock",
+    "**/Rakefile",
+    "**/*.ru",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.md",
+    "**/.env",
+    "**/Dockerfile",
+    "**/*.erb"
+  ],
+  "description": "Ruby プロジェクト用ファイルグロブ設定",
+  "languageFeatures": [
+    "Ruby 3.0+ 構文",
+    "Gem パッケージ管理",
+    "Ruby on Rails フレームワーク",
+    "Rake タスク"
+  ]
+}

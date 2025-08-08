@@ -15,6 +15,8 @@ export interface GenerateFilesOptions {
   conflictResolution?: string;
   interactive?: boolean;
   backup?: boolean;
+  // 🚀 v0.6.0: Dynamic template generation options (Issue #29)
+  languageConfig?: string;  // Override language config (e.g., 'python', 'javascript')
 }
 
 /**
@@ -78,6 +80,166 @@ export abstract class BaseGenerator {
         throw error;
       }
       throw new Error(`Failed to load template ${templateName}: ${error}`);
+    }
+  }
+
+  /**
+   * Load dynamic template from core templates with tool-specific customization
+   * TDD Implementation: Green Phase - Minimal implementation to make tests pass
+   */
+  async loadDynamicTemplate(templateName: string, options?: GenerateFilesOptions): Promise<string> {
+    const lang = options?.lang || 'en';
+    
+    try {
+      // Load core template from templates/core/{lang}/templateName
+      const coreTemplatePath = join(__dirname, '../../templates/core', lang, templateName);
+      
+      // Check if core template exists
+      if (!await FileUtils.fileExists(coreTemplatePath)) {
+        // Handle missing core template directory
+        const coreDir = join(__dirname, '../../templates/core', lang);
+        if (!await FileUtils.fileExists(coreDir)) {
+          throw new Error(`Core template directory not found for language ${lang}`);
+        }
+        throw new Error(`Core template ${templateName} not found for language ${lang}`);
+      }
+      
+      const coreTemplate = await readFile(coreTemplatePath, 'utf-8');
+      
+      // Load tool-specific configuration
+      const toolConfig = await this.loadToolConfig();
+      
+      // Load language configuration (from tool config inheritance or options)
+      const languageName = options?.languageConfig || toolConfig.globs?.inherit || 'universal';
+      const languageConfig = await this.loadLanguageConfig(languageName);
+      
+      // Apply advanced dynamic replacements
+      return this.applyDynamicReplacements(coreTemplate, toolConfig, languageConfig, options);
+      
+    } catch (error) {
+      if (error instanceof Error && (
+        error.message.includes('not found for language') ||
+        error.message.includes('Core template directory not found') ||
+        error.message.includes('Tool configuration not found') ||
+        error.message.includes('Language configuration not found')
+      )) {
+        throw error;
+      }
+      throw new Error(`Failed to load dynamic template ${templateName}: ${error}`);
+    }
+  }
+
+  /**
+   * Apply advanced dynamic replacements using tool and language configurations
+   * TDD Implementation: Green Phase - Complete dynamic replacement system
+   */
+  private applyDynamicReplacements(
+    template: string, 
+    toolConfig: any, 
+    languageConfig: any, 
+    options?: GenerateFilesOptions
+  ): string {
+    let result = template;
+    
+    // 1. Project name replacement (existing)
+    if (options?.projectName) {
+      result = result.replace(/\{\{projectName\}\}/g, options.projectName);
+    }
+    
+    // 2. Remove tool name placeholders (tool-specific naming removed)
+    result = result.replace(/\{\{toolName\}\}/g, '');
+    
+    // 3. Dynamic globs replacement (NEW)
+    const dynamicGlobs = this.generateDynamicGlobs(toolConfig, languageConfig);
+    result = result.replace(/\{\{dynamicGlobs\}\}/g, JSON.stringify(dynamicGlobs, null, 2).replace(/"/g, '\\"'));
+    
+    // 4. Remove tool-specific features placeholders (customSections removed)
+    result = result.replace(/\{\{toolSpecificFeatures\}\}/g, '');
+    
+    // 5. Remove additional instructions placeholders (customSections removed)
+    result = result.replace(/\{\{additionalInstructions\}\}/g, '');
+    
+    // 6. File extension replacement (NEW)
+    if (toolConfig.fileExtension) {
+      result = result.replace(/\{\{fileExtension\}\}/g, toolConfig.fileExtension);
+    }
+    
+    // 7. Apply existing template variable replacements
+    return this.replaceTemplateVariables(result, options || {});
+  }
+
+  /**
+   * Generate dynamic globs by merging language config and tool-specific additions
+   * TDD Implementation: Green Phase - Intelligent globs combination
+   */
+  private generateDynamicGlobs(toolConfig: any, languageConfig: any): string[] {
+    const baseGlobs = languageConfig.globs || [];
+    const additionalGlobs = toolConfig.globs?.additional || [];
+    
+    // Combine and deduplicate globs
+    const allGlobs = [...baseGlobs, ...additionalGlobs];
+    const uniqueGlobs = Array.from(new Set(allGlobs));
+    
+    return uniqueGlobs.sort(); // Sort for consistency
+  }
+
+  /**
+   * Get display name for the tool (helper method for dynamic template generation)
+   */
+  private getToolDisplayName(): string {
+    switch (this.toolConfig.name) {
+      case 'cursor':
+        return 'Cursor AI';
+      case 'github-copilot':
+        return 'GitHub Copilot';
+      case 'claude':
+        return 'Claude AI';
+      default:
+        return this.toolConfig.name;
+    }
+  }
+
+  /**
+   * Load tool-specific configuration from JSON file
+   * TDD Implementation: Green Phase - Configuration loading support
+   */
+  async loadToolConfig(): Promise<any> {
+    try {
+      const toolConfigPath = join(__dirname, '../../templates/configs/tools', `${this.toolConfig.name}.json`);
+      
+      if (!await FileUtils.fileExists(toolConfigPath)) {
+        throw new Error(`Tool configuration not found for ${this.toolConfig.name}`);
+      }
+      
+      const configContent = await readFile(toolConfigPath, 'utf-8');
+      return JSON.parse(configContent);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Tool configuration not found')) {
+        throw error;
+      }
+      throw new Error(`Failed to parse tool configuration for ${this.toolConfig.name}: ${error}`);
+    }
+  }
+
+  /**
+   * Load language-specific configuration from JSON file
+   * TDD Implementation: Green Phase - Language configuration support
+   */
+  async loadLanguageConfig(languageName: string): Promise<any> {
+    try {
+      const langConfigPath = join(__dirname, '../../templates/configs/languages', `${languageName}.json`);
+      
+      if (!await FileUtils.fileExists(langConfigPath)) {
+        throw new Error(`Language configuration not found for ${languageName}`);
+      }
+      
+      const configContent = await readFile(langConfigPath, 'utf-8');
+      return JSON.parse(configContent);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Language configuration not found')) {
+        throw error;
+      }
+      throw new Error(`Failed to parse language configuration for ${languageName}: ${error}`);
     }
   }
 

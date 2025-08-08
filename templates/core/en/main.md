@@ -8,6 +8,8 @@ Must be read before executing any task, command, or tool
 - [Deep Thinking](./instructions/deep-think.md)
 - [Memory](./instructions/memory.md)
 
+{{toolSpecificFeatures}}
+
 ## Project-Specific Architecture, Rules & Documentation
 
 - [Project Documentation Index](./docs/README.md)
@@ -43,6 +45,8 @@ Must be read before executing any task, command, or tool
 ### Record & Management
 
 - [Notes & Journal](./instructions/note.md) - Work documentation guidelines
+
+{{additionalInstructions}}
 
 ## 🔄 Execution Flow
 
