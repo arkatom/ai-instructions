@@ -1,9 +1,3 @@
----
-description: {{projectName}}的主要开发指令
-globs: {{dynamicGlobs}}
-alwaysApply: true
----
-
 # AI开发助手 行动指令 - {{projectName}}
 
 ## 🚨 核心原则（必须）

@@ -1,25 +1,3 @@
----
-description: my-projectの主要開発指示
-globs: [
-  \"**/*.css\",
-  \"**/*.html\",
-  \"**/*.json\",
-  \"**/*.md\",
-  \"**/*.txt\",
-  \"**/*.xml\",
-  \"**/*.yaml\",
-  \"**/*.yml\",
-  \"**/.env\",
-  \"**/.gitignore\",
-  \"**/CHANGELOG*\",
-  \"**/Dockerfile\",
-  \"**/LICENSE*\",
-  \"**/README*\",
-  \"**/docker-compose.yml\"
-]
-alwaysApply: true
----
-
 # AI開発アシスタント 行動指示 - my-project
 
 ## 🚨 核心原則（必須）

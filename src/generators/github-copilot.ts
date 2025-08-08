@@ -24,24 +24,22 @@ export class GitHubCopilotGenerator extends BaseGenerator {
     } catch (error) {
       console.log('🤖 Generating GitHub Copilot instruction files...');
     }
-    
-    // 2024年標準: .github/copilot-instructions.md に直接生成
-    const githubTargetPath = join(targetDir, '.github');
-    
-    // メインインストラクションファイルを生成（言語対応版）
-    const mainInstructionContent = await this.loadDynamicTemplate('main.md', options);
-    await this.safeWriteFile(join(githubTargetPath, 'copilot-instructions.md'), mainInstructionContent, force, options);
 
-    // 追加のインストラクションファイルをコピー（言語対応版）
-    await this.safeCopyInstructionsDirectory(githubTargetPath, options, force);
+    // Use ClaudeGenerator with COPILOT output format for proper conversion
+    const { ClaudeGenerator } = await import('./claude');
+    const { OutputFormat } = await import('../converters');
     
+    const claudeGenerator = new ClaudeGenerator();
+    await claudeGenerator.generateFiles(targetDir, {
+      ...options,
+      outputFormat: OutputFormat.COPILOT
+    });
+
     try {
       const chalk = (await import('chalk')).default;
       console.log(chalk.green('✅ GitHub Copilot template generation completed!'));
-      console.log(chalk.yellow('📝 Using 2024 standard: .github/copilot-instructions.md'));
     } catch (error) {
       console.log('✅ GitHub Copilot template generation completed!');
-      console.log('📝 Using 2024 standard: .github/copilot-instructions.md');
     }
   }
 

@@ -79,7 +79,7 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
     let optimized = content;
     
     // Convert Claude-specific headers to Copilot format
-    optimized = optimized.replace(/# AI Development Assistant Instructions.*?\n/, 
+    optimized = optimized.replace(/# (?:AI Development Assistant Instructions|AI開発アシスタント 行動指示|AI开发助手 行动指令).*?\n/, 
       `# GitHub Copilot Custom Instructions - ${projectName}\n\n`);
     
     // Add Copilot-specific introduction

@@ -17,15 +17,29 @@ export class CursorGenerator extends BaseGenerator {
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
     const force = options.force || false;
     
-    // .cursor/rules/ ディレクトリを作成
-    const rulesTargetPath = join(targetDir, '.cursor', 'rules');
-    
-    // メインルールファイルを生成（言語対応版）
-    const mainRuleContent = await this.loadDynamicTemplate('main.md', options);
-    await this.safeWriteFile(join(rulesTargetPath, 'main.mdc'), mainRuleContent, force, options);
+    try {
+      const chalk = (await import('chalk')).default;
+      console.log(chalk.blue(`🤖 Generating cursor AI instruction files...`));
+    } catch (error) {
+      console.log(`🤖 Generating cursor AI instruction files...`);
+    }
 
-    // 追加のルールファイルをコピー（言語対応版）
-    await this.safeCopyRulesDirectory(rulesTargetPath, options, force);
+    // Use ClaudeGenerator with CURSOR output format for proper conversion
+    const { ClaudeGenerator } = await import('./claude');
+    const { OutputFormat } = await import('../converters');
+    
+    const claudeGenerator = new ClaudeGenerator();
+    await claudeGenerator.generateFiles(targetDir, {
+      ...options,
+      outputFormat: OutputFormat.CURSOR
+    });
+
+    try {
+      const chalk = (await import('chalk')).default;
+      console.log(chalk.green(`✅ Cursor template generation completed!`));
+    } catch (error) {
+      console.log(`✅ Cursor template generation completed!`);
+    }
   }
 
   /**

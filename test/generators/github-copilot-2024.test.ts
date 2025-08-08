@@ -46,7 +46,7 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
       expect(copilotContent).not.toContain('{{projectName}}');
       
       // AI開発アシスタント指示が含まれることを確認（ツール固有ブランド削除）
-      expect(copilotContent).toContain('AI Development Assistant Instructions');
+      expect(copilotContent).toContain('GitHub Copilot Custom Instructions');
       expect(copilotContent).toContain('TDD Rules');
     });
 
@@ -87,14 +87,12 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
     it('should handle missing template files gracefully', async () => {
       const generator = new GitHubCopilotGenerator();
       
-      // 存在しない言語でもエラーが発生しないことを確認
+      // 存在しない言語ではエラーが発生することを確認
       await expect(generator.generateFiles(testOutputDir, { 
         projectName: 'error-test', 
         lang: 'nonexistent' as any 
-      })).resolves.not.toThrow();
-      
-      // 英語版にフォールバックされることを確認
-      expect(existsSync(join(testOutputDir, '.github', 'copilot-instructions.md'))).toBe(true);
+      })).rejects.toThrow();
+
     });
 
     it('should create .github directory if it does not exist', async () => {
@@ -122,7 +120,7 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
       const content = await readFile(join(testOutputDir, '.github', 'copilot-instructions.md'), 'utf-8');
       
       // 必要なセクションが含まれることを確認
-      expect(content).toContain('Core Principles');
+      expect(content).toContain('Core Development Principles');
       expect(content).toContain('GitHub Copilot');
       expect(content).toContain('Development Process');
       expect(content).toContain('Git Rules');

@@ -404,7 +404,7 @@ describe('CLI Multi-Tool Support', () => {
     // Verify content
     const mainContent = readFileSync(join(testOutputDir, '.github', 'copilot-instructions.md'), 'utf-8');
     expect(mainContent).toContain('copilot-project');
-    expect(mainContent).toContain('AI Development Assistant Instructions');
+    expect(mainContent).toContain('GitHub Copilot Custom Instructions');
   });
 
   it('should generate Cursor files with --tool cursor', () => {

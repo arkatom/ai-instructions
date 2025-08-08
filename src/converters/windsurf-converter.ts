@@ -78,7 +78,7 @@ export class WindsurfConverter extends BaseFormatConverter {
     // English: "# AI Development Assistant Instructions"
     // Japanese: "# AI開発アシスタント 行動指示"
     // Chinese: Similar patterns expected
-    optimized = optimized.replace(/^# (?:AI Development Assistant Instructions|AI開発アシスタント 行動指示|AI\s*开发助手指令).*?\n/m, 
+    optimized = optimized.replace(/^# (?:AI Development Assistant Instructions|AI開発アシスタント 行動指示|AI\s*开发助手 行动指令).*?\n/m, 
       `# Windsurf AI Pair Programming Rules - ${projectName}\n\n`);
     
     // Add Windsurf-specific introduction
