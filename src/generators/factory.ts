@@ -2,8 +2,9 @@ import { BaseGenerator } from './base';
 import { ClaudeGenerator } from './claude';
 import { GitHubCopilotGenerator } from './github-copilot';
 import { CursorGenerator } from './cursor';
+import { ClineGenerator } from './cline';
 
-export type SupportedTool = 'claude' | 'github-copilot' | 'cursor';
+export type SupportedTool = 'claude' | 'github-copilot' | 'cursor' | 'cline';
 
 /**
  * Factory class for creating AI tool generators
@@ -20,6 +21,8 @@ export class GeneratorFactory {
         return new GitHubCopilotGenerator();
       case 'cursor':
         return new CursorGenerator();
+      case 'cline':
+        return new ClineGenerator();
       default:
         throw new Error(`Unsupported tool: ${tool}`);
     }
@@ -29,7 +32,7 @@ export class GeneratorFactory {
    * Get list of supported tools
    */
   static getSupportedTools(): SupportedTool[] {
-    return ['claude', 'github-copilot', 'cursor'];
+    return ['claude', 'github-copilot', 'cursor', 'cline'];
   }
 
   /**
