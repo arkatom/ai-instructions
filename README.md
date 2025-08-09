@@ -95,6 +95,195 @@ When using `backup` or `merge` strategies:
 
 > **💡 Pro Tip**: Use `--conflict-resolution merge` to update existing instruction files while preserving your customizations!
 
+## 🏗️ Architecture & Dependency Management
+
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph "CLI Layer"
+        CLI[cli.ts]
+    end
+    
+    subgraph "Generator Layer"
+        Factory[GeneratorFactory]
+        Base[BaseGenerator]
+        Claude[ClaudeGenerator]
+        Cursor[CursorGenerator]
+        Copilot[CopilotGenerator]
+        Cline[ClineGenerator]
+        Windsurf[WindsurfGenerator]
+    end
+    
+    subgraph "Core Services"
+        Config[ConfigurationManager]
+        SharedProc[SharedTemplateProcessor]
+        Parallel[ParallelGeneratorOperations]
+        Errors[Error Classes]
+        Types[Type Definitions]
+    end
+    
+    subgraph "Converter Layer"
+        ConvFactory[ConverterFactory]
+        FormatConv[Format Converters]
+    end
+    
+    subgraph "Utilities"
+        FileUtils[FileUtils]
+        ConflictHandler[FileConflictHandler]
+        MergeHandler[SmartMergeHandler]
+    end
+    
+    CLI --> Factory
+    Factory --> Base
+    Base --> Claude
+    Base --> Cursor
+    Base --> Copilot
+    Base --> Cline
+    Base --> Windsurf
+    
+    Base --> Config
+    Base --> SharedProc
+    Base --> Errors
+    
+    SharedProc --> Config
+    SharedProc --> Parallel
+    SharedProc --> Types
+    
+    Config --> Types
+    Config --> Errors
+    
+    Parallel --> FileUtils
+    
+    Claude --> ConvFactory
+    ConvFactory --> FormatConv
+    
+    FileUtils --> ConflictHandler
+    ConflictHandler --> MergeHandler
+```
+
+### Dependency Flow
+
+```mermaid
+graph LR
+    subgraph "No Dependencies"
+        Types[types.ts]
+        Errors[errors.ts]
+    end
+    
+    subgraph "Low-Level Dependencies"
+        FileUtils[file-utils.ts]
+        MergeHandler[smart-merge-handler.ts]
+    end
+    
+    subgraph "Mid-Level Dependencies"
+        Config[config-manager.ts]
+        ConflictHandler[file-conflict-handler.ts]
+        Parallel[parallel-generator.ts]
+    end
+    
+    subgraph "High-Level Dependencies"
+        SharedProc[shared-processor.ts]
+        Base[base.ts]
+    end
+    
+    subgraph "Top-Level Components"
+        Generators[Specific Generators]
+        Converters[Format Converters]
+        CLI[cli.ts]
+    end
+    
+    Types --> Config
+    Types --> SharedProc
+    Types --> Base
+    
+    Errors --> Config
+    Errors --> SharedProc
+    Errors --> Base
+    Errors --> Parallel
+    
+    FileUtils --> ConflictHandler
+    FileUtils --> Parallel
+    
+    MergeHandler --> ConflictHandler
+    
+    Config --> SharedProc
+    Config --> Base
+    
+    ConflictHandler --> Base
+    
+    Parallel --> SharedProc
+    
+    SharedProc --> Base
+    
+    Base --> Generators
+    Base --> Converters
+    
+    Generators --> CLI
+    Converters --> CLI
+```
+
+### Module Responsibilities
+
+| Module | Purpose | Dependencies | Dependents |
+|--------|---------|--------------|------------|
+| **types.ts** | Type definitions & guards | None | All modules |
+| **errors.ts** | Error class hierarchy | None | Core services |
+| **config-manager.ts** | Configuration loading & caching | types, errors | Generators, SharedProc |
+| **parallel-generator.ts** | Parallel file operations | errors, FileUtils | SharedProc |
+| **shared-processor.ts** | Template processing logic | types, config, parallel | Generators |
+| **base.ts** | Abstract generator base | All core services | Specific generators |
+| **file-utils.ts** | File operations | None | Multiple modules |
+| **file-conflict-handler.ts** | Conflict resolution | FileUtils, MergeHandler | Base generator |
+
+### Circular Dependency Prevention
+
+This project uses **ESLint with eslint-plugin-import** to automatically detect and prevent circular dependencies:
+
+```javascript
+// eslint.config.js
+'import/no-cycle': ['error', {
+  maxDepth: Infinity,
+  ignoreExternal: true
+}]
+```
+
+**Benefits:**
+- ✅ Build-time detection of circular imports
+- ✅ Prevents runtime errors from dependency cycles
+- ✅ Enforces clean architecture principles
+- ✅ Integrated into CI/CD pipeline
+
+### Directory Structure
+
+```
+src/
+├── generators/           # Generator implementations
+│   ├── base.ts          # Abstract base class
+│   ├── claude.ts        # Claude-specific generator
+│   ├── cursor.ts        # Cursor-specific generator
+│   ├── cline.ts         # Cline-specific generator
+│   ├── copilot.ts       # GitHub Copilot generator
+│   ├── windsurf.ts      # Windsurf generator
+│   ├── factory.ts       # Generator factory
+│   ├── config-manager.ts    # Configuration management
+│   ├── errors.ts        # Error definitions
+│   ├── parallel-generator.ts # Parallel operations
+│   ├── shared-processor.ts   # Shared processing
+│   └── types.ts         # Type definitions
+├── converters/          # Format converters
+│   ├── index.ts         # Converter exports
+│   ├── format-converter.ts   # Base converter
+│   ├── cursor-converter.ts   # Cursor format
+│   ├── copilot-converter.ts  # Copilot format
+│   └── windsurf-converter.ts # Windsurf format
+├── utils/               # Utility functions
+│   ├── file-utils.ts    # File operations
+│   ├── file-conflict-handler.ts # Conflict resolution
+│   └── smart-merge-handler.ts   # Content merging
+└── cli.ts               # CLI entry point
+```
+
 ## 📦 Installation
 
 ### Global Installation (Recommended)
