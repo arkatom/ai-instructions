@@ -92,7 +92,7 @@ describe('Template Restructure (Issue #19)', () => {
       await expect(generator.generateFiles(testOutputDir, { 
         projectName: 'test-project', 
         lang: 'fr' as any // フランス語（存在しない）
-      })).rejects.toThrow('Core template directory not found for language fr');
+      })).rejects.toThrow('Unsupported language: fr');
     });
 
     it('should use shared instructions that are not duplicated across tools', async () => {

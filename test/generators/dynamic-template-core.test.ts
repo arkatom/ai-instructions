@@ -174,7 +174,7 @@ describe('Dynamic Template Generation - Core Template Loading', () => {
       // ACT & ASSERT - Should throw specific error for missing template
       await expect(generator.loadDynamicTemplate('nonexistent.md', { lang: 'ja' }))
         .rejects
-        .toThrow('Core template nonexistent.md not found for language ja');
+        .toThrow('Template "nonexistent.md" not found for language "ja"');
     });
 
     test('should throw error when core template directory missing', async () => {
@@ -184,7 +184,7 @@ describe('Dynamic Template Generation - Core Template Loading', () => {
       // ACT & ASSERT - Should handle missing core template directory
       await expect(generator.loadDynamicTemplate('main.md', { lang: 'nonexistent' as any }))
         .rejects
-        .toThrow('Core template directory not found for language nonexistent');
+        .toThrow('Unsupported language: nonexistent');
     });
   });
 

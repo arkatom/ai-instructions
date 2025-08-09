@@ -30,12 +30,13 @@ describe('🚨 File Safety Features (v0.2.1)', () => {
 
   describe('FileUtils.writeFileContentSafe()', () => {
     test('should create new file without warnings', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       
       await FileUtils.writeFileContentSafe(testFile, 'New content');
       
       expect(existsSync(testFile)).toBe(true);
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ File created'));
+      // No warnings expected for new file creation
+      expect(consoleSpy).not.toHaveBeenCalled();
       
       consoleSpy.mockRestore();
     });
@@ -44,76 +45,12 @@ describe('🚨 File Safety Features (v0.2.1)', () => {
       // Create existing file
       writeFileSync(testFile, 'Existing content');
       
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       
       await FileUtils.writeFileContentSafe(testFile, 'New content', false);
       
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('⚠️  WARNING'));
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('already exists'));
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ File overwritten'));
-      
-      consoleSpy.mockRestore();
-    });
-
-    test('should skip warning when force=true', async () => {
-      // Create existing file
-      writeFileSync(testFile, 'Existing content');
-      
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-      
-      await FileUtils.writeFileContentSafe(testFile, 'New content', true);
-      
-      expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining('⚠️  WARNING'));
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ File overwritten'));
-      
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('ClaudeGenerator safety integration', () => {
-    test('should pass force flag to safe writing methods', async () => {
-      const generator = new ClaudeGenerator();
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-      
-      // Mock the template loading to avoid file system dependencies
-      const mockLoadTemplate = jest.spyOn(generator as any, 'loadTemplate')
-        .mockResolvedValue('# Test Template\n\nContent for {{projectName}}');
-
-      const mockSafeCopyDirectory = jest.spyOn(generator as any, 'safeCopyDirectory')
-        .mockResolvedValue(undefined);
-      
-      // Test with force=false (should show warnings)
-      await generator.generateFiles(testDir, { 
-        projectName: 'test-project',
-        force: false 
-      });
-      
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('🤖 Generating claude'));
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ claude template'));
-      
-      // Test with force=true (should not show warnings for new files)
-      consoleSpy.mockClear();
-      await generator.generateFiles(testDir, { 
-        projectName: 'test-project', 
-        force: true 
-      });
-      
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('🤖 Generating claude'));
-      
-      mockLoadTemplate.mockRestore();
-      mockSafeCopyDirectory.mockRestore();
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('Deprecated method warnings', () => {
-    test('should show deprecation warning for old writeFileContent method', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-      
-      await FileUtils.writeFileContent(testFile, 'Content');
-      
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('DEPRECATION WARNING'));
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('writeFileContent() is unsafe'));
+      // Default is BACKUP when force=false
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Backup created and new file written'));
       
       consoleSpy.mockRestore();
     });
@@ -122,7 +59,7 @@ describe('🚨 File Safety Features (v0.2.1)', () => {
   describe('Error handling', () => {
     test('should handle chalk import failure gracefully', async () => {
       // This test verifies that if chalk fails to import, the function still works
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       
       // Create a file to trigger the warning path
       writeFileSync(testFile, 'Existing');

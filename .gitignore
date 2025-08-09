@@ -45,6 +45,9 @@ build/
 
 # Test output
 test/output/
+test/generators/temp-*
+temp-test-*/
+**/temp-test-*/
 
 # Package files
 *.tgz
@@ -54,4 +57,6 @@ logs
 *.log
 
 # Backup files
-backups/
+backups/ 
+# Serena cache
+.serena/cache/

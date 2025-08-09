@@ -1,0 +1,25 @@
+{
+  "displayName": "Cline AI",
+  "fileExtension": ".md",
+  "globs": {
+    "inherit": "universal"
+  },
+  "description": "Cline AI用の設定ファイル - 複数ファイル構成のMarkdown形式",
+  "fileStructure": {
+    "outputDirectory": ".clinerules",
+    "subdirectories": ["instructions"],
+    "includeInstructionsDirectory": true,
+    "fileNamingPattern": "{fileIndex:02d}-{fileName}",
+    "multipleFiles": true,
+    "fileTemplates": [
+      {
+        "fileName": "01-coding.md",
+        "title": "Coding Rules and Standards"
+      },
+      {
+        "fileName": "02-documentation.md",
+        "title": "Documentation Guidelines"
+      }
+    ]
+  }
+}

@@ -101,7 +101,7 @@ program
   .description('Initialize AI development instructions')
   .option('-o, --output <path>', 'output directory', process.cwd())
   .option('-n, --project-name <name>', 'project name', 'my-project')
-  .option('-t, --tool <tool>', 'AI tool (claude, github-copilot, cursor)', 'claude')
+  .option('-t, --tool <tool>', 'AI tool (claude, github-copilot, cursor, cline)', 'claude')
   .option('-l, --lang <language>', 'Language for templates (en, ja, ch)', 'ja')
   .option('-f, --output-format <format>', 'Output format (claude, cursor, copilot, windsurf)', 'claude')
   .option('--force', '⚠️  Force overwrite existing files (DANGEROUS)')
@@ -184,6 +184,11 @@ program
       console.log(`✅ Generated ${generator.getToolName()} template files in ${options.output}`);
       console.log(`📁 Files created for ${generator.getToolName()} AI tool`);
       console.log(`🎯 Project name: ${options.projectName}`);
+      
+      // Show format conversion message when output-format is used
+      if (options.outputFormat && options.outputFormat !== 'claude') {
+        console.log(`🔄 Converted from Claude format to ${options.outputFormat}`);
+      }
       
       // 🚨 EMERGENCY PATCH v0.2.1: Safety reminder
       if (!options.force) {
