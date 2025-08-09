@@ -4,5 +4,12 @@
   "globs": {
     "inherit": "universal"
   },
-  "description": "Claude AI用の設定ファイル - 汎用的なMarkdown形式"
+  "description": "Claude AI用の設定ファイル - 汎用的なMarkdown形式",
+  "fileStructure": {
+    "outputDirectory": "",
+    "mainFileName": "CLAUDE.md",
+    "subdirectories": ["instructions"],
+    "includeInstructionsDirectory": true,
+    "fileNamingPattern": "{projectName}"
+  }
 }

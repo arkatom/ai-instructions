@@ -15,7 +15,7 @@
 ### ✨ Key Benefits
 
 - **🚀 Instant Setup**: Generate complete instruction sets in seconds
-- **🛠️ Multi-Tool Support**: Claude Code, GitHub Copilot, and Cursor AI IDE support
+- **🛠️ Multi-Tool Support**: Claude Code, GitHub Copilot, Cursor AI IDE, and Cline AI support
 - **📚 Comprehensive Templates**: Full collection of development methodology guides (TDD, Git workflow, etc.)
 - **🌐 Multi-language Support**: English, Japanese, and Chinese template support
 - **🛡️ Advanced File Safety**: 5 intelligent conflict resolution strategies with smart merging
@@ -144,6 +144,9 @@ ai-instructions init --tool github-copilot --project-name "my-project"
 
 # Generate Cursor AI IDE instructions  
 ai-instructions init --tool cursor --project-name "my-project"
+
+# Generate Cline AI instructions
+ai-instructions init --tool cline --project-name "my-project"
 ```
 
 ### Format Conversion (New in v0.3.0)
@@ -248,13 +251,26 @@ your-project/
 your-project/
 └── .cursor/
     └── rules/
-        └── main.mdc            # Cursor AI rules with YAML frontmatter
+        └── main.mdc            # Cursor AI rules with YAML front matter
 ```
 
 ### Windsurf AI (`--output-format windsurf`)
 ```
 your-project/
 └── .windsurfrules              # Windsurf pair programming rules
+```
+
+### Cline AI (`--tool cline`)
+```
+your-project/
+├── .clinerules/                # Cline AI rule directory
+│   ├── 01-coding.md           # Core development rules
+│   └── 02-documentation.md    # Documentation standards
+└── instructions/              # Comprehensive development guides
+    ├── base.md                # Core development rules (MUST READ)
+    ├── deep-think.md         # Deep thinking methodology
+    ├── memory.md             # Memory management instructions
+    └── ... (13 additional files)
 ```
 
 ### File Descriptions
@@ -333,9 +349,10 @@ The CLI validates output formats to ensure compatibility:
 | Format | File Extension | Key Features |
 |--------|----------------|---------------|
 | `claude` | `.md` | Full instruction hierarchy, TDD rules, comprehensive guides |
-| `cursor` | `.mdc` | YAML frontmatter, MDC format, Cursor-optimized prompts |
+| `cursor` | `.mdc` | YAML front matter, MDC format, Cursor-optimized prompts |
 | `copilot` | `.md` | GitHub 2024 standard, repository-focused instructions |
 | `windsurf` | `.windsurfrules` | Pair programming focus, collaborative development rules |
+| `cline` | `.md` | Multiple specialized files in .clinerules directory |
 
 ## 🛠️ Development
 

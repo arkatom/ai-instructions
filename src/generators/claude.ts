@@ -3,6 +3,9 @@ import { readdir, stat, readFile } from 'fs/promises';
 import { FileUtils } from '../utils/file-utils';
 import { BaseGenerator, GenerateFilesOptions, ToolConfig } from './base';
 import { ConverterFactory, OutputFormat, ConversionMetadata } from '../converters';
+import { 
+  ParallelGeneratorOperations
+} from './parallel-generator';
 
 export class ClaudeGenerator extends BaseGenerator {
   constructor() {
@@ -81,8 +84,8 @@ export class ClaudeGenerator extends BaseGenerator {
         await this.safeCopyInstructionsDirectory(targetDir, options, force);
       }
 
-    } catch (_error) {
-      throw new Error(`Failed to generate ${outputFormat} format: ${_error}`);
+    } catch (error) {
+      throw new Error(`Failed to generate ${outputFormat} format: ${error}`);
     }
   }
 
@@ -133,6 +136,37 @@ export class ClaudeGenerator extends BaseGenerator {
    */
   private async safeCopyInstructionsDirectory(targetDir: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
     const lang = options.lang || 'en';
+    
+    try {
+      // Use parallel operations for improved performance
+      const stats = await ParallelGeneratorOperations.copyInstructionsDirectoryParallel(
+        targetDir, 
+        lang, 
+        options
+      );
+      
+      // Log performance improvement if enabled
+      if (process.env.NODE_ENV === 'development' && stats.totalTasks > 0) {
+        console.warn(`🚀 Copied ${stats.totalTasks} instruction files in parallel (${stats.totalExecutionTimeMs.toFixed(2)}ms)`);
+      }
+      
+      // Handle any failures  
+      if (stats.failedTasks > 0) {
+        console.warn(`⚠️  ${stats.failedTasks} out of ${stats.totalTasks} instruction files failed to copy`);
+      }
+      
+    } catch {
+      // Fallback to original sequential implementation
+      console.warn('⚠️  Parallel copy failed, falling back to sequential copy');
+      await this.safeCopyInstructionsDirectorySequential(targetDir, options, force);
+    }
+  }
+
+  /**
+   * Fallback sequential copy for instructions directory
+   */
+  private async safeCopyInstructionsDirectorySequential(targetDir: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
+    const lang = options.lang || 'en';
     const instructionsTargetPath = join(targetDir, 'instructions');
     
     try {
@@ -170,8 +204,8 @@ export class ClaudeGenerator extends BaseGenerator {
       }
       
       throw new Error(`Instructions directory not found for language ${lang}`);
-    } catch (_error) {
-      throw new Error(`Failed to copy instructions directory: ${_error}`);
+    } catch (error) {
+      throw new Error(`Failed to copy instructions directory: ${error}`);
     }
   }
 }

@@ -61,14 +61,14 @@ describe('FileConflictHandler', () => {
 
   describe('detectConflict()', () => {
     test('should return false when file does not exist', async () => {
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       const hasConflict = await handler.detectConflict(testFile);
       expect(hasConflict).toBe(false);
     });
 
     test('should return true when file exists', async () => {
       writeFileSync(testFile, 'existing content');
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       const hasConflict = await handler.detectConflict(testFile);
       expect(hasConflict).toBe(true);
     });
@@ -94,11 +94,12 @@ describe('FileConflictHandler', () => {
     });
 
     test('should backup existing file and create new file when resolution is BACKUP', async () => {
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       await handler.resolveConflict(testFile, newContent, ConflictResolution.BACKUP);
 
-      // Check for timestamped backup file in test-backups directory
-      const testBackupDir = join(dirname(testFile), 'test-backups');
+      // Check for timestamped backup file in project backups directory
+      const projectRoot = process.cwd();
+      const testBackupDir = join(projectRoot, 'backups', 'test', 'temp-conflict-test');
       const files = require('fs').readdirSync(testBackupDir);
       const backupFiles = files.filter((f: string) => f.includes('test-file.md.backup.'));
       
@@ -109,7 +110,7 @@ describe('FileConflictHandler', () => {
     });
 
     test('should merge content intelligently when resolution is MERGE', async () => {
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       await handler.resolveConflict(testFile, newContent, ConflictResolution.MERGE);
 
       const mergedContent = readFileSync(testFile, 'utf-8');
@@ -129,21 +130,21 @@ describe('FileConflictHandler', () => {
 
     test('should skip file creation when resolution is SKIP', async () => {
       const originalContent = readFileSync(testFile, 'utf-8');
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       await handler.resolveConflict(testFile, newContent, ConflictResolution.SKIP);
 
       expect(readFileSync(testFile, 'utf-8')).toBe(originalContent);
     });
 
     test('should overwrite file when resolution is OVERWRITE', async () => {
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       await handler.resolveConflict(testFile, newContent, ConflictResolution.OVERWRITE);
 
       expect(readFileSync(testFile, 'utf-8')).toBe(newContent);
     });
 
     test('should handle interactive selection when resolution is INTERACTIVE', async () => {
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       
       // Mock the interactive selection to simulate user choosing specific lines
       const mockSelectLines = jest.spyOn(handler as any, 'promptForLineSelection')
@@ -164,12 +165,12 @@ describe('FileConflictHandler', () => {
   describe('createTimestampedBackup()', () => {
     test('should create backup with timestamp when no backup exists', async () => {
       writeFileSync(testFile, 'content');
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       
       const backupPath = await handler.createTimestampedBackup(testFile);
       
       expect(existsSync(backupPath)).toBe(true);
-      expect(backupPath).toContain('test-backups');
+      expect(backupPath).toContain('backups');
       expect(backupPath).toContain('test-file.md.backup.');
       expect(readFileSync(backupPath, 'utf-8')).toBe('content');
     });
@@ -179,12 +180,12 @@ describe('FileConflictHandler', () => {
       // Create existing backup
       writeFileSync(backupFile, 'old backup');
       
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       const backupPath = await handler.createTimestampedBackup(testFile);
       
       expect(existsSync(backupPath)).toBe(true);
       expect(backupPath).not.toBe(backupFile);
-      expect(backupPath).toContain('test-backups');
+      expect(backupPath).toContain('backups');
       expect(backupPath).toContain('test-file.md.backup.');
     });
   });
@@ -194,7 +195,7 @@ describe('FileConflictHandler', () => {
       const existing = '# Title\n\n## Section 1\nContent 1\n\n## Section 2\nContent 2';
       const newContent = '# New Title\n\n## Section 1\nNew Content 1\n\n## Section 3\nContent 3';
       
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       const merged = await (handler as any).mergeContent(existing, newContent, testFile);
       
       expect(merged).toContain('# New Title'); // New title should win
@@ -207,7 +208,7 @@ describe('FileConflictHandler', () => {
       const existing = 'line1\nline2\nline3';
       const newContent = 'line1\nnewline2\nline4';
       
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       const merged = await (handler as any).mergeContent(existing, newContent, 'test.txt');
       
       expect(merged).toContain('line1'); // Common line
@@ -223,7 +224,7 @@ describe('FileConflictHandler', () => {
       // This test is temporarily skipped due to inquirer mocking complexity
       // Will be fixed after core functionality is working
       writeFileSync(testFile, 'existing content');
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       
       // TODO: Fix inquirer mocking for newer versions
       // For now, we'll test this functionality manually
@@ -233,7 +234,7 @@ describe('FileConflictHandler', () => {
 
   describe('Error handling', () => {
     test('should handle file system errors gracefully', async () => {
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       const invalidPath = '/invalid/path/file.txt';
       
       await expect(handler.detectConflict(invalidPath)).resolves.toBe(false);
@@ -241,7 +242,7 @@ describe('FileConflictHandler', () => {
 
     test('should handle backup creation errors', async () => {
       writeFileSync(testFile, 'content');
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       
       // Mock fs operations to throw error
       const originalCopyFile = require('fs/promises').copyFile;
@@ -259,7 +260,7 @@ describe('FileConflictHandler', () => {
       // This test ensures the new FileConflictHandler can integrate with existing code
       writeFileSync(testFile, 'existing');
       
-      const handler = new FileConflictHandler({ isTestEnvironment: true });
+      const handler = new FileConflictHandler();
       const hasConflict = await handler.detectConflict(testFile);
       expect(hasConflict).toBe(true);
       

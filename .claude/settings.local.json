@@ -212,7 +212,8 @@
       "mcp__github__push_files",
       "mcp__filesystem__read_text_file",
       "mcp__github__search_issues",
-      "mcp__github__get_pull_request_status"
+      "mcp__github__get_pull_request_status",
+      "Bash(./bin/cli.js init:*)"
     ],
     "deny": []
   },
