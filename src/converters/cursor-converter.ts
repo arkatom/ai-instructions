@@ -20,11 +20,11 @@ export class CursorMDCConverter extends BaseFormatConverter {
     return OutputFormat.CURSOR;
   }
 
-  async convert(metadata: ConversionMetadata): Promise<ConversionResult> {
-    const { sourceContent, projectName, lang = 'en' } = metadata;
+  async convert(_metadata: ConversionMetadata): Promise<ConversionResult> {
+    const { sourceContent, projectName, lang = 'en' } = _metadata;
     
     // Process the content
-    let processedContent = this.replaceTemplateVariables(sourceContent, metadata);
+    let processedContent = this.replaceTemplateVariables(sourceContent, _metadata);
     
     // Remove existing YAML frontmatter if present
     processedContent = this.removeYamlFrontmatter(processedContent);
@@ -43,13 +43,13 @@ export class CursorMDCConverter extends BaseFormatConverter {
     
     return {
       content: finalContent,
-      targetPath: this.getTargetPath('', metadata),
+      targetPath: this.getTargetPath('', _metadata),
       format: OutputFormat.CURSOR,
-      metadata
+      metadata: _metadata
     };
   }
 
-  getTargetPath(outputDir: string, metadata: ConversionMetadata): string {
+  getTargetPath(outputDir: string, _metadata: ConversionMetadata): string {
     return join(outputDir, '.cursor', 'rules', 'main.mdc');
   }
 
@@ -183,7 +183,7 @@ export class CursorMDCConverter extends BaseFormatConverter {
     // Convert file references to be more explicit for Cursor
     optimized = optimized.replace(
       /\[([^\]]+)\]\(\.\/instructions\/([^)]+)\)/g,
-      '[$1](./instructions/$2) - Reference this file for $1'
+      '[$1](../../instructions/$2) - Reference this file for $1'
     );
     
     // Add context hints for better AI understanding

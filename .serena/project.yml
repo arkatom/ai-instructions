@@ -22,7 +22,7 @@ read_only: false
 
 # list of tool names to exclude. We recommend not excluding any tools, see the readme for more details.
 # Below is the complete list of tools for convenience.
-# To make sure you have the latest list of tools, and to view their descriptions, 
+# To make sure you have the latest list of tools, and to view their descriptions,
 # execute `uv run scripts/print_tool_overview.py`.
 #
 #  * `activate_project`: Activates a project by name.
@@ -63,6 +63,6 @@ excluded_tools: []
 
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
-initial_prompt: ""
+initial_prompt: "CLAUDE.md を読み、深層思考で進めてください。ゆっくりでいいので、常に質を優先して一度で完璧に答えるという基本原則を厳守。私の依頼を入念に分析し、僅かな不明点でもあれば質問すること。適当な思考・出力は信頼と価値を地に落とします。求めてるのは速さではなく質。急がず、丁寧な仕事が最終的な効率を最大化します。深層思考で意図を分析、200%の価値を提供して。私は適当か否かを常に見てます。TDDできてる？git関連のルールも守れてる？ブランチ戦略・コミット・プッシュ・PR・マージ・Issueの作成/編集/コメント/クローズ。漏れがないように！まず git status!"
 
 project_name: "ai-instructions"

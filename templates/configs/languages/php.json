@@ -1,0 +1,23 @@
+{
+  "globs": [
+    "**/*.php",
+    "**/*.php7",
+    "**/*.php8",
+    "**/composer.json",
+    "**/composer.lock",
+    "**/*.ini",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.md",
+    "**/.env",
+    "**/.htaccess",
+    "**/Dockerfile"
+  ],
+  "description": "PHP プロジェクト用ファイルグロブ設定",
+  "languageFeatures": [
+    "PHP 8.0+ 構文",
+    "Composer パッケージ管理",
+    "Laravel/Symfony フレームワーク",
+    "PSR標準準拠"
+  ]
+}

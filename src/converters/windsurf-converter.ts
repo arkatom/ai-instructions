@@ -21,11 +21,11 @@ export class WindsurfConverter extends BaseFormatConverter {
     return OutputFormat.WINDSURF;
   }
 
-  async convert(metadata: ConversionMetadata): Promise<ConversionResult> {
-    const { sourceContent, projectName, lang = 'en' } = metadata;
+  async convert(_metadata: ConversionMetadata): Promise<ConversionResult> {
+    const { sourceContent, projectName, lang: _lang = 'en' } = _metadata;
     
     // Process the content
-    let processedContent = this.replaceTemplateVariables(sourceContent, metadata);
+    let processedContent = this.replaceTemplateVariables(sourceContent, _metadata);
     
     // Remove existing YAML frontmatter (Windsurf uses custom format)
     processedContent = this.removeYamlFrontmatter(processedContent);
@@ -40,13 +40,13 @@ export class WindsurfConverter extends BaseFormatConverter {
     
     return {
       content: processedContent,
-      targetPath: this.getTargetPath('', metadata),
+      targetPath: this.getTargetPath('', _metadata),
       format: OutputFormat.WINDSURF,
-      metadata
+      metadata: _metadata
     };
   }
 
-  getTargetPath(outputDir: string, metadata: ConversionMetadata): string {
+  getTargetPath(outputDir: string, _metadata: ConversionMetadata): string {
     // Windsurf expects .windsurfrules in project root
     return join(outputDir, '.windsurfrules');
   }
@@ -78,7 +78,7 @@ export class WindsurfConverter extends BaseFormatConverter {
     // English: "# AI Development Assistant Instructions"
     // Japanese: "# AI開発アシスタント 行動指示"
     // Chinese: Similar patterns expected
-    optimized = optimized.replace(/^# (?:AI Development Assistant Instructions|AI開発アシスタント 行動指示|AI\s*开发助手指令).*?\n/m, 
+    optimized = optimized.replace(/^# (?:AI Development Assistant Instructions|AI開発アシスタント 行動指示|AI\s*开发助手 行动指令).*?\n/m, 
       `# Windsurf AI Pair Programming Rules - ${projectName}\n\n`);
     
     // Add Windsurf-specific introduction

@@ -45,9 +45,10 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
       expect(copilotContent).toContain('my-awesome-project');
       expect(copilotContent).not.toContain('{{projectName}}');
       
-      // GitHub Copilot固有の内容が含まれることを確認
-      expect(copilotContent).toContain('GitHub Copilot Custom Instructions');
-      expect(copilotContent).toContain('Test-Driven Development');
+      // AI開発アシスタント指示が含まれることを確認（ツール固有ブランド削除）
+      expect(copilotContent).toContain('Development Instructions'); // ツール名は空文字列に置換される
+      expect(copilotContent).not.toContain('{{toolName}}'); // プレースホルダーが残っていないこと確認
+      expect(copilotContent).toContain('TDD Rules');
     });
 
     it('should support multi-language templates with 2024 standard', async () => {
@@ -87,14 +88,12 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
     it('should handle missing template files gracefully', async () => {
       const generator = new GitHubCopilotGenerator();
       
-      // 存在しない言語でもエラーが発生しないことを確認
+      // 存在しない言語ではエラーが発生することを確認
       await expect(generator.generateFiles(testOutputDir, { 
         projectName: 'error-test', 
         lang: 'nonexistent' as any 
-      })).resolves.not.toThrow();
-      
-      // 英語版にフォールバックされることを確認
-      expect(existsSync(join(testOutputDir, '.github', 'copilot-instructions.md'))).toBe(true);
+      })).rejects.toThrow();
+
     });
 
     it('should create .github directory if it does not exist', async () => {
@@ -123,10 +122,10 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
       
       // 必要なセクションが含まれることを確認
       expect(content).toContain('Core Development Principles');
-      expect(content).toContain('Code Generation Guidelines');
-      expect(content).toContain('Architecture Patterns');
-      expect(content).toContain('Quality Assurance');
-      expect(content).toContain('Issue-Driven Development');
+      expect(content).toContain('GitHub Copilot');
+      expect(content).toContain('Development Process');
+      expect(content).toContain('Git Rules');
+      expect(content).toContain('Issue-driven, TDD, Scrum');
       
       // ファイルが空でないことを確認
       expect(content.length).toBeGreaterThan(500);

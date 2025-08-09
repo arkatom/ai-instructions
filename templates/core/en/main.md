@@ -1,16 +1,10 @@
 ---
 description: Main development instructions for {{projectName}}
-globs:
-  - "**/*.ts"
-  - "**/*.tsx" 
-  - "**/*.js"
-  - "**/*.jsx"
-  - "**/*.json"
-  - "**/*.md"
+globs: {{dynamicGlobs}}
 alwaysApply: true
 ---
 
-# Cursor AI Development Instructions - {{projectName}}
+# {{toolName}} Development Instructions - {{projectName}}
 
 ## 🚨 Core Principles (MANDATORY)
 
@@ -19,6 +13,8 @@ Must be read before executing any task, command, or tool
 - [Basic Rules](./instructions/base.md) - Absolute requirements
 - [Deep Thinking](./instructions/deep-think.md)
 - [Memory](./instructions/memory.md)
+
+{{toolSpecificFeatures}}
 
 ## Project-Specific Architecture, Rules & Documentation
 
@@ -55,6 +51,8 @@ Must be read before executing any task, command, or tool
 ### Record & Management
 
 - [Notes & Journal](./instructions/note.md) - Work documentation guidelines
+
+{{additionalInstructions}}
 
 ## 🔄 Execution Flow
 

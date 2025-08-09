@@ -103,16 +103,17 @@ describe('Multi-Tool Support', () => {
 
       const mainContent = await readFile(join(tempDir, '.github', 'copilot-instructions.md'), 'utf-8');
       expect(mainContent).toContain(projectName);
-      expect(mainContent).toContain('GitHub Copilot Custom Instructions');
+      expect(mainContent).toContain('Development Instructions'); // ツール名は空文字列に置換される
+      expect(mainContent).not.toContain('{{toolName}}'); // プレースホルダーが残っていないこと確認
     });
 
     it('should contain GitHub Copilot specific instructions', async () => {
       await generator.generateFiles(tempDir, { projectName: 'test-project' });
 
       const mainContent = await readFile(join(tempDir, '.github', 'copilot-instructions.md'), 'utf-8');
-      expect(mainContent).toContain('Test-Driven Development');
-      expect(mainContent).toContain('GitHub Flow');
-      expect(mainContent).toContain('Code Generation Guidelines');
+      expect(mainContent).toContain('TDD Rules');
+      expect(mainContent).toContain('GitHub Copilot');
+      expect(mainContent).toContain('Development Process');
     });
   });
 
@@ -149,7 +150,7 @@ describe('Multi-Tool Support', () => {
       expect(mainContent).toContain('description:');
       expect(mainContent).toContain('globs:');
       expect(mainContent).toContain('alwaysApply: true');
-      expect(mainContent).toContain('Test-Driven Development');
+      expect(mainContent).toContain('TDD Rules');
     });
   });
 

@@ -5,34 +5,34 @@ import { rm } from 'fs/promises';
 
 describe('ClaudeGenerator', () => {
   describe('Template Loading', () => {
-    it('should load CLAUDE.md template content for Japanese (default language structure)', async () => {
+    it('should load dynamic template content for Japanese', async () => {
       const generator = new ClaudeGenerator();
-      const templateContent = await generator.loadTemplate('CLAUDE.md', { lang: 'ja' });
+      const templateContent = await generator.loadDynamicTemplate('main.md', { lang: 'ja', projectName: 'test-project' });
       
-      expect(templateContent).toContain('# AI開発アシスタント 行動指示');
-      expect(templateContent).toContain('## 🚨 基本原則（必須）');
+      expect(templateContent).toContain('開発指示');
+      expect(templateContent).toContain('## 🚨 核心原則（必須）');
     });
 
-    it('should load CLAUDE.md template content for English', async () => {
+    it('should load dynamic template content for English', async () => {
       const generator = new ClaudeGenerator();
-      const templateContent = await generator.loadTemplate('CLAUDE.md', { lang: 'en' });
+      const templateContent = await generator.loadDynamicTemplate('main.md', { lang: 'en', projectName: 'test-project' });
       
-      expect(templateContent).toContain('# AI Development Assistant Instructions');
+      expect(templateContent).toContain('Development Instructions');
       expect(templateContent).toContain('## 🚨 Core Principles (MANDATORY)');
     });
 
-    it('should load CLAUDE.md template content for Chinese', async () => {
+    it('should load dynamic template content for Chinese', async () => {
       const generator = new ClaudeGenerator();
-      const templateContent = await generator.loadTemplate('CLAUDE.md', { lang: 'ch' });
+      const templateContent = await generator.loadDynamicTemplate('main.md', { lang: 'ch', projectName: 'test-project' });
       
-      expect(templateContent).toContain('# AI开发助手指令');
+      expect(templateContent).toContain('开发指令');
       expect(templateContent).toContain('## 🚨 核心原则（必须）');
     });
     
     it('should throw error when template file does not exist', async () => {
       const generator = new ClaudeGenerator();
       
-      await expect(generator.loadTemplate('non-existent.md'))
+      await expect(generator.loadDynamicTemplate('non-existent.md'))
         .rejects.toThrow('not found for language');
     });
   });

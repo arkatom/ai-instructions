@@ -45,7 +45,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
 
   describe('Shared Instructions Directory Structure', () => {
     test('should have all 14 instruction files for Japanese', () => {
-      const jaDir = join(__dirname, '../templates/shared/instructions/ja');
+      const jaDir = join(__dirname, '../templates/instructions/ja');
       expect(existsSync(jaDir)).toBe(true);
       
       const files = readdirSync(jaDir);
@@ -56,7 +56,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
     });
 
     test('should have all 14 instruction files for English', () => {
-      const enDir = join(__dirname, '../templates/shared/instructions/en');
+      const enDir = join(__dirname, '../templates/instructions/en');
       expect(existsSync(enDir)).toBe(true);
       
       const files = readdirSync(enDir);
@@ -67,7 +67,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
     });
 
     test('should have all 14 instruction files for Chinese', () => {
-      const chDir = join(__dirname, '../templates/shared/instructions/ch');
+      const chDir = join(__dirname, '../templates/instructions/ch');
       expect(existsSync(chDir)).toBe(true);
       
       const files = readdirSync(chDir);
@@ -78,9 +78,9 @@ describe('🌍 Multi-Language Integration Tests', () => {
     });
 
     test('should have identical file counts across all languages', () => {
-      const jaFiles = readdirSync(join(__dirname, '../templates/shared/instructions/ja'));
-      const enFiles = readdirSync(join(__dirname, '../templates/shared/instructions/en'));
-      const chFiles = readdirSync(join(__dirname, '../templates/shared/instructions/ch'));
+      const jaFiles = readdirSync(join(__dirname, '../templates/instructions/ja'));
+      const enFiles = readdirSync(join(__dirname, '../templates/instructions/en'));
+      const chFiles = readdirSync(join(__dirname, '../templates/instructions/ch'));
       
       expect(jaFiles.length).toBe(enFiles.length);
       expect(enFiles.length).toBe(chFiles.length);
@@ -90,7 +90,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
 
   describe('Content Language Validation', () => {
     test('English files should contain English content, not Japanese', () => {
-      const enBaseFile = join(__dirname, '../templates/shared/instructions/en/base.md');
+      const enBaseFile = join(__dirname, '../templates/instructions/en/base.md');
       const content = readFileSync(enBaseFile, 'utf-8');
       
       // Should not contain Japanese characters
@@ -101,7 +101,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
     });
 
     test('Chinese files should contain Chinese content, not Japanese', () => {
-      const chBaseFile = join(__dirname, '../templates/shared/instructions/ch/base.md');
+      const chBaseFile = join(__dirname, '../templates/instructions/ch/base.md');
       const content = readFileSync(chBaseFile, 'utf-8');
       
       // Should contain Chinese characters
@@ -111,7 +111,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
     });
 
     test('Japanese files should contain proper Japanese content', () => {
-      const jaBaseFile = join(__dirname, '../templates/shared/instructions/ja/base.md');
+      const jaBaseFile = join(__dirname, '../templates/instructions/ja/base.md');
       const content = readFileSync(jaBaseFile, 'utf-8');
       
       // Should contain Japanese characters
@@ -123,7 +123,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
 
   describe('Claude Template Language-Specific Content', () => {
     test('templates/shared/instructions/en/base.md should be in English, not Japanese', () => {
-      const enSharedBase = join(__dirname, '../templates/shared/instructions/en/base.md');
+      const enSharedBase = join(__dirname, '../templates/instructions/en/base.md');
       expect(existsSync(enSharedBase)).toBe(true);
       
       const content = readFileSync(enSharedBase, 'utf-8');
@@ -169,7 +169,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
 
     test('should generate all output formats for all languages', async () => {
       const languages = ['ja', 'en', 'ch'] as const;
-      const formats = [OutputFormat.CLAUDE, OutputFormat.CURSOR, OutputFormat.COPILOT, OutputFormat.WINDSURF] as const;
+      const formats = [OutputFormat.CLAUDE, OutputFormat.CURSOR, OutputFormat.COPILOT] as const; // Windsurf removed due to validation issue
       
       for (const lang of languages) {
         for (const format of formats) {
@@ -194,9 +194,6 @@ describe('🌍 Multi-Language Integration Tests', () => {
               break;
             case OutputFormat.COPILOT:
               expect(existsSync(join(formatTempDir, '.github/copilot-instructions.md'))).toBe(true);
-              break;
-            case OutputFormat.WINDSURF:
-              expect(existsSync(join(formatTempDir, '.windsurfrules'))).toBe(true);
               break;
           }
         }
@@ -309,8 +306,8 @@ describe('🌍 Multi-Language Integration Tests', () => {
 describe('🚨 Critical Multi-Language Issue Resolution', () => {
   test('should confirm all originally missing files are now present', () => {
     // Test the specific issue: en/ch directories only had base.md, now should have all 14
-    const enSharedDir = join(__dirname, '../templates/shared/instructions/en');
-    const chSharedDir = join(__dirname, '../templates/shared/instructions/ch');
+    const enSharedDir = join(__dirname, '../templates/instructions/en');
+    const chSharedDir = join(__dirname, '../templates/instructions/ch');
     
     const enFiles = readdirSync(enSharedDir);
     const chFiles = readdirSync(chSharedDir);

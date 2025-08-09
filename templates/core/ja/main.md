@@ -1,12 +1,20 @@
-# GitHub Copilot カスタム指示 - {{projectName}}
+---
+description: {{projectName}}の主要開発指示
+globs: {{dynamicGlobs}}
+alwaysApply: true
+---
 
-## 🚨 基本原則（必須）
+# {{toolName}} 開発指示 - {{projectName}}
+
+## 🚨 核心原則（必須）
 
 すべてのタスク・コマンド・ツール実行前に必ず読み込み
 
 - [基本ルール](./instructions/base.md) - 絶対厳守事項
 - [深層思考](./instructions/deep-think.md)
 - [memory](./instructions/memory.md)
+
+{{toolSpecificFeatures}}
 
 ## プロジェクト固有のアーキテクチャ・ルール・ドキュメント
 
@@ -43,6 +51,8 @@
 ### 記録・管理
 
 - [ノート・日誌](./instructions/note.md) - 作業記録の書き方
+
+{{additionalInstructions}}
 
 ## 🔄 実行フロー
 

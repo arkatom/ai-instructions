@@ -37,7 +37,7 @@ describe('Template Restructure (Issue #19)', () => {
       expect(existsSync(join(testOutputDir, 'instructions', 'deep-think.md'))).toBe(true);
     });
 
-    it('should copy instructions from templates/shared/instructions/ja/ instead of templates/claude/ja/instructions/', async () => {
+    it('should copy instructions from templates/instructions/ja/ instead of templates/claude/ja/instructions/', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -53,7 +53,7 @@ describe('Template Restructure (Issue #19)', () => {
       expect(baseContent).toContain('絶対厳守');
     });
 
-    it('should copy instructions from templates/shared/instructions/en/ for English', async () => {
+    it('should copy instructions from templates/instructions/en/ for English', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -69,7 +69,7 @@ describe('Template Restructure (Issue #19)', () => {
       expect(baseContent).toContain('Absolute Requirements');
     });
 
-    it('should copy instructions from templates/shared/instructions/ch/ for Chinese', async () => {
+    it('should copy instructions from templates/instructions/ch/ for Chinese', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -85,24 +85,20 @@ describe('Template Restructure (Issue #19)', () => {
       expect(baseContent).toContain('必须');
     });
 
-    it('should fall back to English if language-specific shared instructions not found', async () => {
+    it('should throw error for unsupported languages', async () => {
       const generator = new ClaudeGenerator();
       
-      // 存在しない言語でテスト
-      await generator.generateFiles(testOutputDir, { 
+      // 存在しない言語でテスト - 現在の実装ではエラーになる
+      await expect(generator.generateFiles(testOutputDir, { 
         projectName: 'test-project', 
         lang: 'fr' as any // フランス語（存在しない）
-      });
-      
-      // 英語版にフォールバックすることを確認
-      const baseContent = await readFile(join(testOutputDir, 'instructions', 'base.md'), 'utf-8');
-      expect(baseContent).toContain('Core Rules');
+      })).rejects.toThrow('Core template directory not found for language fr');
     });
 
     it('should use shared instructions that are not duplicated across tools', async () => {
       // この test は実装後に有効になる
       // 現在は claude/ja/instructions/ と claude/en/instructions/ が存在するが
-      // 新しい構造では templates/shared/instructions/ja/ と templates/shared/instructions/en/ のみが存在する
+      // 新しい構造では templates/instructions/ja/ と templates/instructions/en/ のみが存在する
       
       const generator = new ClaudeGenerator();
       

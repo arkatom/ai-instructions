@@ -1,0 +1,26 @@
+{
+  "globs": [
+    "**/*.md",
+    "**/*.txt", 
+    "**/*.json",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.xml",
+    "**/*.html",
+    "**/*.css",
+    "**/.env",
+    "**/.gitignore",
+    "**/README*",
+    "**/CHANGELOG*",
+    "**/LICENSE*",
+    "**/Dockerfile",
+    "**/docker-compose.yml"
+  ],
+  "description": "汎用プロジェクト用ファイルグロブ設定 - 言語に依存しない共通ファイル",
+  "languageFeatures": [
+    "ドキュメントファイル",
+    "設定ファイル",
+    "プロジェクトメタファイル",
+    "コンテナ設定"
+  ]
+}
