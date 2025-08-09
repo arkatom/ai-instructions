@@ -2,6 +2,10 @@ import { BaseGenerator, GenerateFilesOptions, ToolConfig } from './base';
 import { join } from 'path';
 import { mkdir } from 'fs/promises';
 import { FileUtils } from '../utils/file-utils';
+import { 
+  ParallelGeneratorOperations
+} from './parallel-generator';
+import { SharedTemplateProcessor } from './shared-processor';
 
 /**
  * Cline AI tool generator (Issue #23)
@@ -37,51 +41,80 @@ export class ClineGenerator extends BaseGenerator {
    * Creates .clinerules directory with multiple markdown files
    */
   async generateFiles(outputDir: string, options: GenerateFilesOptions = {}): Promise<void> {
-    const { 
-      projectName: _projectName = '',
-      lang = 'en',
-      force: _force = false
-    } = options;
-
-    // Validate language support
-    const supportedLanguages = ['en', 'ja', 'ch'];
-    if (!supportedLanguages.includes(lang)) {
-      throw new Error(`Unsupported language: ${lang}. Supported languages: ${supportedLanguages.join(', ')}`);
-    }
-
-    // Create .clinerules directory
-    const clinerulesDirPath = join(outputDir, '.clinerules');
-    await mkdir(clinerulesDirPath, { recursive: true });
-
-    // Copy instructions directory (shared across all tools) - using Claude's method
-    const instructionsSourcePath = join(__dirname, '../../templates/instructions', lang);
-    const instructionsTargetPath = join(outputDir, 'instructions');
+    const _force = options.force || false;
     
-    if (await FileUtils.fileExists(instructionsSourcePath)) {
-      await FileUtils.copyDirectory(instructionsSourcePath, instructionsTargetPath);
-    }
+    // Cline generator started
 
-    // Generate multiple Cline rule files using core templates
-    await this.generateClineRuleFiles(clinerulesDirPath, options);
+    // Use shared template processor for consistent template loading
+    const claudeContent = await SharedTemplateProcessor.loadAndProcessDynamicTemplate('main.md', 'cline', options);
+    
+    // Create .clinerules directory structure with specialized files
+    await this.generateClineRuleFiles(outputDir, claudeContent, options);
+    
+    // Copy shared instructions directory using shared processor
+    await SharedTemplateProcessor.copyInstructionsDirectory(outputDir, options.lang, options);
+    
+    // Cline generator completed
   }
 
   /**
    * Generate multiple markdown rule files for Cline using core templates
    */
   private async generateClineRuleFiles(
-    clinerulesDirPath: string, 
+    outputDir: string,
+    coreContent: string, 
     options: GenerateFilesOptions
   ): Promise<void> {
-    // Load core template content
-    const coreContent = await this.loadDynamicTemplate('main.md', options);
+    // Create .clinerules directory
+    const clinerulesDirPath = join(outputDir, '.clinerules');
+    await mkdir(clinerulesDirPath, { recursive: true });
     
+    // Define the rule files to generate with specialized content
+    const ruleFiles = [
+      { filename: '01-coding.md', title: 'Coding Rules and Standards', outputDirectory: clinerulesDirPath },
+      { filename: '02-documentation.md', title: 'Documentation Guidelines', outputDirectory: clinerulesDirPath }
+    ];
+
+    // Generate all rule files in parallel for improved performance
+    try {
+      const stats = await ParallelGeneratorOperations.generateMultipleSpecializedFilesParallel(
+        coreContent, 
+        ruleFiles, 
+        options
+      );
+      
+      // Log performance improvement if enabled
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`🚀 Generated ${stats.totalTasks} Cline rule files in parallel (${stats.totalExecutionTimeMs.toFixed(2)}ms)`);
+      }
+      
+      // Handle any failures
+      if (stats.failedTasks > 0) {
+        console.warn(`⚠️  ${stats.failedTasks} out of ${stats.totalTasks} Cline rule files failed to generate`);
+      }
+      
+    } catch {
+      // Fallback to sequential generation if parallel generation fails
+      console.warn('⚠️  Parallel generation failed, falling back to sequential generation');
+      await this.generateClineRuleFilesSequential(clinerulesDirPath, coreContent, options);
+    }
+  }
+
+  /**
+   * Fallback sequential generation for Cline rule files
+   */
+  private async generateClineRuleFilesSequential(
+    clinerulesDirPath: string,
+    coreContent: string, 
+    options: GenerateFilesOptions
+  ): Promise<void> {
     // Define the rule files to generate with specialized content
     const ruleFiles = [
       { filename: '01-coding.md', title: 'Coding Rules and Standards' },
       { filename: '02-documentation.md', title: 'Documentation Guidelines' }
     ];
 
-    // Generate each rule file with core content
+    // Generate each rule file sequentially (original implementation)
     for (const ruleFile of ruleFiles) {
       const specializedContent = this.createSpecializedContent(coreContent, ruleFile.title);
       const outputPath = join(clinerulesDirPath, ruleFile.filename);
@@ -103,5 +136,56 @@ This file contains the core development instructions optimized for Cline AI.
 `;
     
     return clineHeader + coreContent;
+  }
+
+  /**
+   * Copy shared instructions directory using ClaudeGenerator's proven method
+   */
+  private async copySharedInstructions(outputDir: string, options: GenerateFilesOptions): Promise<void> {
+    const lang = options.lang || 'en';
+    
+    try {
+      // Use parallel operations for better performance
+      const stats = await ParallelGeneratorOperations.copyInstructionsDirectoryParallel(
+        outputDir, 
+        lang, 
+        options
+      );
+      
+      // Log performance improvement if enabled
+      if (process.env.NODE_ENV === 'development' && stats.totalTasks > 0) {
+        console.warn(`🚀 Copied ${stats.totalTasks} instruction files in parallel (${stats.totalExecutionTimeMs.toFixed(2)}ms)`);
+      }
+      
+      // Handle any failures
+      if (stats.failedTasks > 0) {
+        console.warn(`⚠️  ${stats.failedTasks} out of ${stats.totalTasks} instruction files failed to copy`);
+      }
+      
+    } catch {
+      // Fallback to original implementation
+      console.warn('⚠️  Parallel copy failed, falling back to sequential copy');
+      await this.copySharedInstructionsSequential(outputDir, options);
+    }
+  }
+
+  /**
+   * Fallback sequential copy for shared instructions
+   */
+  private async copySharedInstructionsSequential(outputDir: string, options: GenerateFilesOptions): Promise<void> {
+    const lang = options.lang || 'en';
+    const instructionsSourcePath = join(__dirname, '../../templates/instructions', lang);
+    const instructionsTargetPath = join(outputDir, 'instructions');
+    
+    if (await FileUtils.fileExists(instructionsSourcePath)) {
+      await FileUtils.copyDirectory(instructionsSourcePath, instructionsTargetPath);
+    } else if (lang !== 'en') {
+      // Fallback to English instructions
+      const enInstructionsPath = join(__dirname, '../../templates/instructions/en');
+      if (await FileUtils.fileExists(enInstructionsPath)) {
+        console.warn(`⚠️  Instructions directory not found for ${lang}, using English version`);
+        await FileUtils.copyDirectory(enInstructionsPath, instructionsTargetPath);
+      }
+    }
   }
 }

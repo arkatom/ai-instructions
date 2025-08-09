@@ -2,8 +2,14 @@
   "displayName": "Cursor AI",
   "fileExtension": ".mdc",
   "globs": {
-    "inherit": "javascript",
-    "additional": ["**/*.mdc", "**/.cursor/**"]
+    "inherit": "universal"
   },
-  "description": "Cursor AI用の設定ファイル - MDC形式とCursor固有機能対応"
+  "description": "Cursor AI用の設定ファイル - MDC (Markdown with YAML frontmatter)形式",
+  "fileStructure": {
+    "outputDirectory": ".cursor/rules",
+    "mainFileName": "main.mdc",
+    "subdirectories": ["instructions"],
+    "includeInstructionsDirectory": true,
+    "fileNamingPattern": "main"
+  }
 }

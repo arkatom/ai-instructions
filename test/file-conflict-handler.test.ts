@@ -97,8 +97,9 @@ describe('FileConflictHandler', () => {
       const handler = new FileConflictHandler();
       await handler.resolveConflict(testFile, newContent, ConflictResolution.BACKUP);
 
-      // Check for timestamped backup file in test-backups directory
-      const testBackupDir = join(dirname(testFile), 'test-backups');
+      // Check for timestamped backup file in project backups directory
+      const projectRoot = process.cwd();
+      const testBackupDir = join(projectRoot, 'backups', 'test', 'temp-conflict-test');
       const files = require('fs').readdirSync(testBackupDir);
       const backupFiles = files.filter((f: string) => f.includes('test-file.md.backup.'));
       
@@ -169,7 +170,7 @@ describe('FileConflictHandler', () => {
       const backupPath = await handler.createTimestampedBackup(testFile);
       
       expect(existsSync(backupPath)).toBe(true);
-      expect(backupPath).toContain('test-backups');
+      expect(backupPath).toContain('backups');
       expect(backupPath).toContain('test-file.md.backup.');
       expect(readFileSync(backupPath, 'utf-8')).toBe('content');
     });
@@ -184,7 +185,7 @@ describe('FileConflictHandler', () => {
       
       expect(existsSync(backupPath)).toBe(true);
       expect(backupPath).not.toBe(backupFile);
-      expect(backupPath).toContain('test-backups');
+      expect(backupPath).toContain('backups');
       expect(backupPath).toContain('test-file.md.backup.');
     });
   });
