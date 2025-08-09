@@ -1,7 +1,46 @@
 import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 import { FileUtils } from '../utils/file-utils';
+import { ConflictResolution } from '../utils/file-conflict-handler';
 import { OutputFormat } from '../converters';
+
+/**
+ * Convert string to ConflictResolution enum
+ * @param resolution - String representation of conflict resolution strategy
+ * @returns ConflictResolution enum value
+ */
+function stringToConflictResolution(resolution: string): ConflictResolution {
+  switch (resolution?.toLowerCase()) {
+    case 'backup': return ConflictResolution.BACKUP;
+    case 'merge': return ConflictResolution.MERGE;
+    case 'interactive': return ConflictResolution.INTERACTIVE;
+    case 'skip': return ConflictResolution.SKIP;
+    case 'overwrite': return ConflictResolution.OVERWRITE;
+    default: return ConflictResolution.BACKUP; // Safe default
+  }
+}
+
+/**
+ * Tool configuration structure
+ */
+export interface ToolConfiguration {
+  displayName: string;
+  fileExtension: string;
+  globs: {
+    inherit: string;
+    additional?: string[];
+  };
+  description: string;
+}
+
+/**
+ * Language configuration structure  
+ */
+export interface LanguageConfiguration {
+  globs: string[];
+  description: string;
+  languageFeatures: string[];
+}
 
 /**
  * Options for file generation
@@ -135,8 +174,8 @@ export abstract class BaseGenerator {
    */
   private applyDynamicReplacements(
     template: string, 
-    toolConfig: any, 
-    languageConfig: any, 
+    toolConfig: ToolConfiguration, 
+    languageConfig: LanguageConfiguration, 
     options?: GenerateFilesOptions
   ): string {
     let result = template;
@@ -172,7 +211,7 @@ export abstract class BaseGenerator {
    * Generate dynamic globs by merging language config and tool-specific additions
    * TDD Implementation: Green Phase - Intelligent globs combination
    */
-  private generateDynamicGlobs(toolConfig: any, languageConfig: any): string[] {
+  private generateDynamicGlobs(toolConfig: ToolConfiguration, languageConfig: LanguageConfiguration): string[] {
     const baseGlobs = languageConfig.globs || [];
     const additionalGlobs = toolConfig.globs?.additional || [];
     
@@ -203,7 +242,7 @@ export abstract class BaseGenerator {
    * Load tool-specific configuration from JSON file
    * TDD Implementation: Green Phase - Configuration loading support
    */
-  async loadToolConfig(): Promise<any> {
+  async loadToolConfig(): Promise<ToolConfiguration> {
     try {
       const toolConfigPath = join(__dirname, '../../templates/configs/tools', `${this.toolConfig.name}.json`);
       
@@ -225,7 +264,7 @@ export abstract class BaseGenerator {
    * Load language-specific configuration from JSON file
    * TDD Implementation: Green Phase - Language configuration support
    */
-  async loadLanguageConfig(languageName: string): Promise<any> {
+  async loadLanguageConfig(languageName: string): Promise<LanguageConfiguration> {
     try {
       const langConfigPath = join(__dirname, '../../templates/configs/languages', `${languageName}.json`);
       
@@ -286,7 +325,7 @@ export abstract class BaseGenerator {
       await FileUtils.writeFileContentAdvanced(targetPath, content, {
         force,
         interactive: interactive !== false,
-        defaultResolution: conflictResolution as any || 'backup',
+        defaultResolution: conflictResolution ? stringToConflictResolution(conflictResolution) : ConflictResolution.BACKUP,
         backup: backup !== false
       });
     } else {

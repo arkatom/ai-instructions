@@ -17,12 +17,7 @@ export class CursorGenerator extends BaseGenerator {
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
     const _force = options.force || false;
     
-    try {
-      const chalk = (await import('chalk')).default;
-      console.log(chalk.blue(`🤖 Generating cursor AI instruction files...`));
-    } catch {
-      console.log(`🤖 Generating cursor AI instruction files...`);
-    }
+    // Cursor generator started
 
     // Use ClaudeGenerator with CURSOR output format for proper conversion
     const { ClaudeGenerator } = await import('./claude');
@@ -34,12 +29,7 @@ export class CursorGenerator extends BaseGenerator {
       outputFormat: OutputFormat.CURSOR
     });
 
-    try {
-      const chalk = (await import('chalk')).default;
-      console.log(chalk.green(`✅ Cursor template generation completed!`));
-    } catch {
-      console.log(`✅ Cursor template generation completed!`);
-    }
+    // Cursor generator completed
   }
 
   /**

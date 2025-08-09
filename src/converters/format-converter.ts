@@ -98,9 +98,9 @@ export abstract class BaseFormatConverter implements FormatConverter {
   /**
    * Extract metadata from source content (e.g., YAML frontmatter)
    */
-  protected extractMetadata(content: string): Record<string, any> {
+  protected extractMetadata(content: string): Record<string, string | string[] | boolean> {
     // Basic implementation - can be overridden for format-specific metadata extraction
-    const metadata: Record<string, any> = {};
+    const metadata: Record<string, string | string[] | boolean> = {};
     
     // Extract YAML frontmatter if present
     const yamlMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -134,7 +134,7 @@ export abstract class BaseFormatConverter implements FormatConverter {
   /**
    * Add YAML frontmatter to content
    */
-  protected addYamlFrontmatter(content: string, frontmatter: Record<string, any>): string {
+  protected addYamlFrontmatter(content: string, frontmatter: Record<string, string | string[] | boolean>): string {
     const yamlLines = ['---'];
     
     for (const [key, value] of Object.entries(frontmatter)) {

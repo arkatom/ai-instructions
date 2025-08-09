@@ -18,12 +18,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
     const _force = options.force || false;
     
-    try {
-      const chalk = (await import('chalk')).default;
-      console.log(chalk.blue('🤖 Generating GitHub Copilot instruction files...'));
-    } catch {
-      console.log('🤖 Generating GitHub Copilot instruction files...');
-    }
+    // GitHub Copilot generator started
 
     // Use ClaudeGenerator with COPILOT output format for proper conversion
     const { ClaudeGenerator } = await import('./claude');
@@ -35,12 +30,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
       outputFormat: OutputFormat.COPILOT
     });
 
-    try {
-      const chalk = (await import('chalk')).default;
-      console.log(chalk.green('✅ GitHub Copilot template generation completed!'));
-    } catch {
-      console.log('✅ GitHub Copilot template generation completed!');
-    }
+    // GitHub Copilot generator completed
   }
 
   /**

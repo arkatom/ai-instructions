@@ -23,12 +23,7 @@ export class ClaudeGenerator extends BaseGenerator {
     const _projectName = options.projectName || 'ai-project';
     
     // 🚨 EMERGENCY PATCH v0.2.1: Safe file generation with warnings
-    try {
-      const chalk = (await import('chalk')).default;
-      console.log(chalk.blue(`🤖 Generating ${outputFormat} AI instruction files...`));
-    } catch {
-      console.log(`🤖 Generating ${outputFormat} AI instruction files...`);
-    }
+    // Generator started
 
     // Generate CLAUDE.md content first (always the source format)
     const claudeContent = await this.loadDynamicTemplate('main.md', options);
@@ -45,18 +40,7 @@ export class ClaudeGenerator extends BaseGenerator {
       await this.generateConvertedFormat(targetDir, claudeContent, outputFormat, options, force);
     }
     
-    try {
-      const chalk = (await import('chalk')).default;
-      console.log(chalk.green(`✅ ${outputFormat} template generation completed!`));
-      if (outputFormat !== OutputFormat.CLAUDE) {
-        console.log(chalk.yellow(`🔄 Converted from Claude format to ${outputFormat}`));
-      }
-    } catch {
-      console.log(`✅ ${outputFormat} template generation completed!`);
-      if (outputFormat !== OutputFormat.CLAUDE) {
-        console.log(`🔄 Converted from Claude format to ${outputFormat}`);
-      }
-    }
+    // Generator completed
   }
 
   /**

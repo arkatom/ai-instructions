@@ -66,9 +66,9 @@ export class FileConflictHandler {
   async promptForResolution(filePath: string, existingContent: string, newContent: string): Promise<ConflictResolution> {
     const stats = statSync(filePath);
     
-    console.log(`\n🚨 File conflict detected: ${filePath}`);
-    console.log(`📊 Existing file: ${stats.size} bytes, modified ${stats.mtime.toLocaleString()}`);
-    console.log(`📊 New content: ${newContent.length} bytes`);
+    console.warn(`\n🚨 File conflict detected: ${filePath}`);
+    console.warn(`📊 Existing file: ${stats.size} bytes, modified ${stats.mtime.toLocaleString()}`);
+    console.warn(`📊 New content: ${newContent.length} bytes`);
     
     const { resolution } = await inquirer.prompt([
       {
@@ -119,30 +119,30 @@ export class FileConflictHandler {
       case ConflictResolution.BACKUP:
         await this.createTimestampedBackup(filePath);
         await writeFile(filePath, newContent, 'utf-8');
-        console.log(`✅ Backup created and new file written: ${filePath}`);
+        console.warn(`✅ Backup created and new file written: ${filePath}`);
         break;
 
       case ConflictResolution.MERGE: {
         const mergedContent = await this.mergeContent(existingContent, newContent, filePath);
         await writeFile(filePath, mergedContent, 'utf-8');
-        console.log(`✅ Content merged: ${filePath}`);
+        console.warn(`✅ Content merged: ${filePath}`);
         break;
       }
 
       case ConflictResolution.INTERACTIVE: {
         const selectedContent = await this.promptForLineSelection(existingContent, newContent);
         await writeFile(filePath, selectedContent, 'utf-8');
-        console.log(`✅ Interactive selection applied: ${filePath}`);
+        console.warn(`✅ Interactive selection applied: ${filePath}`);
         break;
       }
 
       case ConflictResolution.SKIP:
-        console.log(`⏭️  Skipped: ${filePath}`);
+        console.warn(`⏭️  Skipped: ${filePath}`);
         break;
 
       case ConflictResolution.OVERWRITE:
         await writeFile(filePath, newContent, 'utf-8');
-        console.log(`✅ File overwritten: ${filePath}`);
+        console.warn(`✅ File overwritten: ${filePath}`);
         break;
 
       default:
@@ -216,8 +216,10 @@ export class FileConflictHandler {
         i++;
         
         // Add content until next header or end
-        while (i < newLines.length && newLines[i] && !newLines[i]!.startsWith('#')) {
-          result.push(newLines[i]!);
+        while (i < newLines.length && (newLines[i] === undefined || !newLines[i]!.startsWith('#'))) {
+          if (newLines[i] !== undefined) {
+            result.push(newLines[i]!);
+          }
           i++;
         }
       } else {
@@ -242,14 +244,16 @@ export class FileConflictHandler {
           i++;
           
           // Add content until next header or end
-          while (i < existingLines.length && existingLines[i] && !existingLines[i]!.startsWith('#')) {
-            result.push(existingLines[i]!);
+          while (i < existingLines.length && (existingLines[i] === undefined || !existingLines[i]!.startsWith('#'))) {
+            if (existingLines[i] !== undefined) {
+              result.push(existingLines[i]!);
+            }
             i++;
           }
         } else {
           // Skip this section as it was already processed
           i++;
-          while (i < existingLines.length && existingLines[i] && !existingLines[i]!.startsWith('#')) {
+          while (i < existingLines.length && (existingLines[i] === undefined || !existingLines[i]!.startsWith('#'))) {
             i++;
           }
         }
