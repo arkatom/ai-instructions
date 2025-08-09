@@ -10,9 +10,9 @@
  * - Overwrite: Replace existing file (current behavior)
  */
 
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, statSync } from 'fs';
 import { copyFile, writeFile, mkdir } from 'fs/promises';
-import { extname, join, dirname, basename, resolve, relative } from 'path';
+import { extname, join, dirname, basename, relative } from 'path';
 import inquirer from 'inquirer';
 
 export enum ConflictResolution {
@@ -32,21 +32,13 @@ export interface ConflictInfo {
 }
 
 export class FileConflictHandler {
-  private backupBaseDir: string | undefined;
-  private isTestEnvironment: boolean;
-
-  constructor(options?: { backupBaseDir?: string; isTestEnvironment?: boolean }) {
-    this.backupBaseDir = options?.backupBaseDir;
-    this.isTestEnvironment = options?.isTestEnvironment || process.env.NODE_ENV === 'test';
-  }
-
   /**
    * Detect if a file conflict exists
    */
   async detectConflict(filePath: string): Promise<boolean> {
     try {
       return existsSync(filePath);
-    } catch (error) {
+    } catch {
       // If we can't access the file, assume no conflict
       return false;
     }
@@ -57,7 +49,7 @@ export class FileConflictHandler {
    */
   async getConflictInfo(filePath: string, newContent: string): Promise<ConflictInfo> {
     const existingContent = readFileSync(filePath, 'utf-8');
-    const stats = require('fs').statSync(filePath);
+    const stats = statSync(filePath);
     
     return {
       filePath,
@@ -72,13 +64,11 @@ export class FileConflictHandler {
    * Prompt user for conflict resolution strategy
    */
   async promptForResolution(filePath: string, existingContent: string, newContent: string): Promise<ConflictResolution> {
-    const stats = require('fs').statSync(filePath);
+    const stats = statSync(filePath);
     
-    if (!this.isTestEnvironment) {
-      console.log(`\n🚨 File conflict detected: ${filePath}`);
-      console.log(`📊 Existing file: ${stats.size} bytes, modified ${stats.mtime.toLocaleString()}`);
-      console.log(`📊 New content: ${newContent.length} bytes`);
-    }
+    console.warn(`\n🚨 File conflict detected: ${filePath}`);
+    console.warn(`📊 Existing file: ${stats.size} bytes, modified ${stats.mtime.toLocaleString()}`);
+    console.warn(`📊 New content: ${newContent.length} bytes`);
     
     const { resolution } = await inquirer.prompt([
       {
@@ -129,38 +119,30 @@ export class FileConflictHandler {
       case ConflictResolution.BACKUP:
         await this.createTimestampedBackup(filePath);
         await writeFile(filePath, newContent, 'utf-8');
-        if (!this.isTestEnvironment) {
-          console.log(`✅ Backup created and new file written: ${filePath}`);
-        }
+        console.warn(`✅ Backup created and new file written: ${filePath}`);
         break;
 
-      case ConflictResolution.MERGE:
+      case ConflictResolution.MERGE: {
         const mergedContent = await this.mergeContent(existingContent, newContent, filePath);
         await writeFile(filePath, mergedContent, 'utf-8');
-        if (!this.isTestEnvironment) {
-          console.log(`✅ Content merged: ${filePath}`);
-        }
+        console.warn(`✅ Content merged: ${filePath}`);
         break;
+      }
 
-      case ConflictResolution.INTERACTIVE:
+      case ConflictResolution.INTERACTIVE: {
         const selectedContent = await this.promptForLineSelection(existingContent, newContent);
         await writeFile(filePath, selectedContent, 'utf-8');
-        if (!this.isTestEnvironment) {
-          console.log(`✅ Interactive selection applied: ${filePath}`);
-        }
+        console.warn(`✅ Interactive selection applied: ${filePath}`);
         break;
+      }
 
       case ConflictResolution.SKIP:
-        if (!this.isTestEnvironment) {
-          console.log(`⏭️  Skipped: ${filePath}`);
-        }
+        console.warn(`⏭️  Skipped: ${filePath}`);
         break;
 
       case ConflictResolution.OVERWRITE:
         await writeFile(filePath, newContent, 'utf-8');
-        if (!this.isTestEnvironment) {
-          console.log(`✅ File overwritten: ${filePath}`);
-        }
+        console.warn(`✅ File overwritten: ${filePath}`);
         break;
 
       default:
@@ -177,30 +159,20 @@ export class FileConflictHandler {
       .replace(/\..+/, '')
       .replace(/(\d{8})(\d{6})/, '$1_$2');
     
-    // Determine backup base directory
+    // Create backup directory structure
     const projectRoot = process.cwd();
-    const backupBaseDir = this.backupBaseDir || (this.isTestEnvironment 
-      ? join(dirname(filePath), 'test-backups')  // For tests: put backups in test directory
-      : join(projectRoot, 'backups'));           // For production: use project backups/ dir
+    const backupDir = join(projectRoot, 'backups');
     
     // Ensure backup directory exists
-    await mkdir(backupBaseDir, { recursive: true });
+    await mkdir(backupDir, { recursive: true });
     
-    // Create backup file path
-    let backupFilePath: string;
-    if (this.isTestEnvironment && !this.backupBaseDir) {
-      // For test environment: simple backup in test-backups directory
-      const backupFileName = `${basename(filePath)}.backup.${timestamp}`;
-      backupFilePath = join(backupBaseDir, backupFileName);
-    } else {
-      // For production or custom backup dir: preserve relative path structure
-      const relativePath = relative(projectRoot, filePath);
-      const backupFileName = `${basename(filePath)}.backup.${timestamp}`;
-      backupFilePath = join(backupBaseDir, dirname(relativePath), backupFileName);
-      
-      // Ensure backup subdirectory exists
-      await mkdir(dirname(backupFilePath), { recursive: true });
-    }
+    // Preserve relative path structure within backup directory
+    const relativePath = relative(projectRoot, filePath);
+    const backupFileName = `${basename(filePath)}.backup.${timestamp}`;
+    const backupFilePath = join(backupDir, dirname(relativePath), backupFileName);
+    
+    // Ensure backup subdirectory exists
+    await mkdir(dirname(backupFilePath), { recursive: true });
     
     await copyFile(filePath, backupFilePath);
     return backupFilePath;
@@ -244,8 +216,10 @@ export class FileConflictHandler {
         i++;
         
         // Add content until next header or end
-        while (i < newLines.length && newLines[i] && !newLines[i]!.startsWith('#')) {
-          result.push(newLines[i]!);
+        while (i < newLines.length && (newLines[i] === undefined || !newLines[i]!.startsWith('#'))) {
+          if (newLines[i] !== undefined) {
+            result.push(newLines[i]!);
+          }
           i++;
         }
       } else {
@@ -270,14 +244,16 @@ export class FileConflictHandler {
           i++;
           
           // Add content until next header or end
-          while (i < existingLines.length && existingLines[i] && !existingLines[i]!.startsWith('#')) {
-            result.push(existingLines[i]!);
+          while (i < existingLines.length && (existingLines[i] === undefined || !existingLines[i]!.startsWith('#'))) {
+            if (existingLines[i] !== undefined) {
+              result.push(existingLines[i]!);
+            }
             i++;
           }
         } else {
           // Skip this section as it was already processed
           i++;
-          while (i < existingLines.length && existingLines[i] && !existingLines[i]!.startsWith('#')) {
+          while (i < existingLines.length && (existingLines[i] === undefined || !existingLines[i]!.startsWith('#'))) {
             i++;
           }
         }
@@ -363,7 +339,7 @@ export class FileConflictHandler {
         type: 'checkbox',
         name: 'selectedLines',
         message: 'Select which lines to keep:',
-        choices: allLines.map((item, index) => ({
+        choices: allLines.map((item, _index) => ({
           name: `${this.getSourcePrefix(item.source)} ${item.line || '(empty line)'}`,
           value: item.line,
           checked: true // Default to keeping all lines

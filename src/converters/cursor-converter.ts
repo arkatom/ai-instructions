@@ -83,8 +83,8 @@ export class CursorMDCConverter extends BaseFormatConverter {
   /**
    * Generate Cursor-specific YAML frontmatter
    */
-  private generateCursorFrontmatter(projectName: string, lang: string): Record<string, any> {
-    const frontmatter: Record<string, any> = {
+  private generateCursorFrontmatter(projectName: string, lang: string): Record<string, string | string[] | boolean> {
+    const frontmatter: Record<string, string | string[] | boolean> = {
       description: `${projectName} development instructions for Cursor AI`,
       globs: this.getProjectGlobs(),
       alwaysApply: true

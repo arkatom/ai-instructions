@@ -6,7 +6,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
   constructor() {
     const config: ToolConfig = {
       name: 'github-copilot',
-      templateDir: 'github-copilot',
+      templateDir: 'core',
       outputStructure: {
         mainFile: 'copilot-instructions.md',
         directory: '.github'
@@ -16,41 +16,28 @@ export class GitHubCopilotGenerator extends BaseGenerator {
   }
 
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
-    const force = options.force || false;
+    const _force = options.force || false;
     
-    try {
-      const chalk = (await import('chalk')).default;
-      console.log(chalk.blue('🤖 Generating GitHub Copilot instruction files...'));
-    } catch (error) {
-      console.log('🤖 Generating GitHub Copilot instruction files...');
-    }
-    
-    // 2024年標準: .github/copilot-instructions.md に直接生成
-    const githubTargetPath = join(targetDir, '.github');
-    
-    // メインインストラクションファイルを生成（言語対応版）
-    const mainInstructionContent = await this.loadTemplate('main.md', options);
-    const processedContent = this.replaceTemplateVariables(mainInstructionContent, options);
-    await this.safeWriteFile(join(githubTargetPath, 'copilot-instructions.md'), processedContent, force, options);
+    // GitHub Copilot generator started
 
-    // 追加のインストラクションファイルをコピー（言語対応版）
-    await this.safeCopyInstructionsDirectory(githubTargetPath, options, force);
+    // Use ClaudeGenerator with COPILOT output format for proper conversion
+    const { ClaudeGenerator } = await import('./claude');
+    const { OutputFormat } = await import('../converters');
     
-    try {
-      const chalk = (await import('chalk')).default;
-      console.log(chalk.green('✅ GitHub Copilot template generation completed!'));
-      console.log(chalk.yellow('📝 Using 2024 standard: .github/copilot-instructions.md'));
-    } catch (error) {
-      console.log('✅ GitHub Copilot template generation completed!');
-      console.log('📝 Using 2024 standard: .github/copilot-instructions.md');
-    }
+    const claudeGenerator = new ClaudeGenerator();
+    await claudeGenerator.generateFiles(targetDir, {
+      ...options,
+      outputFormat: OutputFormat.COPILOT
+    });
+
+    // GitHub Copilot generator completed
   }
 
   /**
    * Language-aware additional instructions copying for GitHub Copilot (2024 standard)
    * Note: With 2024 standard, additional instructions are rare since main file is self-contained
    */
-  private async safeCopyInstructionsDirectory(githubTargetPath: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
+  private async safeCopyInstructionsDirectory(githubTargetPath: string, options: GenerateFilesOptions, _force: boolean): Promise<void> {
     const lang = options.lang || 'en';
     
     try {
@@ -84,7 +71,7 @@ export class GitHubCopilotGenerator extends BaseGenerator {
       
       // No additional instructions found - this is normal for GitHub Copilot 2024 standard
       console.warn('No additional instructions directory found for GitHub Copilot');
-    } catch (error) {
+    } catch {
       console.warn('No additional instructions directory found for GitHub Copilot');
     }
   }

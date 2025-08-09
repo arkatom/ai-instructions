@@ -209,7 +209,10 @@
       "WebFetch(domain:docs.cursor.com)",
       "WebFetch(domain:docs.roocode.com)",
       "mcp__github__get_file_contents",
-      "mcp__github__push_files"
+      "mcp__github__push_files",
+      "mcp__filesystem__read_text_file",
+      "mcp__github__search_issues",
+      "mcp__github__get_pull_request_status"
     ],
     "deny": []
   },

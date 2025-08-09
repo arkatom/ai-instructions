@@ -1,5 +1,5 @@
 import { mkdir, writeFile, readdir, stat } from 'fs/promises';
-import { existsSync, statSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join } from 'path';
 import { FileConflictHandler, ConflictResolution } from './file-conflict-handler';
 
@@ -33,54 +33,19 @@ export class FileUtils {
   }
 
   /**
-   * 🚨 EMERGENCY PATCH v0.2.1: Safe file writing with warnings
-   * Checks for existing files and displays warnings before overwriting
+   * Safe file writing with comprehensive conflict resolution
+   * Uses FileConflictHandler for complete safety system
+   * @param filePath - Target file path
+   * @param content - Content to write
+   * @param force - Force overwrite without prompts (default: false)
    */
   static async writeFileContentSafe(filePath: string, content: string, force: boolean = false): Promise<void> {
-    const fileExists = existsSync(filePath);
-    
-    if (fileExists && !force) {
-      // Import chalk dynamically to avoid issues if not installed
-      try {
-        const chalk = (await import('chalk')).default;
-        console.log(chalk.red('⚠️  WARNING: File already exists and will be OVERWRITTEN!'));
-        console.log(chalk.red(`📄 Target: ${filePath}`));
-        
-        // Show file info
-        const stats = statSync(filePath);
-        console.log(chalk.yellow(`📊 Size: ${stats.size} bytes, Modified: ${stats.mtime.toLocaleString()}`));
-        console.log(chalk.yellow('💡 Use --force flag to suppress this warning'));
-        console.log(chalk.yellow('💡 Or wait for v0.3.0 for interactive conflict resolution'));
-        console.log('');
-      } catch (error) {
-        // Fallback to plain console if chalk not available
-        console.log('⚠️  WARNING: File already exists and will be OVERWRITTEN!');
-        console.log(`📄 Target: ${filePath}`);
-        console.log('💡 Use --force flag to suppress this warning');
-        console.log('💡 Or wait for v0.3.0 for interactive conflict resolution');
-        console.log('');
-      }
-    }
-    
-    const dirPath = join(filePath, '..');
-    await this.ensureDirectory(dirPath);
-    await writeFile(filePath, content, 'utf-8');
-    
-    if (fileExists) {
-      try {
-        const chalk = (await import('chalk')).default;
-        console.log(chalk.green(`✅ File overwritten: ${filePath}`));
-      } catch (error) {
-        console.log(`✅ File overwritten: ${filePath}`);
-      }
-    } else {
-      try {
-        const chalk = (await import('chalk')).default;
-        console.log(chalk.green(`✅ File created: ${filePath}`));
-      } catch (error) {
-        console.log(`✅ File created: ${filePath}`);
-      }
-    }
+    return this.writeFileContentAdvanced(filePath, content, { 
+      force,
+      interactive: !force && !process.env.CI && process.env.NODE_ENV !== 'test',
+      defaultResolution: force ? ConflictResolution.OVERWRITE : ConflictResolution.BACKUP,
+      backup: true
+    });
   }
 
   /**
@@ -88,8 +53,8 @@ export class FileUtils {
    * This method is kept for backward compatibility but will be removed in v1.0.0
    */
   static async writeFileContent(filePath: string, content: string): Promise<void> {
-    console.log('⚠️  DEPRECATION WARNING: writeFileContent() is unsafe and will be removed in v1.0.0');
-    console.log('⚠️  Please use writeFileContentSafe() instead');
+    console.warn('⚠️  DEPRECATION WARNING: writeFileContent() is unsafe and will be removed in v1.0.0');
+    console.warn('⚠️  Please use writeFileContentSafe() instead');
     
     const dirPath = join(filePath, '..');
     await this.ensureDirectory(dirPath);
@@ -110,7 +75,7 @@ export class FileUtils {
       force = false,
       interactive = true,
       defaultResolution = ConflictResolution.BACKUP,
-      backup = true
+      backup: _backup = true
     } = options;
 
     // Ensure directory exists
@@ -123,12 +88,7 @@ export class FileUtils {
     if (!hasConflict) {
       // No conflict, write file normally
       await writeFile(filePath, content, 'utf-8');
-      try {
-        const chalk = (await import('chalk')).default;
-        console.log(chalk.green(`✅ File created: ${filePath}`));
-      } catch (error) {
-        console.log(`✅ File created: ${filePath}`);
-      }
+      // File created successfully
       return;
     }
 
@@ -139,13 +99,12 @@ export class FileUtils {
       resolution = ConflictResolution.OVERWRITE;
     } else if (interactive && process.env.NODE_ENV !== 'test') {
       // In interactive mode and not in test environment
-      const existingContent = require('fs').readFileSync(filePath, 'utf-8');
+      const existingContent = readFileSync(filePath, 'utf-8');
       resolution = await conflictHandler.promptForResolution(filePath, existingContent, content);
     } else {
       // Use default resolution (useful for automated scenarios or testing)
-      resolution = backup ? ConflictResolution.BACKUP : defaultResolution;
+      resolution = defaultResolution;
     }
-
     // Resolve the conflict using the selected strategy
     await conflictHandler.resolveConflict(filePath, content, resolution);
   }
@@ -166,7 +125,7 @@ export class FileUtils {
       } else {
         const { readFile } = await import('fs/promises');
         const content = await readFile(sourceItemPath, 'utf-8');
-        await this.writeFileContent(targetItemPath, content);
+        await this.writeFileContentSafe(targetItemPath, content);
       }
     }
   }

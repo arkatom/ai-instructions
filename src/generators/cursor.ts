@@ -6,7 +6,7 @@ export class CursorGenerator extends BaseGenerator {
   constructor() {
     const config: ToolConfig = {
       name: 'cursor',
-      templateDir: 'cursor',
+      templateDir: 'core',
       outputStructure: {
         directory: '.cursor/rules'
       }
@@ -15,24 +15,27 @@ export class CursorGenerator extends BaseGenerator {
   }
 
   async generateFiles(targetDir: string, options: GenerateFilesOptions = {}): Promise<void> {
-    const force = options.force || false;
+    const _force = options.force || false;
     
-    // .cursor/rules/ ディレクトリを作成
-    const rulesTargetPath = join(targetDir, '.cursor', 'rules');
-    
-    // メインルールファイルを生成（言語対応版）
-    const mainRuleContent = await this.loadTemplate('main.mdc', options);
-    const processedContent = this.replaceTemplateVariables(mainRuleContent, options);
-    await this.safeWriteFile(join(rulesTargetPath, 'main.mdc'), processedContent, force, options);
+    // Cursor generator started
 
-    // 追加のルールファイルをコピー（言語対応版）
-    await this.safeCopyRulesDirectory(rulesTargetPath, options, force);
+    // Use ClaudeGenerator with CURSOR output format for proper conversion
+    const { ClaudeGenerator } = await import('./claude');
+    const { OutputFormat } = await import('../converters');
+    
+    const claudeGenerator = new ClaudeGenerator();
+    await claudeGenerator.generateFiles(targetDir, {
+      ...options,
+      outputFormat: OutputFormat.CURSOR
+    });
+
+    // Cursor generator completed
   }
 
   /**
    * Language-aware rules directory copying for Cursor
    */
-  private async safeCopyRulesDirectory(rulesTargetPath: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
+  private async safeCopyRulesDirectory(rulesTargetPath: string, options: GenerateFilesOptions, _force: boolean): Promise<void> {
     const lang = options.lang || 'en';
     
     try {
@@ -65,7 +68,7 @@ export class CursorGenerator extends BaseGenerator {
       
       // No rules directory found - this is normal for Cursor
       console.warn('No additional rules directory found for Cursor');
-    } catch (error) {
+    } catch {
       console.warn('No additional rules directory found for Cursor');
     }
   }
