@@ -1,0 +1,8 @@
+{
+  "displayName": "Cline AI",
+  "fileExtension": ".md",
+  "globs": {
+    "inherit": "universal"
+  },
+  "description": "Cline AI用の設定ファイル - 複数ファイル構成のMarkdown形式"
+}

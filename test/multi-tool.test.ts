@@ -35,6 +35,12 @@ describe('Multi-Tool Support', () => {
       expect(generator.getToolName()).toBe('cursor');
     });
 
+    it('should create Cline generator', () => {
+      const generator = GeneratorFactory.createGenerator('cline');
+      expect(generator).toBeDefined();
+      expect(generator.getToolName()).toBe('Cline');
+    });
+
     it('should throw error for unsupported tool', () => {
       expect(() => {
         GeneratorFactory.createGenerator('unsupported' as SupportedTool);
@@ -43,13 +49,14 @@ describe('Multi-Tool Support', () => {
 
     it('should return list of supported tools', () => {
       const supportedTools = GeneratorFactory.getSupportedTools();
-      expect(supportedTools).toEqual(['claude', 'github-copilot', 'cursor']);
+      expect(supportedTools).toEqual(['claude', 'github-copilot', 'cursor', 'cline']);
     });
 
     it('should validate tool names correctly', () => {
       expect(GeneratorFactory.isValidTool('claude')).toBe(true);
       expect(GeneratorFactory.isValidTool('github-copilot')).toBe(true);
       expect(GeneratorFactory.isValidTool('cursor')).toBe(true);
+      expect(GeneratorFactory.isValidTool('cline')).toBe(true);
       expect(GeneratorFactory.isValidTool('invalid')).toBe(false);
     });
   });
