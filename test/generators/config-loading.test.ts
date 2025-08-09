@@ -271,10 +271,10 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       
       // ASSERT - All loads should succeed
       expect(results).toHaveLength(4);
-      expect(results[0].displayName).toBe('GitHub Copilot'); // tool config
-      expect(results[1].description).toContain('Python'); // python config
-      expect(results[2].description).toContain('JavaScript'); // js config
-      expect(results[3].description).toContain('汎用'); // universal config
+      expect((results[0] as any)?.displayName).toBe('GitHub Copilot'); // tool config
+      expect(results[1]?.description).toContain('Python'); // python config
+      expect(results[2]?.description).toContain('JavaScript'); // js config
+      expect(results[3]?.description).toContain('汎用'); // universal config
     });
   });
 });
