@@ -299,7 +299,7 @@ describe('Dynamic Template Generation - Complete Matrix Test', () => {
         lang: 'invalid-lang' as any,
         projectName: 'error-test',
         languageConfig: 'javascript'
-      })).rejects.toThrow('Core template directory not found for language invalid-lang');
+      })).rejects.toThrow('Unsupported language: invalid-lang');
     });
 
     test('should validate all combinations handle missing config gracefully', async () => {

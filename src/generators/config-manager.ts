@@ -75,7 +75,7 @@ export class ConfigurationManager {
       try {
         parsedConfig = JSON.parse(configContent);
       } catch (error) {
-        throw new TemplateParsingError(`tool config ${toolName}.json`, error as Error);
+        throw new Error(`Failed to parse tool configuration for ${toolName}: ${(error as Error).message}`);
       }
       
       // Enhance basic tool config with configurable file structure

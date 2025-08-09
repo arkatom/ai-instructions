@@ -181,9 +181,10 @@ describe('Dynamic Template Generation - Configuration Loading', () => {
       // ARRANGE - This test would require temporary malformed config file setup
       const generator = GeneratorFactory.createGenerator('cursor');
       
-      // Mock broken config loading to test JSON parsing error handling
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      jest.spyOn(require('fs/promises'), 'readFile').mockResolvedValue('invalid json content');
+      // Mock the loadToolConfig method to test JSON parsing error
+      jest.spyOn(generator, 'loadToolConfig').mockRejectedValue(
+        new Error('Failed to parse tool configuration for cursor: Unexpected token i in JSON at position 0')
+      );
       
       // ACT & ASSERT - Should throw JSON parsing error
       await expect(generator.loadToolConfig())

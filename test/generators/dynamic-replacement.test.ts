@@ -233,9 +233,11 @@ describe('Dynamic Template Generation - Dynamic Replacement', () => {
       jest.spyOn(generator, 'loadToolConfig').mockResolvedValue({
         displayName: 'Test Tool',
         fileExtension: '.md',
-        globs: [],
+        globs: {
+          inherit: 'universal'
+        },
         description: 'Test tool description',
-        // Missing customSections
+        // Missing customSections (which is expected and valid)
       } as any);
       
       // ACT

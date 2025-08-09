@@ -47,7 +47,8 @@ export class ConfigurationNotFoundError extends GeneratorError {
   readonly category = 'configuration' as const;
 
   constructor(configType: 'tool' | 'language', configName: string, searchPath: string) {
-    super(`${configType} configuration "${configName}" not found at path: ${searchPath}`, 
+    const capitalizedType = configType.charAt(0).toUpperCase() + configType.slice(1);
+    super(`${capitalizedType} configuration not found for ${configName}`, 
       { configType, configName, searchPath });
   }
 }
