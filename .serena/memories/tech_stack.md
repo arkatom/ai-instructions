@@ -8,7 +8,6 @@
 - **commander.js** - Command-line interface framework
 - **inquirer.js** - Interactive command-line prompts
 - **chalk** - Terminal string styling
-- **ora** - Terminal spinners
 
 ## File System
 - **fs-extra** - Enhanced file system utilities

@@ -64,8 +64,7 @@
     "chalk": "^4.1.2",
     "commander": "^14.0.0",
     "fs-extra": "^11.3.0",
-    "inquirer": "^12.9.0",
-    "ora": "^8.2.0"
+    "inquirer": "^12.9.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
