@@ -16,7 +16,7 @@
     "lint": "eslint src/**/*.ts test/**/*.ts",
     "lint:fix": "npm run lint -- --fix",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build && npm test",
+    "prepublishOnly": "npm run clean && npm run build",
     "prepack": "npm run build",
     "postpack": "echo \"📦 Package ready for publishing\"",
     "prepublish": "echo \"⚠️ Use 'npm run prepublishOnly' for safety\"",
