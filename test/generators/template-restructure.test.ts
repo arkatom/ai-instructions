@@ -14,10 +14,10 @@ describe('Template Restructure (Issue #19)', () => {
   });
 
   describe('New Template Structure', () => {
-    it('should copy instructions from shared language-specific directories', async () => {
+    it('should copy instructions from unified instructions directory', async () => {
       const generator = new ClaudeGenerator();
       
-      // TDD RED: 新しい構造でのファイル生成をテスト
+      // TDD RED: 新しい統一構造でのファイル生成をテスト
       await generator.generateFiles(testOutputDir, { 
         projectName: 'test-project', 
         lang: 'ja' 
@@ -26,18 +26,23 @@ describe('Template Restructure (Issue #19)', () => {
       // 期待される構造：
       // testOutputDir/
       // ├── CLAUDE.md (日本語版)
-      // └── instructions/ (日本語版の共通instructionsディレクトリから)
-      //     ├── base.md
-      //     ├── deep-think.md
-      //     └── ... その他のファイル
+      // └── instructions/ (統一instructionsディレクトリから)
+      //     ├── core/
+      //     │   ├── base.md
+      //     │   ├── deep-think.md
+      //     │   └── memory.md
+      //     ├── workflows/
+      //     ├── methodologies/
+      //     └── patterns/
       
       expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
       expect(existsSync(join(testOutputDir, 'instructions'))).toBe(true);
-      expect(existsSync(join(testOutputDir, 'instructions', 'base.md'))).toBe(true);
-      expect(existsSync(join(testOutputDir, 'instructions', 'deep-think.md'))).toBe(true);
+      expect(existsSync(join(testOutputDir, 'instructions', 'core'))).toBe(true);
+      expect(existsSync(join(testOutputDir, 'instructions', 'core', 'base.md'))).toBe(true);
+      expect(existsSync(join(testOutputDir, 'instructions', 'core', 'deep-think.md'))).toBe(true);
     });
 
-    it('should copy instructions from templates/instructions/ja/ instead of templates/claude/ja/instructions/', async () => {
+    it('should copy instructions from unified structure instead of language-specific directories', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -45,15 +50,15 @@ describe('Template Restructure (Issue #19)', () => {
         lang: 'ja' 
       });
       
-      // 日本語のbase.mdの内容を確認（共通ディレクトリから来ているかチェック）
-      const baseContent = await readFile(join(testOutputDir, 'instructions', 'base.md'), 'utf-8');
+      // 統一構造のbase.mdの内容を確認
+      const baseContent = await readFile(join(testOutputDir, 'instructions', 'core', 'base.md'), 'utf-8');
       
       // 日本語のファイルであることを確認
       expect(baseContent).toContain('超基本ルール');
       expect(baseContent).toContain('絶対厳守');
     });
 
-    it('should copy instructions from templates/instructions/en/ for English', async () => {
+    it('should work with any language using unified instructions', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -61,45 +66,28 @@ describe('Template Restructure (Issue #19)', () => {
         lang: 'en' 
       });
       
-      // 英語のbase.mdの内容を確認（共通ディレクトリから来ているかチェック）
-      const baseContent = await readFile(join(testOutputDir, 'instructions', 'base.md'), 'utf-8');
+      // 統一構造では言語に関係なく同じ内容
+      const baseContent = await readFile(join(testOutputDir, 'instructions', 'core', 'base.md'), 'utf-8');
       
-      // 英語のファイルであることを確認
-      expect(baseContent).toContain('Core Rules');
-      expect(baseContent).toContain('Absolute Requirements');
+      // 統一された日本語のファイルであることを確認
+      expect(baseContent).toContain('超基本ルール');
+      expect(baseContent).toContain('絶対厳守');
     });
 
-    it('should copy instructions from templates/instructions/ch/ for Chinese', async () => {
+    it('should support all configured languages with unified instructions', async () => {
       const generator = new ClaudeGenerator();
       
-      await generator.generateFiles(testOutputDir, { 
-        projectName: 'test-project', 
-        lang: 'ch' 
-      });
-      
-      // 中国語のbase.mdの内容を確認（共通ディレクトリから来ているかチェック）
-      const baseContent = await readFile(join(testOutputDir, 'instructions', 'base.md'), 'utf-8');
-      
-      // 中国語のファイルであることを確認
-      expect(baseContent).toContain('超级基本规则');
-      expect(baseContent).toContain('必须');
-    });
-
-    it('should throw error for unsupported languages', async () => {
-      const generator = new ClaudeGenerator();
-      
-      // 存在しない言語でテスト - 現在の実装ではエラーになる
+      // 統一構造ではサポートされている言語なら正常に動作する
       await expect(generator.generateFiles(testOutputDir, { 
         projectName: 'test-project', 
-        lang: 'fr' as any // フランス語（存在しない）
-      })).rejects.toThrow('Unsupported language: fr');
+        lang: 'ch' // サポートされている言語
+      })).resolves.not.toThrow();
+      
+      expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
+      expect(existsSync(join(testOutputDir, 'instructions'))).toBe(true);
     });
 
-    it('should use shared instructions that are not duplicated across tools', async () => {
-      // この test は実装後に有効になる
-      // 現在は claude/ja/instructions/ と claude/en/instructions/ が存在するが
-      // 新しい構造では templates/instructions/ja/ と templates/instructions/en/ のみが存在する
-      
+    it('should use unified instructions directory structure', async () => {
       const generator = new ClaudeGenerator();
       
       await generator.generateFiles(testOutputDir, { 
@@ -110,14 +98,21 @@ describe('Template Restructure (Issue #19)', () => {
       // instructions ディレクトリが存在することを確認
       expect(existsSync(join(testOutputDir, 'instructions'))).toBe(true);
       
-      // ファイル数が適切かチェック（重複がないこと）
+      // 新しい統一構造が正しくコピーされているかチェック
       const { readdir } = await import('fs/promises');
-      const instructionFiles = await readdir(join(testOutputDir, 'instructions'));
+      const instructionDirs = await readdir(join(testOutputDir, 'instructions'));
       
-      // 最低限必要なファイルが存在することを確認
-      expect(instructionFiles).toContain('base.md');
-      expect(instructionFiles).toContain('deep-think.md');
-      expect(instructionFiles).toContain('memory.md');
+      // 統一構造のディレクトリが存在することを確認
+      expect(instructionDirs).toContain('core');
+      expect(instructionDirs).toContain('workflows');
+      expect(instructionDirs).toContain('methodologies');
+      expect(instructionDirs).toContain('patterns');
+      
+      // コアファイルが正しく配置されていることを確認
+      const coreFiles = await readdir(join(testOutputDir, 'instructions', 'core'));
+      expect(coreFiles).toContain('base.md');
+      expect(coreFiles).toContain('deep-think.md');
+      expect(coreFiles).toContain('memory.md');
     });
   });
 

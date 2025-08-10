@@ -368,14 +368,14 @@ export class ParallelFileGenerator {
  */
 export class ParallelGeneratorOperations {
   /**
-   * Copy instructions directory with parallel operations
+   * Copy instructions directory with parallel operations using unified structure
    */
   static async copyInstructionsDirectoryParallel(
     targetDir: string,
-    lang: SupportedLanguage = DEFAULT_VALUES.LANGUAGE,
+    _lang: SupportedLanguage = DEFAULT_VALUES.LANGUAGE,
     options?: GenerateFilesOptions  // Change back to GenerateFilesOptions for compatibility
   ): Promise<ParallelOperationStats> {
-    const instructionsSourcePath = join(__dirname, '../../templates/instructions', lang);
+    const instructionsSourcePath = join(__dirname, '../../templates/instructions');
     const instructionsTargetPath = join(targetDir, 'instructions');
     
     if (await FileUtils.fileExists(instructionsSourcePath)) {
@@ -384,17 +384,8 @@ export class ParallelGeneratorOperations {
         instructionsTargetPath, 
         options
       );
-    } else if (lang !== 'en') {
-      // Fallback to English instructions with parallel copy
-      const enInstructionsPath = join(__dirname, '../../templates/instructions/en');
-      if (await FileUtils.fileExists(enInstructionsPath)) {
-        console.warn(`⚠️  Instructions directory not found for ${lang}, using English version`);
-        return await ParallelFileGenerator.copyDirectoryParallel(
-          enInstructionsPath, 
-          instructionsTargetPath, 
-          options
-        );
-      }
+    } else {
+      console.warn(`⚠️  Instructions directory not found at ${instructionsSourcePath}`);
     }
     
     // Return empty stats if no instructions found
