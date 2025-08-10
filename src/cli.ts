@@ -12,6 +12,8 @@ import { GeneratorFactory, SupportedTool } from './generators/factory';
 import { ConverterFactory, OutputFormat } from './converters';
 import { InteractiveInitializer, InteractiveUtils } from './init/interactive';
 import { InteractivePrompts } from './init/prompts';
+import { ConfigUpdater } from './init/update';
+import { PresetManager } from './init/presets';
 
 /**
  * Validates project name for filesystem safety
@@ -305,6 +307,319 @@ program
       InteractivePrompts.showHelp();
     } catch (error) {
       console.error('❌ Failed to show help:', error);
+      process.exit(1);
+    }
+  });
+
+// Update command - update existing configuration
+program
+  .command('update')
+  .description('Update existing AI instructions configuration')
+  .option('-d, --directory <path>', 'Directory containing configuration (default: current directory)', process.cwd())
+  .option('-t, --tool <tool>', 'Update AI tool (claude, github-copilot, cursor, cline)')
+  .option('-n, --project-name <name>', 'Update project name')
+  .option('--methodologies <items>', 'Update methodologies (comma-separated)')
+  .option('--languages <items>', 'Update languages (comma-separated)')
+  .option('--agents <items>', 'Update agents (comma-separated)')
+  .option('--workflow <workflow>', 'Update workflow (github-flow, git-flow)')
+  .option('--backup', 'Create backup before updating (default: true)')
+  .option('--no-backup', 'Skip creating backup')
+  .option('--force', 'Force update without confirmation')
+  .option('--dry-run', 'Show what would be changed without making changes')
+  .action(async (options) => {
+    try {
+      const templatesDir = join(__dirname, '../templates');
+      const updater = new ConfigUpdater(templatesDir);
+
+      // Parse array options
+      const updates: any = {};
+      
+      if (options.tool) updates.tool = options.tool;
+      if (options.projectName) updates.projectName = options.projectName;
+      if (options.workflow) updates.workflow = options.workflow;
+      
+      if (options.methodologies) {
+        updates.methodologies = options.methodologies.split(',').map((s: string) => s.trim());
+      }
+      if (options.languages) {
+        updates.languages = options.languages.split(',').map((s: string) => s.trim());
+      }
+      if (options.agents) {
+        updates.agents = options.agents.split(',').map((s: string) => s.trim());
+      }
+
+      // Check if any updates provided
+      if (Object.keys(updates).length === 0) {
+        console.log('❌ No updates specified. Use --help to see available options.');
+        process.exit(1);
+      }
+
+      const updateOptions = {
+        backup: options.backup !== false,
+        force: options.force || false,
+        dryRun: options.dryRun || false
+      };
+
+      if (options.dryRun) {
+        console.log('🔍 Dry run mode - showing what would be changed:\n');
+        // TODO: Implement dry run preview
+        console.log('Updates to apply:');
+        Object.entries(updates).forEach(([key, value]) => {
+          console.log(`  ${key}: ${value}`);
+        });
+        console.log('\nRun without --dry-run to apply changes.');
+        return;
+      }
+
+      console.log('🔄 Updating configuration...\n');
+      const updatedConfig = await updater.updateConfiguration(
+        options.directory,
+        updates,
+        updateOptions
+      );
+
+      console.log('✅ Configuration updated successfully!');
+      console.log(`📁 Tool: ${updatedConfig.tool}`);
+      console.log(`🎯 Project: ${updatedConfig.projectName}`);
+      console.log(`🔧 Version: ${updatedConfig.version}`);
+
+    } catch (error) {
+      console.error('❌ Failed to update configuration:', error);
+      process.exit(1);
+    }
+  });
+
+// Regenerate command - regenerate files from existing configuration
+program
+  .command('regenerate')
+  .alias('regen')
+  .description('Regenerate all files from existing configuration')
+  .option('-d, --directory <path>', 'Directory containing configuration (default: current directory)', process.cwd())
+  .option('--backup', 'Create backup before regenerating (default: false)')
+  .option('--force', 'Force regeneration without confirmation')
+  .action(async (options) => {
+    try {
+      const templatesDir = join(__dirname, '../templates');
+      const updater = new ConfigUpdater(templatesDir);
+
+      if (!options.force) {
+        console.log('⚠️  This will regenerate all instruction files.');
+        console.log('   Any manual changes will be lost unless backed up.');
+        console.log('   Use --force to skip this warning.\n');
+        
+        // In interactive environments, we could prompt for confirmation
+        if (InteractiveUtils.canRunInteractive()) {
+          // TODO: Add confirmation prompt
+          console.log('💡 Add --force to skip this warning in non-interactive environments.');
+          return;
+        } else {
+          console.log('🤖 Use --force to proceed in non-interactive mode.');
+          return;
+        }
+      }
+
+      console.log('🔄 Regenerating files from configuration...\n');
+      
+      await updater.regenerateFromConfig(options.directory, {
+        backup: options.backup || false
+      });
+
+      console.log('✅ Files regenerated successfully!');
+      console.log('💡 Run "ai-instructions status" to see current configuration.');
+
+    } catch (error) {
+      console.error('❌ Failed to regenerate files:', error);
+      process.exit(1);
+    }
+  });
+
+// Preset commands - Phase 4 Advanced Features
+program
+  .command('presets')
+  .description('Manage configuration presets')
+  .option('-l, --list', 'List all available presets')
+  .option('-s, --search <criteria>', 'Search presets (format: key=value)')
+  .option('--builtin-only', 'Show only built-in presets')
+  .option('--custom-only', 'Show only custom presets')
+  .action(async (options) => {
+    try {
+      const presetManager = new PresetManager();
+
+      if (options.list || (!options.search)) {
+        // List presets
+        const builtinPresets = presetManager.listBuiltinPresets();
+        const customPresets = await presetManager.listCustomPresets();
+
+        if (!options.customOnly && builtinPresets.length > 0) {
+          console.log('\n📦 Built-in Presets:');
+          builtinPresets.forEach(preset => {
+            console.log(`  ${preset.id}: ${preset.name}`);
+            console.log(`    ${preset.description}`);
+            if (preset.tags) console.log(`    Tags: ${preset.tags.join(', ')}`);
+            console.log();
+          });
+        }
+
+        if (!options.builtinOnly && customPresets.length > 0) {
+          console.log('🎨 Custom Presets:');
+          customPresets.forEach(preset => {
+            console.log(`  ${preset.id}: ${preset.name}`);
+            console.log(`    ${preset.description}`);
+            if (preset.tags) console.log(`    Tags: ${preset.tags.join(', ')}`);
+            console.log();
+          });
+        }
+
+        if (builtinPresets.length === 0 && customPresets.length === 0) {
+          console.log('No presets available. Use "ai-instructions preset init <preset-id>" to apply a preset.');
+        }
+      }
+
+      if (options.search) {
+        // Search presets
+        const [key, value] = options.search.split('=');
+        if (!key || !value) {
+          console.error('❌ Invalid search format. Use: key=value (e.g., tool=claude)');
+          process.exit(1);
+        }
+
+        const criteria: any = {};
+        criteria[key] = value;
+
+        const results = presetManager.searchPresets(criteria);
+        
+        if (results.length > 0) {
+          console.log(`\n🔍 Search results for ${key}=${value}:`);
+          results.forEach(preset => {
+            console.log(`  ${preset.id}: ${preset.name}`);
+            console.log(`    ${preset.description}`);
+            console.log();
+          });
+        } else {
+          console.log(`No presets found matching ${key}=${value}`);
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to manage presets:', error);
+      process.exit(1);
+    }
+  });
+
+// Preset init command - apply a preset
+program
+  .command('preset')
+  .argument('<preset-id>', 'Preset ID to apply')
+  .description('Apply a configuration preset')
+  .option('-d, --directory <path>', 'Output directory (default: current directory)', process.cwd())
+  .option('-n, --project-name <name>', 'Override project name')
+  .option('-t, --tool <tool>', 'Override AI tool')
+  .option('--workflow <workflow>', 'Override workflow')
+  .option('--force', 'Force overwrite existing configuration')
+  .action(async (presetId, options) => {
+    try {
+      const presetManager = new PresetManager();
+      
+      // Try to load preset (builtin first, then custom)
+      let preset = presetManager.getBuiltinPreset(presetId);
+      if (!preset) {
+        preset = await presetManager.loadCustomPreset(presetId);
+      }
+
+      if (!preset) {
+        console.error(`❌ Preset '${presetId}' not found.`);
+        console.log('💡 Use "ai-instructions presets --list" to see available presets.');
+        process.exit(1);
+      }
+
+      // Apply customizations
+      const customizations: any = {
+        outputDirectory: options.directory
+      };
+      
+      if (options.projectName) customizations.projectName = options.projectName;
+      if (options.tool) customizations.tool = options.tool;
+      if (options.workflow) customizations.workflow = options.workflow;
+
+      const config = presetManager.applyPreset(preset, customizations);
+
+      console.log(`🚀 Applying preset: ${preset.name}`);
+      console.log(`📝 Description: ${preset.description}`);
+      console.log();
+
+      // Generate files using the config
+      const generator = GeneratorFactory.createGenerator(config.tool);
+      await generator.generateFiles(config.outputDirectory, {
+        projectName: config.projectName,
+        force: options.force || false,
+        lang: 'ja' as const,
+        outputFormat: config.tool as any,
+        conflictResolution: 'backup' as const,
+        interactive: false,
+        backup: true
+      });
+
+      // Save configuration
+      const { ConfigManager } = await import('./init/config');
+      ConfigManager.saveConfig(config.outputDirectory, config);
+
+      console.log('✅ Preset applied successfully!');
+      console.log(`📁 Files generated in: ${config.outputDirectory}`);
+      console.log(`🎯 Project: ${config.projectName}`);
+      console.log(`🔧 Tool: ${config.tool}`);
+      console.log(`📋 Languages: ${config.languages.join(', ')}`);
+      console.log(`🔄 Methodologies: ${config.methodologies.join(', ')}`);
+      if (config.agents) console.log(`🤖 Agents: ${config.agents.join(', ')}`);
+
+    } catch (error) {
+      console.error('❌ Failed to apply preset:', error);
+      process.exit(1);
+    }
+  });
+
+// Preset save command - save current config as preset
+program
+  .command('preset-save')
+  .argument('<preset-id>', 'ID for the new preset')
+  .argument('<name>', 'Name for the new preset')
+  .description('Save current configuration as a custom preset')
+  .option('-d, --directory <path>', 'Directory containing configuration (default: current directory)', process.cwd())
+  .option('--description <desc>', 'Preset description')
+  .option('--category <category>', 'Preset category (frontend, backend, fullstack, mobile, custom)')
+  .option('--tags <tags>', 'Comma-separated tags')
+  .action(async (presetId, name, options) => {
+    try {
+      const { ConfigManager } = await import('./init/config');
+      const config = ConfigManager.loadConfig(options.directory);
+
+      if (!config) {
+        console.error(`❌ No configuration found in ${options.directory}`);
+        console.log('💡 Run "ai-instructions init" first to create a configuration.');
+        process.exit(1);
+      }
+
+      const presetManager = new PresetManager();
+      const preset = {
+        id: presetId,
+        name: name,
+        description: options.description || `Custom preset: ${name}`,
+        config: config,
+        category: options.category || 'custom',
+        tags: options.tags ? options.tags.split(',').map((t: string) => t.trim()) : [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        author: 'user'
+      };
+
+      await presetManager.saveCustomPreset(preset);
+
+      console.log('✅ Custom preset saved successfully!');
+      console.log(`📝 ID: ${presetId}`);
+      console.log(`🏷️  Name: ${name}`);
+      console.log(`📋 Description: ${preset.description}`);
+
+    } catch (error) {
+      console.error('❌ Failed to save preset:', error);
       process.exit(1);
     }
   });
