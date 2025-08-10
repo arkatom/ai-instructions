@@ -25,7 +25,7 @@ describe('ClaudeGenerator', () => {
       const generator = new ClaudeGenerator();
       const templateContent = await generator.loadDynamicTemplate('main.md', { lang: 'ch', projectName: 'test-project' });
       
-      expect(templateContent).toContain('开发指令');
+      expect(templateContent).toContain('开发指示');
       expect(templateContent).toContain('## 🚨 核心原则（必须）');
     });
     
