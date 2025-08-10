@@ -23,6 +23,29 @@ export class ConfigUpdater {
   constructor(private templatesDir: string) {}
 
   /**
+   * Validate path to prevent directory traversal
+   */
+  private static validatePath(path: string): boolean {
+    // Normalize the path
+    const normalizedPath = path.replace(/\\/g, '/');
+    
+    // Check for path traversal attempts
+    if (normalizedPath.includes('../') || normalizedPath.includes('..\\')) {
+      return false;
+    }
+    
+    // Check for absolute paths outside project
+    if (normalizedPath.startsWith('/etc') || 
+        normalizedPath.startsWith('/root') ||
+        normalizedPath.startsWith('/home') ||
+        normalizedPath.includes(':/')) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
    * Update existing configuration with new values
    */
   async updateConfiguration(
@@ -31,6 +54,11 @@ export class ConfigUpdater {
     options: UpdateOptions = {}
   ): Promise<ProjectConfig> {
     try {
+      // Validate output directory for security
+      if (!ConfigUpdater.validatePath(outputDirectory)) {
+        throw new Error(`Invalid output directory path: ${outputDirectory}`);
+      }
+      
       // Load existing configuration
       const existingConfig = ConfigManager.loadConfig(outputDirectory);
       if (!existingConfig) {
@@ -93,6 +121,11 @@ export class ConfigUpdater {
     outputDirectory: string,
     options: UpdateOptions = {}
   ): Promise<void> {
+    // Validate output directory for security
+    if (!ConfigUpdater.validatePath(outputDirectory)) {
+      throw new Error(`Invalid output directory path: ${outputDirectory}`);
+    }
+    
     const config = ConfigManager.loadConfig(outputDirectory);
     if (!config) {
       throw new Error(`No configuration found in ${outputDirectory}`);
@@ -172,6 +205,11 @@ export class ConfigUpdater {
    * Create backup of current configuration
    */
   private async createBackup(outputDirectory: string): Promise<void> {
+    // Validate output directory for security
+    if (!ConfigUpdater.validatePath(outputDirectory)) {
+      throw new Error(`Invalid output directory path: ${outputDirectory}`);
+    }
+    
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = join(outputDirectory, '.ai-instructions-backup', timestamp);
 
