@@ -209,10 +209,12 @@ export class ConfigManager {
   /**
    * Validate configuration object
    */
-  static validateConfig(config: any): config is ProjectConfig {
+  static validateConfig(config: unknown): config is ProjectConfig {
     if (!config || typeof config !== 'object') {
       return false;
     }
+
+    const configObj = config as Record<string, unknown>;
 
     const requiredFields = [
       'tool', 'workflow', 'methodologies', 'languages', 
@@ -220,20 +222,20 @@ export class ConfigManager {
     ];
 
     for (const field of requiredFields) {
-      if (!(field in config)) {
+      if (!(field in configObj)) {
         console.warn(`Configuration missing required field: ${field}`);
         return false;
       }
     }
 
     // Validate tool
-    if (!Object.keys(AVAILABLE_TOOLS).includes(config.tool)) {
-      console.warn(`Invalid tool: ${config.tool}`);
+    if (!Object.keys(AVAILABLE_TOOLS).includes(configObj.tool as string)) {
+      console.warn(`Invalid tool: ${configObj.tool}`);
       return false;
     }
 
     // Validate arrays
-    if (!Array.isArray(config.methodologies) || !Array.isArray(config.languages)) {
+    if (!Array.isArray(configObj.methodologies) || !Array.isArray(configObj.languages)) {
       console.warn('Methodologies and languages must be arrays');
       return false;
     }

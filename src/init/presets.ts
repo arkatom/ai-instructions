@@ -265,21 +265,31 @@ export class PresetManager {
   /**
    * Validate preset structure
    */
-  static validatePreset(preset: any): preset is ConfigPreset {
+  static validatePreset(preset: unknown): preset is ConfigPreset {
+    // Type guard: ensure preset is an object
+    if (typeof preset !== 'object' || preset === null) {
+      return false;
+    }
+    
+    const presetObj = preset as Record<string, unknown>;
     const requiredFields = ['id', 'name', 'description', 'config', 'createdAt', 'updatedAt', 'author'];
     
     for (const field of requiredFields) {
-      if (!(field in preset)) {
+      if (!(field in presetObj)) {
         return false;
       }
     }
 
     // Validate config structure
-    const config = preset.config;
+    const config = presetObj.config;
+    if (typeof config !== 'object' || config === null) {
+      return false;
+    }
+    const configObj = config as Record<string, unknown>;
     const configRequiredFields = ['tool', 'workflow', 'methodologies', 'languages', 'projectName', 'outputDirectory'];
     
     for (const field of configRequiredFields) {
-      if (!(field in config)) {
+      if (!(field in configObj)) {
         return false;
       }
     }
