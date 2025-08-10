@@ -6,14 +6,47 @@
  */
 
 import { Command } from 'commander';
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { GeneratorFactory, SupportedTool } from './generators/factory';
 import { ConverterFactory, OutputFormat } from './converters';
 import { InteractiveInitializer, InteractiveUtils } from './init/interactive';
 import { InteractivePrompts } from './init/prompts';
 import { ConfigUpdater } from './init/update';
-import { PresetManager } from './init/presets';
+import { PresetManager, PresetSearchCriteria } from './init/presets';
+import { ProjectConfig } from './init/config';
+
+// CLI Option interfaces
+interface InitOptions {
+  output: string;
+  projectName: string;
+  tool: SupportedTool;
+  lang: 'en' | 'ja' | 'ch';
+  outputFormat: OutputFormat;
+  force?: boolean;
+  preview?: boolean;
+  conflictResolution: 'backup' | 'merge' | 'skip' | 'overwrite';
+  interactive?: boolean;
+  backup?: boolean;
+  [key: string]: unknown; // Allow dynamic property access
+}
+
+interface _UpdateOptions {
+  directory: string;
+  tool?: SupportedTool;
+  projectName?: string;
+  methodologies?: string;
+  languages?: string;
+  agents?: string;
+}
+
+interface _SearchOptions {
+  tool?: SupportedTool;
+  language?: string;
+  methodology?: string;
+  category?: string;
+  tag?: string;
+}
 
 /**
  * Validates project name for filesystem safety
@@ -95,7 +128,7 @@ function validateConflictResolution(strategy: string): void {
  * - No explicit tool/configuration options are provided
  * - Environment supports TTY interaction
  */
-function shouldUseInteractiveMode(rawArgs: string[], options: any): boolean {
+function shouldUseInteractiveMode(rawArgs: string[], options: InitOptions): boolean {
   // If user explicitly disabled interactive, respect that
   if (options.interactive === false) {
     return false;
@@ -146,7 +179,7 @@ program
   .option('-r, --conflict-resolution <strategy>', '🛡️  Default conflict resolution (backup, merge, skip, overwrite)', 'backup')
   .option('--no-interactive', '🤖 Disable interactive conflict resolution')
   .option('--no-backup', '🚨 Disable automatic backups (use with caution)')
-  .action(async (options, command) => {
+  .action(async (options, _command) => {
     try {
       // Get raw command line arguments
       const rawArgs = process.argv.slice(2);
@@ -209,7 +242,7 @@ program
           console.log(`📦 Project name: ${options.projectName}`);
           console.log(`🌍 Language: ${options.lang}`);
           return;
-        } catch (error) {
+        } catch {
           console.log('🔍 Preview mode: Analyzing potential file conflicts...');
           console.log('⚠️  Preview functionality will be enhanced in v0.3.0');
           console.log('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
@@ -227,7 +260,7 @@ program
           const chalk = (await import('chalk')).default;
           console.log(chalk.red('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!'));
           console.log(chalk.red('💣 Proceeding in 2 seconds...'));
-        } catch (error) {
+        } catch {
           console.log('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!');
           console.log('💣 Proceeding in 2 seconds...');
         }
@@ -263,7 +296,7 @@ program
           console.log(chalk.cyan('💡 Tip: Use --preview to check for conflicts before generating'));
           console.log(chalk.cyan('💡 Tip: Use --force to skip warnings (be careful!)'));
           console.log(chalk.cyan('💡 Tip: Run "ai-instructions init" without options for interactive setup'));
-        } catch (error) {
+        } catch {
           console.log('💡 Tip: Use --preview to check for conflicts before generating');
           console.log('💡 Tip: Use --force to skip warnings (be careful!)');
           console.log('💡 Tip: Run "ai-instructions init" without options for interactive setup');
@@ -332,7 +365,7 @@ program
       const updater = new ConfigUpdater(templatesDir);
 
       // Parse array options
-      const updates: any = {};
+      const updates: Partial<ProjectConfig> = {};
       
       if (options.tool) updates.tool = options.tool;
       if (options.projectName) updates.projectName = options.projectName;
@@ -483,8 +516,8 @@ program
           process.exit(1);
         }
 
-        const criteria: any = {};
-        criteria[key] = value;
+        const criteria: Partial<PresetSearchCriteria> = {};
+        (criteria as Record<string, unknown>)[key] = value;
 
         const results = presetManager.searchPresets(criteria);
         
@@ -533,7 +566,7 @@ program
       }
 
       // Apply customizations
-      const customizations: any = {
+      const customizations: Partial<ProjectConfig> = {
         outputDirectory: options.directory
       };
       
@@ -553,7 +586,7 @@ program
         projectName: config.projectName,
         force: options.force || false,
         lang: 'ja' as const,
-        outputFormat: config.tool as any,
+        outputFormat: config.tool as OutputFormat,
         conflictResolution: 'backup' as const,
         interactive: false,
         backup: true
