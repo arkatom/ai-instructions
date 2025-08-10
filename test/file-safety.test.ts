@@ -88,7 +88,7 @@ describe('🔍 CLI Options Integration', () => {
     expect(initCommand).toBeDefined();
     
     // Check if new options exist
-    const options = initCommand.options.map((opt: { long: string }) => opt.long);
+    const options = initCommand?.options?.map((opt) => opt.long).filter(Boolean) || [];
     expect(options).toContain('--force');
     expect(options).toContain('--preview');
   });

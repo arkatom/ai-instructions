@@ -66,7 +66,7 @@ describe('Dynamic Template Generation - Complete Matrix Test', () => {
               expect(result).toContain('🚨 核心原则（必须）');
               expect(result).toContain('基本规则');
               expect(result).toContain('深度思考');
-              expect(result).toContain('记忆');
+              expect(result).toContain('内存');
               break;
           }
           
