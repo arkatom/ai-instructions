@@ -55,10 +55,11 @@ describe('ClineGenerator (Issue #23)', () => {
         lang: 'en' 
       });
       
-      // instructions ディレクトリが生成されることを確認
+      // instructions ディレクトリが生成されることを確認（統一構造）
       const instructionsPath = join(testOutputDir, 'instructions');
       expect(existsSync(instructionsPath)).toBe(true);
-      expect(existsSync(join(instructionsPath, 'base.md'))).toBe(true);
+      expect(existsSync(join(instructionsPath, 'core'))).toBe(true);
+      expect(existsSync(join(instructionsPath, 'core', 'base.md'))).toBe(true);
     });
   });
 

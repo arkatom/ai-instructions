@@ -65,7 +65,8 @@ describe('ClaudeGenerator', () => {
       
       expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
       expect(existsSync(join(testOutputDir, 'instructions'))).toBe(true);
-      expect(existsSync(join(testOutputDir, 'instructions', 'base.md'))).toBe(true);
+      expect(existsSync(join(testOutputDir, 'instructions', 'core'))).toBe(true);
+      expect(existsSync(join(testOutputDir, 'instructions', 'core', 'base.md'))).toBe(true);
     });
 
     it('should replace template variables in generated files', async () => {

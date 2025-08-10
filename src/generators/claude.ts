@@ -3,9 +3,7 @@ import { readdir, stat, readFile } from 'fs/promises';
 import { FileUtils } from '../utils/file-utils';
 import { BaseGenerator, GenerateFilesOptions, ToolConfig } from './base';
 import { ConverterFactory, OutputFormat, ConversionMetadata } from '../converters';
-import { 
-  ParallelGeneratorOperations
-} from './parallel-generator';
+// Note: ParallelGeneratorOperations is not needed in this file anymore
 
 export class ClaudeGenerator extends BaseGenerator {
   constructor() {
@@ -131,33 +129,25 @@ export class ClaudeGenerator extends BaseGenerator {
   }
 
   /**
-   * Language-aware instructions directory copying (Issue #19: Templates restructure)
-   * Uses templates/instructions/(lang)/ structure
+   * Copy instructions directory using new unified structure
+   * Uses templates/instructions/ with unified core/workflows/methodologies/patterns
    */
   private async safeCopyInstructionsDirectory(targetDir: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
-    const lang = options.lang || 'en';
+    const instructionsTargetPath = join(targetDir, 'instructions');
     
     try {
-      // Use parallel operations for improved performance
-      const stats = await ParallelGeneratorOperations.copyInstructionsDirectoryParallel(
-        targetDir, 
-        lang, 
-        options
-      );
-      
-      // Log performance improvement if enabled
-      if (process.env.NODE_ENV === 'development' && stats.totalTasks > 0) {
-        console.warn(`🚀 Copied ${stats.totalTasks} instruction files in parallel (${stats.totalExecutionTimeMs.toFixed(2)}ms)`);
+      // Use the new unified instructions structure
+      const instructionsPath = join(__dirname, '../../templates/instructions');
+      if (await FileUtils.fileExists(instructionsPath)) {
+        await this.safeCopyDirectory(instructionsPath, instructionsTargetPath, force, options);
+        return;
       }
       
-      // Handle any failures  
-      if (stats.failedTasks > 0) {
-        console.warn(`⚠️  ${stats.failedTasks} out of ${stats.totalTasks} instruction files failed to copy`);
-      }
+      // Fallback to sequential copy if parallel fails
+      await this.safeCopyInstructionsDirectorySequential(targetDir, options, force);
       
     } catch {
-      // Fallback to original sequential implementation
-      console.warn('⚠️  Parallel copy failed, falling back to sequential copy');
+      console.warn('⚠️  Failed to copy instructions directory, trying fallback');
       await this.safeCopyInstructionsDirectorySequential(targetDir, options, force);
     }
   }
@@ -166,44 +156,25 @@ export class ClaudeGenerator extends BaseGenerator {
    * Fallback sequential copy for instructions directory
    */
   private async safeCopyInstructionsDirectorySequential(targetDir: string, options: GenerateFilesOptions, force: boolean): Promise<void> {
-    const lang = options.lang || 'en';
     const instructionsTargetPath = join(targetDir, 'instructions');
     
     try {
-      // NEW: Try language-specific instructions directory first (templates/instructions/(lang)/)
-      const instructionsPath = join(__dirname, '../../templates/instructions', lang);
+      // Use new unified instructions structure
+      const instructionsPath = join(__dirname, '../../templates/instructions');
       if (await FileUtils.fileExists(instructionsPath)) {
         await this.safeCopyDirectory(instructionsPath, instructionsTargetPath, force, options);
         return;
       }
       
-      // Fallback to English instructions
-      if (lang !== 'en') {
-        const enInstructionsPath = join(__dirname, '../../templates/instructions/en');
-        if (await FileUtils.fileExists(enInstructionsPath)) {
-          console.warn(`⚠️  Instructions directory not found for ${lang}, using English version`);
-          await this.safeCopyDirectory(enInstructionsPath, instructionsTargetPath, force, options);
-          return;
-        }
-      }
-      
-      // Legacy fallback: Try tool-specific instructions directory (templates/claude/(lang)/instructions/)
-      const legacyLangInstructionsPath = join(this.templateDir, lang, 'instructions');
-      if (await FileUtils.fileExists(legacyLangInstructionsPath)) {
-        console.warn(`⚠️  Using legacy tool-specific instructions directory for ${lang}`);
-        await this.safeCopyDirectory(legacyLangInstructionsPath, instructionsTargetPath, force, options);
-        return;
-      }
-      
-      // Final fallback: Legacy structure without language support
+      // Legacy fallback: Try tool-specific instructions directory 
       const legacyInstructionsPath = join(this.templateDir, 'instructions');
       if (await FileUtils.fileExists(legacyInstructionsPath)) {
-        console.warn(`⚠️  Using legacy instructions directory (no language support)`);
+        console.warn(`⚠️  Using legacy instructions directory`);
         await this.safeCopyDirectory(legacyInstructionsPath, instructionsTargetPath, force, options);
         return;
       }
       
-      throw new Error(`Instructions directory not found for language ${lang}`);
+      throw new Error(`Instructions directory not found`);
     } catch (error) {
       throw new Error(`Failed to copy instructions directory: ${error}`);
     }
