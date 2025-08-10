@@ -31,7 +31,7 @@ module.exports = tseslint.config(
         varsIgnorePattern: '^_'
       }],
       '@typescript-eslint/no-explicit-any': 'warn',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': ['warn', { allow: ['log', 'warn', 'error'] }],
       
       // Circular dependency detection
       'import/no-cycle': ['error', {
