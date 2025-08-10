@@ -1,23 +1,28 @@
 {
   "globs": [
     "**/*.py",
-    "**/*.pyx",
     "**/*.pyi",
-    "**/*.pyw",
+    "**/*.pyx",
+    "**/*.pxd",
     "**/requirements.txt",
+    "**/requirements*.txt",
     "**/setup.py",
+    "**/setup.cfg",
     "**/pyproject.toml",
-    "**/*.yaml",
-    "**/*.yml",
-    "**/*.md",
-    "**/.env",
-    "**/Dockerfile"
+    "**/Pipfile",
+    "**/Pipfile.lock",
+    "**/.python-version",
+    "**/pytest.ini",
+    "**/tox.ini",
+    "**/.flake8",
+    "**/.pylintrc"
   ],
-  "description": "Python プロジェクト用ファイルグロブ設定",
+  "description": "Python project files",
   "languageFeatures": [
-    "Python 3.8+ 構文",
-    "Type hints サポート",
-    "Django/Flask/FastAPI フレームワーク",
-    "データサイエンス・機械学習ライブラリ"
+    "Dynamic typing",
+    "List comprehensions",
+    "Decorators",
+    "Async/await",
+    "Type hints (Python 3.5+)"
   ]
 }

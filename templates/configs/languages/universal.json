@@ -1,26 +1,34 @@
 {
   "globs": [
     "**/*.md",
-    "**/*.txt", 
-    "**/*.json",
-    "**/*.yaml",
+    "**/*.txt",
     "**/*.yml",
+    "**/*.yaml",
+    "**/*.json",
     "**/*.xml",
-    "**/*.html",
-    "**/*.css",
-    "**/.env",
-    "**/.gitignore",
+    "**/*.toml",
+    "**/*.ini",
+    "**/*.cfg",
+    "**/*.conf",
     "**/README*",
-    "**/CHANGELOG*",
     "**/LICENSE*",
+    "**/CHANGELOG*",
+    "**/.gitignore",
+    "**/.gitattributes",
     "**/Dockerfile",
-    "**/docker-compose.yml"
+    "**/docker-compose.yml",
+    "**/.env",
+    "**/.env.*",
+    "**/Makefile",
+    "**/*.sh",
+    "**/*.bash"
   ],
-  "description": "汎用プロジェクト用ファイルグロブ設定 - 言語に依存しない共通ファイル",
+  "description": "Universal configuration and documentation files",
   "languageFeatures": [
-    "ドキュメントファイル",
-    "設定ファイル",
-    "プロジェクトメタファイル",
-    "コンテナ設定"
+    "Configuration files",
+    "Documentation",
+    "Build scripts",
+    "Environment variables",
+    "Container definitions"
   ]
 }

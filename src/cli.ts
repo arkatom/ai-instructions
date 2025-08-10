@@ -10,6 +10,8 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { GeneratorFactory, SupportedTool } from './generators/factory';
 import { ConverterFactory, OutputFormat } from './converters';
+import { InteractiveInitializer, InteractiveUtils } from './init/interactive';
+import { InteractivePrompts } from './init/prompts';
 
 /**
  * Validates project name for filesystem safety
@@ -85,6 +87,39 @@ function validateConflictResolution(strategy: string): void {
   }
 }
 
+/**
+ * Determines if user wants interactive mode based on CLI arguments
+ * Interactive mode is used when:
+ * - No explicit tool/configuration options are provided
+ * - Environment supports TTY interaction
+ */
+function shouldUseInteractiveMode(rawArgs: string[], options: any): boolean {
+  // If user explicitly disabled interactive, respect that
+  if (options.interactive === false) {
+    return false;
+  }
+
+  // Check if TTY is available
+  if (!InteractiveUtils.canRunInteractive()) {
+    return false;
+  }
+
+  // If user provided specific configuration options, use non-interactive
+  const configOptions = ['tool', 'projectName', 'lang', 'outputFormat'];
+  const hasConfigOptions = configOptions.some(opt => {
+    const originalValue = opt === 'projectName' ? 'my-project' : 
+                          opt === 'tool' ? 'claude' :
+                          opt === 'lang' ? 'ja' :
+                          opt === 'outputFormat' ? 'claude' : undefined;
+    return options[opt] && options[opt] !== originalValue;
+  });
+
+  // If only output directory is specified, still use interactive
+  const onlyOutputSpecified = options.output !== process.cwd() && !hasConfigOptions;
+  
+  return !hasConfigOptions || onlyOutputSpecified;
+}
+
 // Read package.json for version
 const packageJsonPath = join(__dirname, '../package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
@@ -109,8 +144,37 @@ program
   .option('-r, --conflict-resolution <strategy>', '🛡️  Default conflict resolution (backup, merge, skip, overwrite)', 'backup')
   .option('--no-interactive', '🤖 Disable interactive conflict resolution')
   .option('--no-backup', '🚨 Disable automatic backups (use with caution)')
-  .action(async (options) => {
+  .action(async (options, command) => {
     try {
+      // Get raw command line arguments
+      const rawArgs = process.argv.slice(2);
+      
+      // Determine if we should use interactive mode
+      const useInteractive = shouldUseInteractiveMode(rawArgs, options);
+      
+      if (useInteractive) {
+        // 🚀 v0.5.0: Interactive mode
+        console.log('🤖 Starting interactive setup...\n');
+        
+        // Check prerequisites
+        if (!InteractiveInitializer.validatePrerequisites()) {
+          console.error('❌ Prerequisites not met for interactive mode');
+          process.exit(1);
+        }
+
+        // Run interactive initialization
+        const initializer = new InteractiveInitializer();
+        await initializer.initialize({
+          outputDirectory: options.output,
+          verbose: false
+        });
+
+        return;
+      }
+
+      // Non-interactive mode (existing functionality)
+      console.log('🤖 Using non-interactive mode with provided options...\n');
+      
       // Validate project name before generating files
       validateProjectName(options.projectName);
       
@@ -196,19 +260,52 @@ program
           const chalk = (await import('chalk')).default;
           console.log(chalk.cyan('💡 Tip: Use --preview to check for conflicts before generating'));
           console.log(chalk.cyan('💡 Tip: Use --force to skip warnings (be careful!)'));
+          console.log(chalk.cyan('💡 Tip: Run "ai-instructions init" without options for interactive setup'));
         } catch (error) {
           console.log('💡 Tip: Use --preview to check for conflicts before generating');
           console.log('💡 Tip: Use --force to skip warnings (be careful!)');
+          console.log('💡 Tip: Run "ai-instructions init" without options for interactive setup');
         }
       }
+      
     } catch (error) {
       if (process.env.NODE_ENV === 'test') {
         // In test environment, throw the error so tests can catch it
         throw error;
       } else {
         console.error('❌ Failed to generate template files:', error);
+        if (!InteractiveUtils.canRunInteractive()) {
+          InteractiveUtils.showInteractiveWarning();
+        }
         process.exit(1);
       }
+    }
+  });
+
+// Status command - show current configuration
+program
+  .command('status')
+  .description('Show current AI instructions configuration')
+  .option('-d, --directory <path>', 'Directory to check (default: current directory)', process.cwd())
+  .action(async (options) => {
+    try {
+      InteractiveInitializer.showStatus(options.directory);
+    } catch (error) {
+      console.error('❌ Failed to show status:', error);
+      process.exit(1);
+    }
+  });
+
+// Help command - show detailed help about interactive mode
+program
+  .command('help-interactive')
+  .description('Show detailed help about interactive setup options')
+  .action(async () => {
+    try {
+      InteractivePrompts.showHelp();
+    } catch (error) {
+      console.error('❌ Failed to show help:', error);
+      process.exit(1);
     }
   });
 

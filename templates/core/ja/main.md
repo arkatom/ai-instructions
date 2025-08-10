@@ -4,7 +4,7 @@ globs: {{dynamicGlobs}}
 alwaysApply: true
 ---
 
-# {{toolName}} 開発指示 - {{projectName}}
+# 開発指示 - {{projectName}}
 
 ## 🚨 核心原則（必須）
 
@@ -13,8 +13,6 @@ alwaysApply: true
 - [基本ルール](./instructions/base.md) - 絶対厳守事項
 - [深層思考](./instructions/deep-think.md)
 - [memory](./instructions/memory.md)
-
-{{toolSpecificFeatures}}
 
 ## プロジェクト固有のアーキテクチャ・ルール・ドキュメント
 
@@ -52,14 +50,10 @@ alwaysApply: true
 
 - [ノート・日誌](./instructions/note.md) - 作業記録の書き方
 
-{{additionalInstructions}}
-
 ## 🔄 実行フロー
 
 1. 基本ルール読み込み → 絶対厳守事項の確認
 2. 場面に応じた専用ファイル読み込み → 具体的な実行ルール確認
-
-- 例：実装時 → プロジェクトドキュメント索引 を参照
-
+   - 例：実装時 → プロジェクトドキュメント索引 を参照
 3. 参照確認の明示 → `✅️:{filename.md}` で表示
 4. 実行 → ルールに従って作業実行

@@ -4,33 +4,31 @@ globs: {{dynamicGlobs}}
 alwaysApply: true
 ---
 
-# {{toolName}} Development Instructions - {{projectName}}
+# Development Instructions - {{projectName}}
 
 ## 🚨 Core Principles (MANDATORY)
 
-Must be read before executing any task, command, or tool
+Always review before any task, command, or tool execution
 
-- [Basic Rules](./instructions/base.md) - Absolute requirements
+- [Basic Rules](./instructions/base.md) - Absolute compliance requirements
 - [Deep Thinking](./instructions/deep-think.md)
 - [Memory](./instructions/memory.md)
 
-{{toolSpecificFeatures}}
-
-## Project-Specific Architecture, Rules & Documentation
+## Project-Specific Architecture, Rules, and Documentation
 
 - [Project Documentation Index](./docs/README.md)
 
-## 📋 Situational Reference Files
+## 📋 Context-Specific Required Files
 
 ### Execution Environment
 
-- [Command Execution](./instructions/command.md) - Shell, execution rules
+- [Command Execution](./instructions/command.md) - Shell and execution rules
 
-### Git & Commit Related
+### Git and Commit Related
 
 - [Git Rules](./instructions/git.md) - GitHub operations, Issues, branch strategy
 - [Commit Conventions](./instructions/commit-rules.md) - Commit message format
-- [PR Rules](./instructions/pr-rules.md) - Pull request creation guidelines
+- [PR Rules](./instructions/pr-rules.md) - Pull request creation standards
 
 ### Development Process
 
@@ -38,28 +36,24 @@ Must be read before executing any task, command, or tool
 - [TDD Rules](./instructions/KentBeck-tdd-rules.md) - Test-driven development
 - [Scrum Development](./instructions/scrum.md) - Sprint management
 
-### Terminology & Standardization
+### Terminology and Notation
 
-- [Domain Glossary](./instructions/domain-terms.md) - Unified terminology
+- [Domain Glossary](./instructions/domain-terms.md) - Standardized terminology
 - [Term Update Workflow](./instructions/domain-term-workflow.md) - New term proposals
 
-### Research & Search
+### Investigation and Search
 
 - [Search Patterns](./instructions/search-patterns.md) - Git search commands
-- [Troubleshooting](./instructions/troubleshooting.md) - Problem-solving procedures
+- [Troubleshooting](./instructions/troubleshooting.md) - Problem resolution procedures
 
-### Record & Management
+### Records and Management
 
-- [Notes & Journal](./instructions/note.md) - Work documentation guidelines
-
-{{additionalInstructions}}
+- [Notes and Logs](./instructions/note.md) - Work record guidelines
 
 ## 🔄 Execution Flow
 
-1. Load basic rules → Confirm absolute requirements
-2. Load situation-specific files → Confirm specific execution rules
-
-- Example: During implementation → Reference project documentation index
-
-3. Show reference confirmation → Display as `✅️:{filename.md}`
+1. Load basic rules → Confirm absolute compliance requirements
+2. Load context-specific files → Review specific execution rules
+   - Example: During implementation → Reference Project Documentation Index
+3. Explicitly confirm references → Display with `✅️:{filename.md}`
 4. Execute → Perform work according to rules

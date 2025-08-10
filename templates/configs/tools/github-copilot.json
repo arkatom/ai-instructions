@@ -4,12 +4,5 @@
   "globs": {
     "inherit": "universal"
   },
-  "description": "GitHub Copilot用の設定ファイル - GitHub 2024標準形式のMarkdown",
-  "fileStructure": {
-    "outputDirectory": ".github",
-    "mainFileName": "copilot-instructions.md",
-    "subdirectories": ["instructions"],
-    "includeInstructionsDirectory": true,
-    "fileNamingPattern": "copilot-instructions"
-  }
+  "description": "GitHub Copilot用の設定ファイル - 汎用的なMarkdown形式"
 }
