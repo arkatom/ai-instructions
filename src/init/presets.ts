@@ -74,6 +74,11 @@ export class PresetManager {
    * Save custom preset
    */
   async saveCustomPreset(preset: ConfigPreset): Promise<void> {
+    // Validate preset ID for security
+    if (!PresetManager.validatePresetId(preset.id)) {
+      throw new Error(`Invalid preset ID: ${preset.id}. Only alphanumeric, hyphen, and underscore characters are allowed.`);
+    }
+    
     if (!PresetManager.validatePreset(preset)) {
       throw new Error('Invalid preset structure');
     }
@@ -92,6 +97,12 @@ export class PresetManager {
    * Load custom preset by ID
    */
   async loadCustomPreset(id: string): Promise<ConfigPreset | null> {
+    // Validate ID for security
+    if (!PresetManager.validatePresetId(id)) {
+      console.warn(`Invalid preset ID: ${id}`);
+      return null;
+    }
+    
     const presetPath = join(this.presetsDir, `${id}.json`);
     
     if (!existsSync(presetPath)) {
@@ -100,14 +111,17 @@ export class PresetManager {
 
     try {
       const content = readFileSync(presetPath, 'utf-8');
-      const preset = JSON.parse(content) as ConfigPreset;
+      const rawPreset = JSON.parse(content);
       
-      if (!PresetManager.validatePreset(preset)) {
+      // Sanitize JSON to prevent prototype pollution
+      const sanitizedPreset = PresetManager.sanitizeJSON(rawPreset);
+      
+      if (!PresetManager.validatePreset(sanitizedPreset)) {
         console.warn(`Invalid preset file: ${presetPath}`);
         return null;
       }
 
-      return preset;
+      return sanitizedPreset as ConfigPreset;
     } catch (error) {
       console.warn(`Failed to load preset ${id}:`, error);
       return null;
@@ -215,15 +229,18 @@ export class PresetManager {
 
     try {
       const content = readFileSync(importPath, 'utf-8');
-      const preset = JSON.parse(content) as ConfigPreset;
+      const rawPreset = JSON.parse(content);
       
-      if (!PresetManager.validatePreset(preset)) {
+      // Sanitize JSON to prevent prototype pollution
+      const sanitizedPreset = PresetManager.sanitizeJSON(rawPreset);
+      
+      if (!PresetManager.validatePreset(sanitizedPreset)) {
         console.warn(`Invalid preset file: ${importPath}`);
         return false;
       }
 
-      await this.saveCustomPreset(preset);
-      console.log(`Imported preset: ${preset.name}`);
+      await this.saveCustomPreset(sanitizedPreset as ConfigPreset);
+      console.log(`Imported preset: ${(sanitizedPreset as ConfigPreset).name}`);
       return true;
     } catch (error) {
       console.warn(`Failed to import preset:`, error);
@@ -295,6 +312,62 @@ export class PresetManager {
     }
 
     return true;
+  }
+
+  /**
+   * Validate preset ID for security (prevent path traversal)
+   */
+  private static validatePresetId(id: string): boolean {
+    // Allow only alphanumeric, hyphen, underscore
+    const validIdPattern = /^[a-zA-Z0-9-_]+$/;
+    
+    // Check for path traversal attempts
+    if (id.includes('..') || id.includes('/') || id.includes('\\')) {
+      return false;
+    }
+    
+    // Check for command injection attempts
+    if (id.includes('|') || id.includes(';') || id.includes('$') || 
+        id.includes('`') || id.includes('&') || id.includes('<') || 
+        id.includes('>') || id.includes('(') || id.includes(')')) {
+      return false;
+    }
+    
+    // Length check
+    if (id.length === 0 || id.length > 100) {
+      return false;
+    }
+    
+    return validIdPattern.test(id);
+  }
+
+  /**
+   * Sanitize JSON to prevent prototype pollution
+   */
+  private static sanitizeJSON(obj: unknown): unknown {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+
+    // Remove dangerous keys
+    const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => PresetManager.sanitizeJSON(item));
+    }
+    
+    const sanitized: Record<string, unknown> = {};
+    const objRecord = obj as Record<string, unknown>;
+    for (const key in objRecord) {
+      if (Object.prototype.hasOwnProperty.call(objRecord, key) && !dangerousKeys.includes(key)) {
+        sanitized[key] = PresetManager.sanitizeJSON(objRecord[key]);
+      }
+    }
+    
+    // Set prototype to null to prevent pollution
+    Object.setPrototypeOf(sanitized, null);
+    
+    return sanitized;
   }
 
   /**
