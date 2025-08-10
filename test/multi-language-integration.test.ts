@@ -4,7 +4,6 @@
  * Tests for Issue: 多言語実装不備の完全修正
  */
 
-import { jest } from '@jest/globals';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { mkdtemp, rm } from 'fs/promises';
@@ -256,7 +255,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
       try {
         await generator.generateFiles(tempDir, {
           projectName: 'test-project',
-          lang: 'invalid-lang' as any,
+          lang: 'invalid-lang' as 'ja' | 'en' | 'ch',
           force: true
         });
         
@@ -268,8 +267,9 @@ describe('🌍 Multi-Language Integration Tests', () => {
       }
     });
 
-    test('should validate language parameter in CLI validation', () => {
-      const { validateLanguage } = require('../src/cli');
+    test('should validate language parameter in CLI validation', async () => {
+      const cli = await import('../src/cli');
+      const { validateLanguage: _validateLanguage } = cli;
       
       // This will be used internally by the CLI validation
       expect(() => {

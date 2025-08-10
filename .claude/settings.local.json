@@ -219,7 +219,8 @@
       "mcp__github__create_pull_request_review",
       "mcp__filesystem__search_files",
       "mcp__filesystem__read_multiple_files",
-      "mcp__github__get_pull_request_reviews"
+      "mcp__github__get_pull_request_reviews",
+      "WebFetch(domain:patch-diff.githubusercontent.com)"
     ],
     "deny": []
   },
