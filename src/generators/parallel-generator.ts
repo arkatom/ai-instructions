@@ -123,13 +123,9 @@ export class ParallelFileGenerator {
           id: `template-${index}-${task.templateName}`,
           operation: 'write',
           targetPath: task.outputPath,
-          content: task.content
+          content: task.content,
+          ...(task.options && { options: task.options })
         };
-        
-        // Only add options if they exist
-        if (task.options) {
-          (baseTask as any).options = task.options;
-        }
         
         return baseTask;
       });
@@ -235,13 +231,9 @@ export class ParallelFileGenerator {
       const result: FileOperationResult = {
         taskId: task.id,
         success: true,
-        executionTimeMs: endTime - startTime
+        executionTimeMs: endTime - startTime,
+        ...(content !== undefined && { content })
       };
-      
-      // Only include content if it was actually read
-      if (content !== undefined) {
-        (result as any).content = content;
-      }
       
       return result;
       
@@ -281,13 +273,9 @@ export class ParallelFileGenerator {
           const mkdirTask: FileOperationTask = {
             id: `${taskPrefix}-mkdir-${item}`,
             operation: 'mkdir',
-            targetPath: targetItemPath
+            targetPath: targetItemPath,
+            ...(options && { options })
           };
-          
-          // Only add options if they exist
-          if (options) {
-            (mkdirTask as any).options = options;
-          }
           
           tasks.push(mkdirTask);
           
@@ -305,13 +293,9 @@ export class ParallelFileGenerator {
             id: `${taskPrefix}-file-${item}`,
             operation: 'copy',
             sourcePath: sourceItemPath,
-            targetPath: targetItemPath
+            targetPath: targetItemPath,
+            ...(options && { options })
           };
-          
-          // Only add options if they exist
-          if (options) {
-            (copyTask as any).options = options;
-          }
           
           tasks.push(copyTask);
         }
@@ -414,13 +398,9 @@ export class ParallelGeneratorOperations {
       } = {
         templateName: spec.filename,
         outputPath: join(spec.outputDirectory, spec.filename),
-        content: this.createSpecializedContent(baseContent, spec.title)
+        content: this.createSpecializedContent(baseContent, spec.title),
+        ...(options && { options })
       };
-      
-      // Only add options if they exist
-      if (options) {
-        task.options = options;
-      }
       
       return task;
     });
