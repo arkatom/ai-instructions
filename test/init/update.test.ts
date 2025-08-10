@@ -1,7 +1,8 @@
 import { ConfigUpdater } from '../../src/init/update';
 import { ProjectConfig, ConfigManager } from '../../src/init/config';
 import { GeneratorFactory } from '../../src/generators/factory';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { BaseGenerator } from '../../src/generators/base';
+import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 
 // Mock dependencies
@@ -65,7 +66,7 @@ describe('ConfigUpdater', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act
       const result = await updater.updateConfiguration(testDir, updates);
@@ -103,7 +104,7 @@ describe('ConfigUpdater', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act
       const result = await updater.updateConfiguration(testDir, {});
@@ -137,7 +138,7 @@ describe('ConfigUpdater', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act
       await updater.updateConfiguration(testDir, { tool: 'cursor' }, { backup: true });
@@ -170,7 +171,7 @@ describe('ConfigUpdater', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act & Assert
       await expect(
@@ -207,7 +208,7 @@ describe('ConfigUpdater', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act
       await updater.regenerateFromConfig(testDir);
@@ -312,8 +313,8 @@ describe('ConfigUpdater', () => {
       };
 
       const invalidUpdate = {
-        tool: 'invalid-tool' as any,
-        methodologies: [] as any
+        tool: 'invalid-tool' as never,
+        methodologies: [] as never
       };
 
       // Act & Assert

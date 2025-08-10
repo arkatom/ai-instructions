@@ -1,5 +1,6 @@
 import { GeneratorFactory } from '../../src/generators/factory';
 import { BaseGenerator } from '../../src/generators/base';
+import { type StrictGenerateFilesOptions } from '../../src/generators/types';
 
 // Test implementation of BaseGenerator for testing purposes
 class TestGenerator extends BaseGenerator {
@@ -13,7 +14,7 @@ class TestGenerator extends BaseGenerator {
     });
   }
   
-  async generateFiles(outputDir: string, options?: any): Promise<void> {
+  async generateFiles(_outputDir: string, _options?: StrictGenerateFilesOptions): Promise<void> {
     // Empty implementation for testing
   }
 }
@@ -69,8 +70,8 @@ describe('Configuration File Loading', () => {
       // Arrange
       const generator = new TestGenerator();
       // Override for this test
-      (generator as any).toolConfig = { name: 'nonexistent-tool' };
-      (generator as any).templatesDir = 'nonexistent';
+      (generator as BaseGenerator & { toolConfig: { name: string } }).toolConfig = { name: 'nonexistent-tool' };
+      (generator as BaseGenerator & { templatesDir: string }).templatesDir = 'nonexistent';
       
       // Act & Assert
       await expect(generator.loadToolConfig())

@@ -173,7 +173,7 @@ describe('CLI Safety Integration', () => {
       
       // No backup should exist
       const projectRoot = process.cwd();
-      const backupDir = join(projectRoot, 'backups');
+      const _backupDir = join(projectRoot, 'backups');
       // Note: Backup directory might exist from other tests, but should not contain our specific backup
     });
   });

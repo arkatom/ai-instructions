@@ -167,8 +167,10 @@ describe('ClaudeGenerator OutputFormat Support', () => {
 
   describe('Format Detection and Validation', () => {
     it('should determine instructions directory copying correctly for each format', async () => {
-      // Use reflection to access private method for testing
-      const generatorAny = generator as any;
+      // Use reflection to access private method for testing  
+      const generatorAny = generator as ClaudeGenerator & {
+        shouldCopyInstructionsForFormat(format: OutputFormat): boolean;
+      };
       
       expect(generatorAny.shouldCopyInstructionsForFormat(OutputFormat.CLAUDE)).toBe(true);
       expect(generatorAny.shouldCopyInstructionsForFormat(OutputFormat.CURSOR)).toBe(true);

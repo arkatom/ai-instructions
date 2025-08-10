@@ -1,7 +1,7 @@
-import { InteractivePrompts, InteractiveResponses, PromptValidators } from '../../src/init/prompts';
-import { ProjectConfig, ConfigManager, AVAILABLE_TOOLS } from '../../src/init/config';
-import inquirer from 'inquirer';
-import chalk from 'chalk';
+import { InteractivePrompts, PromptValidators } from '../../src/init/prompts';
+import { ProjectConfig } from '../../src/init/config';
+import inquirer, { QuestionCollection, DistinctQuestion } from 'inquirer';
+
 
 // Mock inquirer
 jest.mock('inquirer');
@@ -138,7 +138,7 @@ describe('InteractivePrompts', () => {
       // Arrange
       const mockExit = jest.spyOn(process, 'exit').mockImplementation((code?: string | number | null | undefined) => {
         throw new Error(`Process exited with code ${code}`);
-      }) as any;
+      }) as jest.MockedFunction<typeof process.exit>;
 
       mockedInquirer.prompt.mockResolvedValueOnce({
         projectName: 'cancelled-project',
@@ -167,20 +167,20 @@ describe('InteractivePrompts', () => {
         confirmGeneration: true
       };
 
-      mockedInquirer.prompt.mockImplementation(((questions: any) => {
+      mockedInquirer.prompt.mockImplementation(((questions: QuestionCollection) => {
         // Check if agents question is included
         const hasAgentsQuestion = Array.isArray(questions) && 
-          questions.some((q: any) => q.name === 'agents');
+          questions.some((q: DistinctQuestion) => q.name === 'agents');
         
         if (hasAgentsQuestion) {
           // Check the when condition
-          const agentsQuestion = questions.find((q: any) => q.name === 'agents');
-          const shouldShowAgents = agentsQuestion.when ? agentsQuestion.when(responses) : true;
+          const agentsQuestion = questions.find((q: DistinctQuestion) => q.name === 'agents');
+          const shouldShowAgents = agentsQuestion?.when ? agentsQuestion.when(responses) : true;
           expect(shouldShowAgents).toBe(false);
         }
         
         return Promise.resolve(responses);
-      }) as any);
+      }) as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       const config = await prompts.runInteractiveFlow();
@@ -202,19 +202,19 @@ describe('InteractivePrompts', () => {
         confirmGeneration: true
       };
 
-      mockedInquirer.prompt.mockImplementation(((questions: any) => {
+      mockedInquirer.prompt.mockImplementation(((questions: QuestionCollection) => {
         // Check if agents question is included
         const hasAgentsQuestion = Array.isArray(questions) && 
-          questions.some((q: any) => q.name === 'agents');
+          questions.some((q: DistinctQuestion) => q.name === 'agents');
         
         if (hasAgentsQuestion) {
-          const agentsQuestion = questions.find((q: any) => q.name === 'agents');
-          const shouldShowAgents = agentsQuestion.when ? agentsQuestion.when(responses) : true;
+          const agentsQuestion = questions.find((q: DistinctQuestion) => q.name === 'agents');
+          const shouldShowAgents = agentsQuestion?.when ? agentsQuestion.when(responses) : true;
           expect(shouldShowAgents).toBe(true);
         }
         
         return Promise.resolve(responses);
-      }) as any);
+      }) as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       const config = await prompts.runInteractiveFlow();
@@ -225,12 +225,12 @@ describe('InteractivePrompts', () => {
 
     it('should validate required fields', async () => {
       // Arrange
-      mockedInquirer.prompt.mockImplementation(((questions: any) => {
+      mockedInquirer.prompt.mockImplementation(((questions: QuestionCollection) => {
         // Test validations
-        const projectNameQ = questions.find((q: any) => q.name === 'projectName');
-        const outputDirQ = questions.find((q: any) => q.name === 'outputDirectory');
-        const methodologiesQ = questions.find((q: any) => q.name === 'methodologies');
-        const languagesQ = questions.find((q: any) => q.name === 'languages');
+        const projectNameQ = questions.find((q: DistinctQuestion) => q.name === 'projectName');
+        const outputDirQ = questions.find((q: DistinctQuestion) => q.name === 'outputDirectory');
+        const methodologiesQ = questions.find((q: DistinctQuestion) => q.name === 'methodologies');
+        const languagesQ = questions.find((q: DistinctQuestion) => q.name === 'languages');
 
         // Test project name validation
         expect(projectNameQ.validate('')).toBe('Project name cannot be empty');
@@ -259,7 +259,7 @@ describe('InteractivePrompts', () => {
           agents: ['frontend-specialist'],
           confirmGeneration: true
         });
-      }) as any);
+      }) as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       await prompts.runInteractiveFlow();
@@ -284,20 +284,20 @@ describe('InteractivePrompts', () => {
 
       mockedInquirer.prompt
         .mockResolvedValueOnce({ shouldUpdate: true })
-        .mockImplementation(((questions: any) => {
+        .mockImplementation(((questions: QuestionCollection) => {
           // Check defaults are set from existing config
-          const projectNameQ = questions.find((q: any) => q.name === 'projectName');
-          const toolQ = questions.find((q: any) => q.name === 'tool');
-          const workflowQ = questions.find((q: any) => q.name === 'workflow');
+          const projectNameQ = questions.find((q: DistinctQuestion) => q.name === 'projectName');
+          const toolQ = questions.find((q: DistinctQuestion) => q.name === 'tool');
+          const workflowQ = questions.find((q: DistinctQuestion) => q.name === 'workflow');
 
-          expect(projectNameQ.default).toBe('existing-name');
-          expect(toolQ.default).toBe('github-copilot');
-          expect(workflowQ.default).toBe('git-flow');
+          expect(projectNameQ?.default).toBe('existing-name');
+          expect(toolQ?.default).toBe('github-copilot');
+          expect(workflowQ?.default).toBe('git-flow');
 
           // Check checkbox defaults
-          const methodologiesQ = questions.find((q: any) => q.name === 'methodologies');
-          const scrumChoice = methodologiesQ.choices.find((c: any) => c.value === 'scrum');
-          expect(scrumChoice.checked).toBe(true);
+          const methodologiesQ = questions.find((q: DistinctQuestion) => q.name === 'methodologies');
+          const scrumChoice = methodologiesQ?.choices?.find((c: { value: string; checked?: boolean }) => c.value === 'scrum');
+          expect(scrumChoice?.checked).toBe(true);
 
           return Promise.resolve({
             projectName: 'new-name',
@@ -308,7 +308,7 @@ describe('InteractivePrompts', () => {
             languages: ['typescript'],
             confirmGeneration: true
           });
-        }) as any);
+        }) as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       await prompts.runInteractiveFlow(existingConfig);

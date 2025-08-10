@@ -193,7 +193,7 @@ describe('ClineGenerator (Issue #23)', () => {
       
       await expect(generator.generateFiles(testOutputDir, { 
         projectName: 'error-test', 
-        lang: 'nonexistent' as any 
+        lang: 'nonexistent' as never 
       })).rejects.toThrow();
     });
 

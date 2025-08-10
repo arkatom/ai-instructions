@@ -1,14 +1,15 @@
 import { 
   InteractiveInitializer, 
   InteractiveUtils, 
-  InteractiveOptions 
+  
 } from '../../src/init/interactive';
-import { ProjectConfig, ConfigManager, AVAILABLE_TOOLS } from '../../src/init/config';
+import { ProjectConfig, ConfigManager } from '../../src/init/config';
 import { InteractivePrompts } from '../../src/init/prompts';
 import { GeneratorFactory } from '../../src/generators/factory';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { BaseGenerator } from '../../src/generators/base';
+import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
-import chalk from 'chalk';
+
 
 // Mock dependencies
 jest.mock('../../src/init/prompts');
@@ -89,7 +90,7 @@ describe('InteractiveInitializer', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act
       await initializer.initialize({ outputDirectory: testDir });
@@ -147,7 +148,7 @@ describe('InteractiveInitializer', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act
       await initializer.initialize({ outputDirectory: testDir });
@@ -163,7 +164,7 @@ describe('InteractiveInitializer', () => {
       const mockExit = jest.spyOn(process, 'exit')
         .mockImplementation((code?: string | number | null | undefined) => {
           throw new Error(`Process exited with code ${code}`);
-        }) as any;
+        }) as jest.MockedFunction<typeof process.exit>;
 
       jest.spyOn(ConfigManager, 'loadConfig')
         .mockImplementation(() => {
@@ -194,7 +195,7 @@ describe('InteractiveInitializer', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       const consoleSpy = jest.spyOn(console, 'log');
 
@@ -214,7 +215,8 @@ describe('InteractiveInitializer', () => {
   describe('validatePrerequisites', () => {
     it('should return true when all required directories exist', () => {
       // Arrange
-      jest.spyOn(require('fs'), 'existsSync')
+      const fs = jest.requireMock('fs');
+      jest.spyOn(fs, 'existsSync')
         .mockImplementation((path: string) => {
           const pathStr = path.toString();
           return pathStr.includes('templates') ||
@@ -232,7 +234,8 @@ describe('InteractiveInitializer', () => {
 
     it('should return false when templates directory does not exist', () => {
       // Arrange
-      jest.spyOn(require('fs'), 'existsSync')
+      const fs = jest.requireMock('fs');
+      jest.spyOn(fs, 'existsSync')
         .mockReturnValue(false);
 
       // Act
@@ -247,7 +250,8 @@ describe('InteractiveInitializer', () => {
 
     it('should return false when required subdirectory is missing', () => {
       // Arrange
-      jest.spyOn(require('fs'), 'existsSync')
+      const fs = jest.requireMock('fs');
+      jest.spyOn(fs, 'existsSync')
         .mockImplementation((path: string) => {
           const pathStr = path.toString();
           if (pathStr.endsWith('templates')) return true;
@@ -320,7 +324,8 @@ describe('InteractiveInitializer', () => {
       };
 
       jest.spyOn(ConfigManager, 'loadConfig').mockReturnValue(mockConfig);
-      jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+      const fs = jest.requireMock('fs');
+      jest.spyOn(fs, 'existsSync').mockReturnValue(true);
 
       const consoleSpy = jest.spyOn(console, 'log');
 
@@ -354,7 +359,7 @@ describe('InteractiveInitializer', () => {
     it('should handle unknown tool gracefully', () => {
       // Arrange
       const mockConfig: ProjectConfig = {
-        tool: 'unknown-tool' as any,
+        tool: 'unknown-tool' as never,
         workflow: 'github-flow',
         methodologies: ['github-idd'],
         languages: ['typescript'],

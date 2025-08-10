@@ -1,6 +1,6 @@
 import { PresetManager, ConfigPreset } from '../../src/init/presets';
 import { ProjectConfig } from '../../src/init/config';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 describe('PresetManager', () => {
@@ -331,7 +331,7 @@ describe('PresetManager', () => {
       expect(success).toBe(true);
       expect(existsSync(exportPath)).toBe(true);
       
-      const exportedContent = require(exportPath);
+      const exportedContent = JSON.parse(readFileSync(exportPath, 'utf-8'));
       expect(exportedContent.id).toBe('export-test');
       expect(exportedContent.name).toBe('Export Test');
     });
@@ -425,7 +425,7 @@ describe('PresetManager', () => {
       };
 
       // Act
-      const isValid = PresetManager.validatePreset(invalidPreset as any);
+      const isValid = PresetManager.validatePreset(invalidPreset as never);
 
       // Assert
       expect(isValid).toBe(false);

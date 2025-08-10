@@ -306,10 +306,11 @@ describe('CLI Interactive Mode Detection', () => {
             env: { ...process.env, NODE_ENV: 'test' }
           }
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Assert
-        expect(error.status).toBe(1);
-        expect(error.stdout.toString()).toContain('Failed to show status');
+        const execError = error as { status: number; stdout: { toString(): string } };
+        expect(execError.status).toBe(1);
+        expect(execError.stdout.toString()).toContain('Failed to show status');
       }
     });
 
@@ -327,8 +328,9 @@ describe('CLI Interactive Mode Detection', () => {
             env: { ...process.env, NODE_ENV: 'test' }
           }
         );
-      } catch (error: any) {
-        result = error.stdout.toString();
+      } catch (error: unknown) {
+        const execError = error as { stdout: { toString(): string } };
+        result = execError.stdout.toString();
       }
 
       // Should still show something even if there's an issue

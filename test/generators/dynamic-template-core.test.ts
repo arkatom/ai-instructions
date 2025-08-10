@@ -1,5 +1,5 @@
 import { GeneratorFactory } from '../../src/generators/factory';
-import { BaseGenerator } from '../../src/generators/base';
+
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -84,7 +84,7 @@ describe('Core Template Loading', () => {
       const generator = GeneratorFactory.createGenerator('cursor');
       
       // Act & Assert
-      await expect(generator.loadDynamicTemplate('main.md', { lang: 'invalid' as any }))
+      await expect(generator.loadDynamicTemplate('main.md', { lang: 'invalid' as never }))
         .rejects
         .toThrow('Unsupported language: invalid');
     });
