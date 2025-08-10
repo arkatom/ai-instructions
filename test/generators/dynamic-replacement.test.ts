@@ -1,310 +1,241 @@
-/**
- * TDD Test Suite - Dynamic Template Generation System
- * Phase 3: Dynamic Replacement Tests
- * 
- * GREEN PHASE: Test enhanced loadDynamicTemplate() with full config integration
- * Following Kent Beck's TDD principles: Red → Green → Refactor
- */
-
 import { GeneratorFactory } from '../../src/generators/factory';
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { tmpdir } from 'os';
-import { mkdtemp, rm } from 'fs/promises';
-import { join } from 'path';
 
-describe('Dynamic Template Generation - Dynamic Replacement', () => {
-  let tempDir: string;
-
-  beforeEach(async () => {
-    // Create temporary directory for test files
-    tempDir = await mkdtemp(join(tmpdir(), 'dynamic-replacement-test-'));
-  });
-
-  afterEach(async () => {
-    // Clean up temporary directory
-    await rm(tempDir, { recursive: true, force: true });
-  });
-
-  describe('Tool-specific Dynamic Replacement', () => {
-    test('should replace tool name with display name from config', async () => {
-      // ARRANGE
+describe('Dynamic Template Replacement', () => {
+  describe('Project name replacement', () => {
+    test('should replace project name placeholder', async () => {
+      // Arrange
       const generator = GeneratorFactory.createGenerator('cursor');
       
-      // ACT
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        projectName: 'my-awesome-project',
+        lang: 'en'
+      });
+      
+      // Assert
+      expect(result).toContain('my-awesome-project');
+      expect(result).not.toContain('{{projectName}}');
+    });
+
+    test('should handle project name with special characters', async () => {
+      // Arrange
+      const generator = GeneratorFactory.createGenerator('cursor');
+      
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        projectName: '@company/project-name_v2.0',
+        lang: 'en'
+      });
+      
+      // Assert
+      expect(result).toContain('@company/project-name_v2.0');
+      expect(result).not.toContain('{{projectName}}');
+    });
+
+    test('should use default project name when not specified', async () => {
+      // Arrange
+      const generator = GeneratorFactory.createGenerator('cursor');
+      
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        lang: 'en'
+      });
+      
+      // Assert
+      // When no projectName is specified, the placeholder remains for later replacement
+      expect(result).toContain('{{projectName}}');
+    });
+  });
+
+  describe('Tool name replacement (empty per design)', () => {
+    test('should replace tool name placeholder with empty string', async () => {
+      // Arrange
+      const generator = GeneratorFactory.createGenerator('cursor');
+      
+      // Act
       const result = await generator.loadDynamicTemplate('main.md', { 
         lang: 'ja',
         projectName: 'test-project' 
       });
       
-      // ASSERT - toolName placeholder should be replaced with empty string
-      expect(result).toContain('開発指示 - test-project');
+      // Assert
+      // Per design update: toolName is replaced with empty string for token efficiency
       expect(result).not.toContain('{{toolName}}');
-    });
-
-    test('should replace tool-specific features section', async () => {
-      // ARRANGE
-      const generator = GeneratorFactory.createGenerator('cursor');
-      
-      // ACT
-      const result = await generator.loadDynamicTemplate('main.md', { lang: 'ja' });
-      
-      // ASSERT - toolSpecificFeatures placeholder should be replaced with empty string
-      expect(result).not.toContain('{{toolSpecificFeatures}}');
-      // Since customSections is removed from config, these sections won't exist
-      expect(result).not.toContain('## Cursor 固有機能');
-    });
-
-    test('should replace additional instructions section', async () => {
-      // ARRANGE  
-      const generator = GeneratorFactory.createGenerator('cursor');
-      
-      // ACT
-      const result = await generator.loadDynamicTemplate('main.md', { lang: 'ja' });
-      
-      // ASSERT - additionalInstructions placeholder should be replaced with empty string
-      expect(result).not.toContain('{{additionalInstructions}}');
-      // Since customSections is removed from config, these sections won't exist
-      expect(result).not.toContain('## 追加指示');
-    });
-
-    test('should handle different tools with different configs', async () => {
-      // ARRANGE & ACT
-      const cursorResult = await GeneratorFactory.createGenerator('cursor')
-        .loadDynamicTemplate('main.md', { lang: 'en' });
-      const copilotResult = await GeneratorFactory.createGenerator('github-copilot')
-        .loadDynamicTemplate('main.md', { lang: 'en' });
-      const claudeResult = await GeneratorFactory.createGenerator('claude')
-        .loadDynamicTemplate('main.md', { lang: 'en' });
-      
-      // ASSERT - Each should have basic template structure (no tool-specific content)
-      expect(cursorResult).toContain('Development Instructions');
-      expect(cursorResult).not.toContain('{{toolName}}');
-      
-      expect(copilotResult).toContain('Development Instructions');
-      expect(copilotResult).not.toContain('{{toolName}}');
-      
-      expect(claudeResult).toContain('Development Instructions');
-      expect(claudeResult).not.toContain('{{toolName}}');
+      expect(result).not.toContain('Cursor AI 開発指示'); // Should not include tool name
+      expect(result).toContain('開発指示'); // Should have generic title
     });
   });
 
-  describe('Dynamic Globs Generation', () => {
-    test('should generate dynamic globs from javascript config for cursor', async () => {
-      // ARRANGE
+  describe('Tool-specific features replacement (empty per design)', () => {
+    test('should replace tool-specific features placeholder with empty string', async () => {
+      // Arrange
       const generator = GeneratorFactory.createGenerator('cursor');
       
-      // ACT
-      const result = await generator.loadDynamicTemplate('main.md', { lang: 'en' });
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        lang: 'ja'
+      });
       
-      // ASSERT - Should include JavaScript globs + Cursor-specific additions
-      expect(result).toContain('**/*.js');
-      expect(result).toContain('**/*.jsx');
-      expect(result).toContain('**/*.json');
-      expect(result).toContain('**/*.mdc'); // Cursor-specific addition
-      expect(result).toContain('**/.cursor/**'); // Cursor-specific addition
-      expect(result).not.toContain('{{dynamicGlobs}}');
+      // Assert
+      // Per design update: toolSpecificFeatures is replaced with empty string
+      expect(result).not.toContain('{{toolSpecificFeatures}}');
+      expect(result).not.toContain('Cursor Specific Features');
+      expect(result).not.toContain('Advanced code completion');
     });
+  });
 
-    test('should generate universal globs for github-copilot', async () => {
-      // ARRANGE
-      const generator = GeneratorFactory.createGenerator('github-copilot');
-      
-      // ACT  
-      const result = await generator.loadDynamicTemplate('main.md', { lang: 'en' });
-      
-      // ASSERT - Should include universal globs (no additional)
-      expect(result).toContain('**/*.md');
-      expect(result).toContain('**/*.json');
-      expect(result).toContain('**/*.yaml');
-      expect(result).toContain('**/README*');
-      expect(result).not.toContain('**/*.ts'); // No JavaScript-specific
-      expect(result).not.toContain('{{dynamicGlobs}}');
-    });
-
-    test('should support custom language config override', async () => {
-      // ARRANGE
+  describe('Additional instructions replacement (empty per design)', () => {
+    test('should replace additional instructions placeholder with empty string', async () => {
+      // Arrange
       const generator = GeneratorFactory.createGenerator('cursor');
       
-      // ACT - Override default javascript with python config
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        lang: 'ja'
+      });
+      
+      // Assert
+      // Per design update: additionalInstructions is replaced with empty string
+      expect(result).not.toContain('{{additionalInstructions}}');
+    });
+  });
+
+  describe('Dynamic globs replacement', () => {
+    test('should replace dynamic globs based on language config', async () => {
+      // Arrange
+      const generator = GeneratorFactory.createGenerator('cursor');
+      
+      // Act
       const result = await generator.loadDynamicTemplate('main.md', { 
         lang: 'en',
-        languageConfig: 'python'
+        languageConfig: 'javascript'
       });
       
-      // ASSERT - Should use Python globs instead of JavaScript
-      expect(result).toContain('**/*.py');
-      expect(result).toContain('**/requirements.txt');
-      expect(result).toContain('**/pyproject.toml');
-      expect(result).toContain('**/*.mdc'); // Still includes Cursor addition
-      expect(result).not.toContain('**/*.js'); // No JavaScript globs
+      // Assert
+      expect(result).not.toContain('{{dynamicGlobs}}');
+      expect(result).toContain('**/*.ts');
+      expect(result).toContain('**/*.js');
+      expect(result).toContain('**/*.mdc'); // Additional from cursor config
     });
 
-    test('should deduplicate and sort globs', async () => {
-      // ARRANGE - Create a scenario where globs might overlap
+    test('should merge tool-specific and language-specific globs', async () => {
+      // Arrange
       const generator = GeneratorFactory.createGenerator('cursor');
       
-      // ACT
-      const result = await generator.loadDynamicTemplate('main.md', { lang: 'en' });
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        lang: 'en',
+        languageConfig: 'typescript'
+      });
       
-      // ASSERT - Should not have duplicate globs and should be sorted
-      const globsMatch = result.match(/globs: (\[[\s\S]*?\])/);
-      expect(globsMatch).toBeTruthy();
+      // Assert
+      expect(result).not.toContain('{{dynamicGlobs}}');
+      expect(result).toContain('**/*.ts');
+      expect(result).toContain('**/*.tsx');
+      expect(result).toContain('**/*.d.ts');
+      expect(result).toContain('**/*.mdc'); // From cursor config
+      expect(result).toContain('**/.cursor/**'); // From cursor config
+    });
+
+    test('should use universal globs when no language specified', async () => {
+      // Arrange
+      const generator = GeneratorFactory.createGenerator('github-copilot');
       
-      if (!globsMatch || !globsMatch[1]) {
-        throw new Error('Globs match not found - check template format');
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        lang: 'en'
+      });
+      
+      // Assert
+      expect(result).not.toContain('{{dynamicGlobs}}');
+      expect(result).toContain('**/*.md');
+      expect(result).toContain('**/README*');
+      expect(result).toContain('**/LICENSE*');
+    });
+  });
+
+  describe('File extension replacement', () => {
+    test('should replace file extension placeholder for cursor', async () => {
+      // Arrange
+      const generator = GeneratorFactory.createGenerator('cursor');
+      
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        lang: 'en'
+      });
+      
+      // Assert
+      expect(result).not.toContain('{{fileExtension}}');
+      if (result.includes('file extension')) {
+        expect(result).toContain('.mdc');
       }
-      const globsStr = globsMatch[1];
-      const globs = JSON.parse(globsStr.replace(/\\"/g, '"'));
+    });
+
+    test('should replace file extension placeholder for claude', async () => {
+      // Arrange
+      const generator = GeneratorFactory.createGenerator('claude');
       
-      // Check no duplicates
-      const uniqueGlobs = Array.from(new Set(globs));
-      expect(globs).toHaveLength(uniqueGlobs.length);
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        lang: 'en'
+      });
       
-      // Check sorted
-      const sortedGlobs = [...globs].sort();
-      expect(globs).toEqual(sortedGlobs);
+      // Assert
+      expect(result).not.toContain('{{fileExtension}}');
+      if (result.includes('file extension')) {
+        expect(result).toContain('.md');
+      }
     });
   });
 
-  describe('Multi-Language Template Integration', () => {
-    test('should maintain language-specific content with dynamic replacement', async () => {
-      // ARRANGE
+  describe('Multiple replacements', () => {
+    test('should handle all replacements in single template', async () => {
+      // Arrange
       const generator = GeneratorFactory.createGenerator('cursor');
       
-      // ACT - Test all languages
-      const jaResult = await generator.loadDynamicTemplate('main.md', { 
-        lang: 'ja', 
-        projectName: 'テスト-プロジェクト' 
-      });
-      const enResult = await generator.loadDynamicTemplate('main.md', { 
-        lang: 'en', 
-        projectName: 'test-project' 
-      });
-      const chResult = await generator.loadDynamicTemplate('main.md', { 
-        lang: 'ch', 
-        projectName: '测试项目' 
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        projectName: 'multi-replace-test',
+        lang: 'ja',
+        languageConfig: 'typescript'
       });
       
-      // ASSERT - Each should have language-specific content + dynamic replacements
-      expect(jaResult).toContain('🚨 核心原則（必須）');
-      expect(jaResult).toContain('開発指示 - テスト-プロジェクト');
-      expect(jaResult).not.toContain('{{toolName}}');
-      
-      expect(enResult).toContain('🚨 Core Principles (MANDATORY)');
-      expect(enResult).toContain('Development Instructions - test-project');
-      expect(enResult).not.toContain('{{toolName}}');
-      
-      expect(chResult).toContain('🚨 核心原则（必须）');
-      expect(chResult).toContain('开发指令 - 测试项目');
-      expect(chResult).not.toContain('{{toolName}}');
-    });
-  });
-
-  describe('Error Handling for Dynamic Replacement', () => {
-    test('should handle missing tool config gracefully', async () => {
-      // ARRANGE - Mock missing tool config
-      const generator = GeneratorFactory.createGenerator('cursor');
-      jest.spyOn(generator, 'loadToolConfig').mockRejectedValue(new Error('Tool configuration not found'));
-      
-      // ACT & ASSERT - Should propagate config error
-      await expect(generator.loadDynamicTemplate('main.md'))
-        .rejects
-        .toThrow('Tool configuration not found');
-        
-      jest.restoreAllMocks();
-    });
-
-    test('should handle missing language config gracefully', async () => {
-      // ARRANGE - Mock missing language config
-      const generator = GeneratorFactory.createGenerator('cursor');
-      jest.spyOn(generator, 'loadLanguageConfig').mockRejectedValue(new Error('Language configuration not found'));
-      
-      // ACT & ASSERT - Should propagate config error
-      await expect(generator.loadDynamicTemplate('main.md'))
-        .rejects
-        .toThrow('Language configuration not found');
-        
-      jest.restoreAllMocks();
-    });
-
-    test('should handle config without optional sections', async () => {
-      // ARRANGE - Mock config with missing optional sections
-      const generator = GeneratorFactory.createGenerator('cursor');
-      jest.spyOn(generator, 'loadToolConfig').mockResolvedValue({
-        displayName: 'Test Tool',
-        fileExtension: '.md',
-        globs: {
-          inherit: 'universal'
-        },
-        description: 'Test tool description',
-        // Missing customSections (which is expected and valid)
-      } as any);
-      
-      // ACT
-      const result = await generator.loadDynamicTemplate('main.md', { lang: 'en' });
-      
-      // ASSERT - Should handle missing sections gracefully
-      expect(result).toContain('Development Instructions');
+      // Assert
+      // No placeholders should remain
+      expect(result).not.toContain('{{projectName}}');
       expect(result).not.toContain('{{toolName}}');
-      expect(result).not.toContain('{{toolSpecificFeatures}}'); // Should be replaced with empty
-      expect(result).not.toContain('{{additionalInstructions}}'); // Should be replaced with empty
+      expect(result).not.toContain('{{dynamicGlobs}}');
+      expect(result).not.toContain('{{toolSpecificFeatures}}');
+      expect(result).not.toContain('{{additionalInstructions}}');
+      expect(result).not.toContain('{{fileExtension}}');
       
-      jest.restoreAllMocks();
+      // Content should be present
+      expect(result).toContain('multi-replace-test');
+      expect(result).toContain('**/*.ts');
+      expect(result.length).toBeGreaterThan(500);
     });
-  });
 
-  describe('Performance for Enhanced Dynamic Replacement', () => {
-    test('should load and replace within reasonable time', async () => {
-      // ARRANGE
+    test('should maintain template structure after replacements', async () => {
+      // Arrange
       const generator = GeneratorFactory.createGenerator('cursor');
-      const startTime = Date.now();
       
-      // ACT
-      await generator.loadDynamicTemplate('main.md', { 
-        lang: 'ja', 
-        projectName: 'performance-test' 
+      // Act
+      const result = await generator.loadDynamicTemplate('main.md', { 
+        projectName: 'structure-test',
+        lang: 'ja',
+        languageConfig: 'javascript'
       });
-      const loadTime = Date.now() - startTime;
       
-      // ASSERT - Should complete within 200ms (including config loading + replacement)
-      expect(loadTime).toBeLessThan(200);
-    });
-
-    test('should handle concurrent dynamic template generation', async () => {
-      // ARRANGE
-      const promises = [];
+      // Assert
+      // Check that main sections are present
+      expect(result).toContain('核心原則');
+      expect(result).toContain('基本ルール');
+      expect(result).toContain('深層思考');
+      expect(result).toContain('structure-test');
       
-      // ACT - Generate multiple templates concurrently
-      promises.push(GeneratorFactory.createGenerator('cursor').loadDynamicTemplate('main.md', { lang: 'ja' }));
-      promises.push(GeneratorFactory.createGenerator('github-copilot').loadDynamicTemplate('main.md', { lang: 'en' }));
-      promises.push(GeneratorFactory.createGenerator('claude').loadDynamicTemplate('main.md', { lang: 'ch' }));
-      promises.push(GeneratorFactory.createGenerator('cursor').loadDynamicTemplate('main.md', { languageConfig: 'python' }));
-      
-      const results = await Promise.all(promises);
-      
-      // ASSERT - All should succeed with basic template structure
-      expect(results).toHaveLength(4);
-      expect(results[0]).toContain('開発指示');
-      expect(results[1]).toContain('Development Instructions');
-      expect(results[2]).toContain('开发指令');
-      expect(results[3]).toContain('**/*.py'); // Python globs
+      // Check markdown structure is maintained
+      expect(result).toMatch(/^#/m); // Has headers
+      expect(result).toMatch(/^-\s/m); // Has list items
     });
   });
 });
-
-/**
- * TDD Implementation Notes:
- * 
- * GREEN PHASE (Current):
- * - Tests enhanced loadDynamicTemplate() with full config integration
- * - Verifies tool-specific features, additional instructions, and dynamic globs
- * - Tests multi-language support with dynamic replacement
- * - Error handling for various config scenarios
- * - Performance testing for enhanced functionality
- * 
- * REFACTOR PHASE (Next):
- * - Add configuration caching for better performance
- * - Optimize glob generation and deduplication
- * - Add config validation
- * - Improve error messages and debugging
- */

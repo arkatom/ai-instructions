@@ -1,18 +1,28 @@
 {
   "globs": [
-    "**/*.js", 
+    "**/*.js",
     "**/*.jsx",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.mjs",
+    "**/*.cjs",
     "**/*.json",
-    "**/*.md",
     "**/package.json",
-    "**/*.config.js",
-    "**/.env",
-    "**/.env.local"
+    "**/package-lock.json",
+    "**/tsconfig.json",
+    "**/jsconfig.json",
+    "**/.eslintrc*",
+    "**/.prettierrc*",
+    "**/webpack.config.js",
+    "**/vite.config.*",
+    "**/rollup.config.*"
   ],
-  "description": "JavaScript プロジェクト用ファイルグロブ設定",
+  "description": "JavaScript and TypeScript project files",
   "languageFeatures": [
-    "ES6/ES2015+ 構文",
-    "React/Vue/Angular フレームワーク",
-    "Node.js サーバーサイド開発"
+    "ES6+ syntax",
+    "TypeScript support",
+    "JSX/TSX support",
+    "Module systems (CommonJS, ESM)",
+    "Node.js ecosystem"
   ]
 }

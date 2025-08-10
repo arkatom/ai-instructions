@@ -117,6 +117,10 @@ export class ConfigurationManager {
     
     try {
       if (!await FileUtils.fileExists(langConfigPath)) {
+        // Fallback to universal configuration for unknown languages
+        if (languageName !== 'universal') {
+          return this.loadLanguageConfig('universal');
+        }
         throw new ConfigurationNotFoundError('language', languageName, langConfigPath);
       }
       
