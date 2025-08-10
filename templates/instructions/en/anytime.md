@@ -1,2 +1,0 @@
-- Casual thinking and output will destroy trust and value. What I seek is not speed but quality. Don't rush, meticulous work ultimately maximizes efficiency. Analyze intentions with deep thinking and provide 200% value. I am always watching whether you are being casual.
-- Please read CLAUDE.md and proceed with deep thinking. Take your time, but always prioritize quality and strictly adhere to the basic principle of providing perfect answers in one go. Carefully analyze my requests and ask questions even if there are minor unclear points.
