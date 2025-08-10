@@ -402,7 +402,8 @@ export class ParallelGeneratorOperations {
       title: string;
       outputDirectory: string;
     }>,
-    options?: GenerateFilesOptions  // Use legacy type for compatibility
+    options?: GenerateFilesOptions,  // Use legacy type for compatibility
+    toolName = 'AI'  // Add toolName parameter with default
   ): Promise<ParallelOperationStats> {
     // Create template tasks for parallel generation
     const templateTasks = fileSpecs.map(spec => {
@@ -414,7 +415,7 @@ export class ParallelGeneratorOperations {
       } = {
         templateName: spec.filename,
         outputPath: join(spec.outputDirectory, spec.filename),
-        content: this.createSpecializedContent(baseContent, spec.title)
+        content: this.createSpecializedContent(baseContent, spec.title, toolName)
       };
       
       // Only add options if they exist
@@ -431,8 +432,8 @@ export class ParallelGeneratorOperations {
   /**
    * Create specialized content for different file types
    */
-  private static createSpecializedContent(baseContent: string, title: string): string {
-    const header = `# ${title} - AI Integration
+  private static createSpecializedContent(baseContent: string, title: string, toolName = 'AI'): string {
+    const header = `# ${title} - ${toolName} Integration
 
 This file contains specialized development instructions.
 
