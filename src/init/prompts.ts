@@ -25,6 +25,14 @@ export interface InteractiveResponses {
   confirmGeneration: boolean;
 }
 
+// Custom type for inquirer question objects to avoid complex type dependencies
+type InquirerQuestion = {
+  type: string;
+  name: string;
+  message: string;
+  [key: string]: unknown; // Allow for inquirer-specific properties like 'when', 'validate', etc.
+};
+
 export class InteractivePrompts {
   private templatesDir: string;
 
@@ -75,7 +83,7 @@ export class InteractivePrompts {
     existingConfig?: ProjectConfig | null,
     defaultOutputDir: string = process.cwd()
   ): Promise<InteractiveResponses> {
-    const questions: any[] = [
+    const questions: InquirerQuestion[] = [
       // Project metadata
       {
         type: 'input',
@@ -169,7 +177,7 @@ export class InteractivePrompts {
     ];
 
     // Agent selection (Claude only)
-    questions.push({
+    const agentQuestion: InquirerQuestion = {
       type: 'checkbox',
       name: 'agents',
       message: 'Select agents: (Press space to select multiple)',
@@ -178,20 +186,22 @@ export class InteractivePrompts {
         value: option.value,
         checked: existingConfig?.agents?.includes(option.value) || false
       })),
-      when: (answers: any) => {
-        const toolConfig = AVAILABLE_TOOLS[answers.tool];
+      when: (answers: Partial<InteractiveResponses>) => {
+        const toolConfig = answers.tool ? AVAILABLE_TOOLS[answers.tool] : undefined;
         return toolConfig ? toolConfig.supportsAgents : false;
       },
-      validate: (choices: string[], answers: any) => {
-        const toolConfig = AVAILABLE_TOOLS[answers.tool];
+      validate: (choices: string[], answers: Partial<InteractiveResponses>) => {
+        const toolConfig = answers.tool ? AVAILABLE_TOOLS[answers.tool] : undefined;
         if (toolConfig && toolConfig.supportsAgents && choices.length === 0) {
           return 'Please select at least one agent for Claude';
         }
         return true;
       }
-    });
+    };
+    
+    questions.push(agentQuestion);
 
-    const responses = await inquirer.prompt(questions);
+    const responses = await inquirer.prompt(questions as unknown as never[]);
 
     // Show configuration summary
     console.log(chalk.green('\n📋 Configuration Summary:'));
@@ -234,8 +244,8 @@ export class InteractivePrompts {
    */
   private createConfigFromResponses(responses: InteractiveResponses): ProjectConfig {
     const configOverrides: Partial<ProjectConfig> = {
-      tool: responses.tool as any,
-      workflow: responses.workflow as any,
+      tool: responses.tool as ProjectConfig['tool'],
+      workflow: responses.workflow as ProjectConfig['workflow'],
       methodologies: responses.methodologies,
       languages: responses.languages,
       projectName: responses.projectName,
