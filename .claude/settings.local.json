@@ -216,7 +216,10 @@
       "Bash(./bin/cli.js init:*)",
       "WebFetch(domain:bundlephobia.com)",
       "mcp__github__search_repositories",
-      "mcp__github__create_pull_request_review"
+      "mcp__github__create_pull_request_review",
+      "mcp__filesystem__search_files",
+      "mcp__filesystem__read_multiple_files",
+      "mcp__github__get_pull_request_reviews"
     ],
     "deny": []
   },
