@@ -2,6 +2,23 @@ import { InteractivePrompts, PromptValidators } from '../../src/init/prompts';
 import { ProjectConfig } from '../../src/init/config';
 import inquirer from 'inquirer';
 
+// Type definitions for test mocks
+interface MockQuestion {
+  name: string;
+  type?: string;
+  message?: string;
+  choices?: Array<{ name: string; value: string; checked?: boolean }>;
+  default?: unknown;
+  validate?: (value: unknown) => boolean | string;
+  when?: (answers: Record<string, unknown>) => boolean;
+}
+
+type MockQuestions = MockQuestion | MockQuestion[];
+
+interface MockExit {
+  (code?: string | number | null | undefined): never;
+}
+
 // Mock inquirer
 jest.mock('inquirer');
 const mockedInquirer = inquirer as jest.Mocked<typeof inquirer>;
@@ -139,9 +156,9 @@ describe('InteractivePrompts', () => {
 
     it('should exit process if user cancels generation', async () => {
       // Arrange
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation((code?: string | number | null | undefined) => {
+      const mockExit = jest.spyOn(process, 'exit').mockImplementation(((code?: string | number | null | undefined) => {
         throw new Error(`Process exited with code ${code}`);
-      }) as any;
+      }) as MockExit);
 
       // First prompt: configuration questions
       mockedInquirer.prompt.mockResolvedValueOnce({
@@ -175,20 +192,20 @@ describe('InteractivePrompts', () => {
         confirmGeneration: true
       };
 
-      mockedInquirer.prompt.mockImplementation(((questions: any) => {
+      mockedInquirer.prompt.mockImplementation(((questions: MockQuestions) => {
         // Check if agents question is included
-        const hasAgentsQuestion = Array.isArray(questions) && 
-          questions.some((q: any) => q.name === 'agents');
+        const questionArray = Array.isArray(questions) ? questions : [questions];
+        const hasAgentsQuestion = questionArray.some((q: MockQuestion) => q.name === 'agents');
         
         if (hasAgentsQuestion) {
           // Check the when condition
-          const agentsQuestion = questions.find((q: any) => q.name === 'agents');
-          const shouldShowAgents = agentsQuestion.when ? agentsQuestion.when(responses) : true;
+          const agentsQuestion = questionArray.find((q: MockQuestion) => q.name === 'agents');
+          const shouldShowAgents = agentsQuestion?.when ? agentsQuestion.when(responses) : true;
           expect(shouldShowAgents).toBe(false);
         }
         
         return Promise.resolve(responses);
-      }) as any);
+      }) as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       const config = await prompts.runInteractiveFlow();
@@ -210,19 +227,19 @@ describe('InteractivePrompts', () => {
         confirmGeneration: true
       };
 
-      mockedInquirer.prompt.mockImplementation(((questions: any) => {
+      mockedInquirer.prompt.mockImplementation(((questions: MockQuestions) => {
         // Check if agents question is included
-        const hasAgentsQuestion = Array.isArray(questions) && 
-          questions.some((q: any) => q.name === 'agents');
+        const questionArray = Array.isArray(questions) ? questions : [questions];
+        const hasAgentsQuestion = questionArray.some((q: MockQuestion) => q.name === 'agents');
         
         if (hasAgentsQuestion) {
-          const agentsQuestion = questions.find((q: any) => q.name === 'agents');
-          const shouldShowAgents = agentsQuestion.when ? agentsQuestion.when(responses) : true;
+          const agentsQuestion = questionArray.find((q: MockQuestion) => q.name === 'agents');
+          const shouldShowAgents = agentsQuestion?.when ? agentsQuestion.when(responses) : true;
           expect(shouldShowAgents).toBe(true);
         }
         
         return Promise.resolve(responses);
-      }) as any);
+      }) as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       const config = await prompts.runInteractiveFlow();
@@ -235,31 +252,31 @@ describe('InteractivePrompts', () => {
       // Arrange
       let validationTested = false;
       
-      mockedInquirer.prompt.mockImplementation(((questions: any) => {
+      mockedInquirer.prompt.mockImplementation(((questions: MockQuestions) => {
         if (!validationTested && Array.isArray(questions)) {
           // Test validations on first call (configuration questions)
-          const projectNameQ = questions.find((q: any) => q.name === 'projectName');
-          const outputDirQ = questions.find((q: any) => q.name === 'outputDirectory');
-          const methodologiesQ = questions.find((q: any) => q.name === 'methodologies');
-          const languagesQ = questions.find((q: any) => q.name === 'languages');
+          const projectNameQ = questions.find((q: MockQuestion) => q.name === 'projectName');
+          const outputDirQ = questions.find((q: MockQuestion) => q.name === 'outputDirectory');
+          const methodologiesQ = questions.find((q: MockQuestion) => q.name === 'methodologies');
+          const languagesQ = questions.find((q: MockQuestion) => q.name === 'languages');
 
           if (projectNameQ && outputDirQ && methodologiesQ && languagesQ) {
             // Test project name validation
-            expect(projectNameQ.validate('')).toBe('Project name cannot be empty');
-            expect(projectNameQ.validate('valid-name')).toBe(true);
-            expect(projectNameQ.validate('name<with>pipe|')).toBe('Project name cannot contain forbidden characters (<, >, |)');
+            expect(projectNameQ.validate?.('')).toBe('Project name cannot be empty');
+            expect(projectNameQ.validate?.('valid-name')).toBe(true);
+            expect(projectNameQ.validate?.('name<with>pipe|')).toBe('Project name cannot contain forbidden characters (<, >, |)');
 
             // Test output directory validation
-            expect(outputDirQ.validate('')).toBe('Output directory cannot be empty');
-            expect(outputDirQ.validate('/valid/path')).toBe(true);
+            expect(outputDirQ.validate?.('')).toBe('Output directory cannot be empty');
+            expect(outputDirQ.validate?.('/valid/path')).toBe(true);
 
             // Test methodologies validation
-            expect(methodologiesQ.validate([])).toBe('Please select at least one methodology');
-            expect(methodologiesQ.validate(['github-idd'])).toBe(true);
+            expect(methodologiesQ.validate?.([])).toBe('Please select at least one methodology');
+            expect(methodologiesQ.validate?.(['github-idd'])).toBe(true);
 
             // Test languages validation
-            expect(languagesQ.validate([])).toBe('Please select at least one language');
-            expect(languagesQ.validate(['typescript'])).toBe(true);
+            expect(languagesQ.validate?.([])).toBe('Please select at least one language');
+            expect(languagesQ.validate?.(['typescript'])).toBe(true);
 
             validationTested = true;
             
@@ -279,7 +296,7 @@ describe('InteractivePrompts', () => {
         return Promise.resolve({
           confirmGeneration: true
         });
-      }) as any);
+      }) as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       await prompts.runInteractiveFlow();
@@ -307,12 +324,12 @@ describe('InteractivePrompts', () => {
 
       mockedInquirer.prompt
         .mockResolvedValueOnce({ shouldUpdate: true })
-        .mockImplementation(((questions: any) => {
+        .mockImplementation(((questions: MockQuestions) => {
           if (!defaultsTested && Array.isArray(questions)) {
             // Check defaults are set from existing config
-            const projectNameQ = questions.find((q: any) => q.name === 'projectName');
-            const toolQ = questions.find((q: any) => q.name === 'tool');
-            const workflowQ = questions.find((q: any) => q.name === 'workflow');
+            const projectNameQ = questions.find((q: MockQuestion) => q.name === 'projectName');
+            const toolQ = questions.find((q: MockQuestion) => q.name === 'tool');
+            const workflowQ = questions.find((q: MockQuestion) => q.name === 'workflow');
 
             if (projectNameQ && toolQ && workflowQ) {
               expect(projectNameQ.default).toBe('existing-name');
@@ -320,10 +337,10 @@ describe('InteractivePrompts', () => {
               expect(workflowQ.default).toBe('git-flow');
 
               // Check checkbox defaults
-              const methodologiesQ = questions.find((q: any) => q.name === 'methodologies');
+              const methodologiesQ = questions.find((q: MockQuestion) => q.name === 'methodologies');
               if (methodologiesQ) {
-                const scrumChoice = methodologiesQ.choices.find((c: any) => c.value === 'scrum');
-                expect(scrumChoice.checked).toBe(true);
+                const scrumChoice = methodologiesQ.choices?.find((c: { name: string; value: string; checked?: boolean }) => c.value === 'scrum');
+                expect(scrumChoice?.checked).toBe(true);
               }
 
               defaultsTested = true;
@@ -343,7 +360,7 @@ describe('InteractivePrompts', () => {
           return Promise.resolve({
             confirmGeneration: true
           });
-        }) as any);
+        }) as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       await prompts.runInteractiveFlow(existingConfig);

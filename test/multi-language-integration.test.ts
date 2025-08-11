@@ -255,7 +255,7 @@ describe('🌍 Multi-Language Integration Tests', () => {
       try {
         await generator.generateFiles(tempDir, {
           projectName: 'test-project',
-          lang: 'invalid-lang' as any,
+          lang: 'invalid-lang' as never,
           force: true
         });
         

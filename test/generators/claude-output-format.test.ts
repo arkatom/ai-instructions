@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { readFile, mkdir, rm } from 'fs/promises';
+import { join } from 'path';
 import { ClaudeGenerator } from '../../src/generators/claude';
 import { OutputFormat } from '../../src/converters';
 import { FileUtils } from '../../src/utils/file-utils';
@@ -168,7 +169,7 @@ describe('ClaudeGenerator OutputFormat Support', () => {
   describe('Format Detection and Validation', () => {
     it('should determine instructions directory copying correctly for each format', async () => {
       // Use reflection to access private method for testing
-      const generatorAny = generator as any;
+      const generatorAny = generator as unknown as { shouldCopyInstructionsForFormat: (format: OutputFormat) => boolean };
       
       expect(generatorAny.shouldCopyInstructionsForFormat(OutputFormat.CLAUDE)).toBe(true);
       expect(generatorAny.shouldCopyInstructionsForFormat(OutputFormat.CURSOR)).toBe(true);

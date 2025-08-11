@@ -148,7 +148,7 @@ describe('FileConflictHandler', () => {
       const handler = new FileConflictHandler();
       
       // Mock the interactive selection to simulate user choosing specific lines
-      const mockSelectLines = jest.spyOn(handler as any, 'promptForLineSelection')
+      const mockSelectLines = jest.spyOn(handler as unknown as { promptForLineSelection: (...args: unknown[]) => Promise<string[]> }, 'promptForLineSelection')
         .mockResolvedValue(['# New File', 'Line 3', 'Line 4']); // User keeps new header, common line, and existing line
 
       await handler.resolveConflict(testFile, newContent, ConflictResolution.INTERACTIVE);
@@ -197,7 +197,7 @@ describe('FileConflictHandler', () => {
       const newContent = '# New Title\n\n## Section 1\nNew Content 1\n\n## Section 3\nContent 3';
       
       const handler = new FileConflictHandler();
-      const merged = await (handler as any).mergeContent(existing, newContent, testFile);
+      const merged = await (handler as unknown as { mergeContent: (existing: string, newContent: string, filePath: string) => Promise<string> }).mergeContent(existing, newContent, testFile);
       
       expect(merged).toContain('# New Title'); // New title should win
       expect(merged).toContain('## Section 1');
@@ -210,7 +210,7 @@ describe('FileConflictHandler', () => {
       const newContent = 'line1\nnewline2\nline4';
       
       const handler = new FileConflictHandler();
-      const merged = await (handler as any).mergeContent(existing, newContent, 'test.txt');
+      const merged = await (handler as unknown as { mergeContent: (existing: string, newContent: string, filePath: string) => Promise<string> }).mergeContent(existing, newContent, 'test.txt');
       
       expect(merged).toContain('line1'); // Common line
       expect(merged).toContain('line2'); // Existing unique line

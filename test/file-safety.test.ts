@@ -82,11 +82,11 @@ describe('🔍 CLI Options Integration', () => {
     return;
     
     // Find the init command
-    const initCommand = program.commands?.find((cmd: any) => cmd.name() === 'init');
+    const initCommand = program.commands?.find((cmd: { name: () => string }) => cmd.name() === 'init');
     expect(initCommand).toBeDefined();
     
     // Check if new options exist
-    const options = initCommand.options.map((opt: any) => opt.long);
+    const options = initCommand.options.map((opt: { long: string }) => opt.long);
     expect(options).toContain('--force');
     expect(options).toContain('--preview');
   });

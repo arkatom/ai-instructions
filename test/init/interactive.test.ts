@@ -5,6 +5,12 @@ import {
 import { ProjectConfig, ConfigManager } from '../../src/init/config';
 import { InteractivePrompts } from '../../src/init/prompts';
 import { GeneratorFactory } from '../../src/generators/factory';
+import { BaseGenerator } from '../../src/generators/base';
+
+// Type definitions for test mocks
+interface MockProcessExit {
+  (code?: string | number | null | undefined): never;
+}
 import { existsSync, mkdirSync, rmSync } from 'fs';
 import * as fs from 'fs';
 
@@ -76,7 +82,7 @@ describe('InteractiveInitializer', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act
       await initializer.initialize({ outputDirectory: testDir });
@@ -134,7 +140,7 @@ describe('InteractiveInitializer', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       // Act
       await initializer.initialize({ outputDirectory: testDir });
@@ -148,9 +154,9 @@ describe('InteractiveInitializer', () => {
     it('should handle initialization errors', async () => {
       // Arrange
       const mockExit = jest.spyOn(process, 'exit')
-        .mockImplementation((code?: string | number | null | undefined) => {
+        .mockImplementation(((code?: string | number | null | undefined) => {
           throw new Error(`Process exited with code ${code}`);
-        }) as any;
+        }) as MockProcessExit);
 
       jest.spyOn(ConfigManager, 'loadConfig')
         .mockImplementation(() => {
@@ -190,7 +196,7 @@ describe('InteractiveInitializer', () => {
       };
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
-        .mockReturnValue(mockGenerator as any);
+        .mockReturnValue(mockGenerator as BaseGenerator);
 
       const consoleSpy = jest.spyOn(console, 'log');
 
@@ -347,7 +353,7 @@ describe('InteractiveInitializer', () => {
     it('should handle unknown tool gracefully', () => {
       // Arrange
       const mockConfig: ProjectConfig = {
-        tool: 'unknown-tool' as any,
+        tool: 'unknown-tool' as never,
         workflow: 'github-flow',
         methodologies: ['github-idd'],
         languages: ['typescript'],

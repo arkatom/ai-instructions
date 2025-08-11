@@ -151,7 +151,7 @@ describe('JSON Injection Security Tests', () => {
 
     test('should reject deeply nested JSON objects', () => {
       // Create deeply nested object to prevent stack overflow
-      let deepObject: any = { name: 'Deep Tool' };
+      let deepObject: Record<string, unknown> = { name: 'Deep Tool' };
       for (let i = 0; i < 100; i++) { // Reduced for test performance
         deepObject = { nested: deepObject };
       }

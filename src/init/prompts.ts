@@ -5,6 +5,7 @@
 
 import inquirer from 'inquirer';
 import chalk from 'chalk';
+import { Logger } from '../utils/logger';
 import {
   ProjectConfig,
   ConfigManager,
@@ -40,8 +41,7 @@ export class InteractivePrompts {
     defaultOutputDir: string = process.cwd()
   ): Promise<ProjectConfig> {
     Logger.section('🤖 AI Instructions Interactive Setup');
-    Logger.info('Configure your project with AI development instructions
-');
+    Logger.info('Configure your project with AI development instructions');
 
     if (existingConfig) {
       Logger.warn('📝 Found existing configuration:');
@@ -209,8 +209,7 @@ export class InteractivePrompts {
     if (responses.agents && responses.agents.length > 0) {
       Logger.item('Agents:', responses.agents.join(', '));
     }
-    Logger.item('Output:', responses.outputDirectory + '
-');
+    Logger.item('Output:', responses.outputDirectory);
 
     // Confirmation
     const { confirmGeneration } = await inquirer.prompt([{
@@ -279,38 +278,32 @@ export class InteractivePrompts {
    * Show help information about available options
    */
   static showHelp(): void {
-    Logger.section('🤖 AI Instructions - Interactive Setup
-');
+    Logger.section('🤖 AI Instructions - Interactive Setup');
     
     Logger.info(chalk.green('Available Tools:'));
     Object.entries(AVAILABLE_TOOLS).forEach(([key, config]) => {
       Logger.item(key.padEnd(15), '- ' + config.description);
     });
     
-    Logger.info(chalk.green('
-Available Workflows:'));
+    Logger.info(chalk.green('\nAvailable Workflows:'));
     AVAILABLE_WORKFLOWS.forEach(option => {
       Logger.item(option.value.padEnd(15), '- ' + option.description);
     });
     
-    Logger.info(chalk.green('
-Available Methodologies:'));
+    Logger.info(chalk.green('\nAvailable Methodologies:'));
     AVAILABLE_METHODOLOGIES.forEach(option => {
       Logger.item(option.value.padEnd(15), '- ' + option.description);
     });
     
-    Logger.info(chalk.green('
-Available Languages:'));
+    Logger.info(chalk.green('\nAvailable Languages:'));
     AVAILABLE_LANGUAGES.forEach(option => {
       Logger.item(option.value.padEnd(15), '- ' + option.description);
     });
 
-    Logger.info(chalk.gray('
-Usage:'));
+    Logger.info(chalk.gray('\nUsage:'));
     Logger.info('  ai-instructions init                    # Interactive mode');
     Logger.info('  ai-instructions init --tool claude     # Non-interactive mode');
-    Logger.info('  ai-instructions init --help            # Show this help
-');
+    Logger.info('  ai-instructions init --help            # Show this help');
   }
 }
 

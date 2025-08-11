@@ -13,7 +13,7 @@ class TestGenerator extends BaseGenerator {
     });
   }
   
-  async generateFiles(_outputDir: string, _options?: any): Promise<void> {
+  async generateFiles(_outputDir: string, _options?: { projectName: string, lang?: string }): Promise<void> {
     // Empty implementation for testing
   }
 }
@@ -69,8 +69,8 @@ describe('Configuration File Loading', () => {
       // Arrange
       const generator = new TestGenerator();
       // Override for this test
-      (generator as any).toolConfig = { name: 'nonexistent-tool' };
-      (generator as any).templatesDir = 'nonexistent';
+      (generator as unknown as { toolConfig: { name: string } }).toolConfig = { name: 'nonexistent-tool' };
+      (generator as unknown as { templatesDir: string }).templatesDir = 'nonexistent';
       
       // Act & Assert
       await expect(generator.loadToolConfig())

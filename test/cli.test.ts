@@ -74,9 +74,9 @@ describe('CLI Error Handling', () => {
       });
       // If we reach here, the command didn't fail as expected
       throw new Error('Expected command to throw an error');
-    } catch (error: any) {
+    } catch (error: unknown) {
       // In test environment, execSync throws with the CLI validation error
-      expect(error.message).toContain('Invalid output directory');
+      expect((error as Error).message).toContain('Invalid output directory');
     }
   });
 
@@ -91,8 +91,8 @@ describe('CLI Error Handling', () => {
         cwd: join(__dirname, '..')
       });
       throw new Error('Expected command to throw an error');
-    } catch (error: any) {
-      expect(error.message).toContain('Invalid project name');
+    } catch (error: unknown) {
+      expect((error as Error).message).toContain('Invalid project name');
     }
   });
 });
@@ -205,8 +205,8 @@ describe('CLI Edge Case Project Names', () => {
         cwd: join(__dirname, '..')
       });
       throw new Error('Expected command to throw an error');
-    } catch (error: any) {
-      expect(error.message).toContain('Invalid project name');
+    } catch (error: unknown) {
+      expect((error as Error).message).toContain('Invalid project name');
     }
   });
 
@@ -703,8 +703,8 @@ describe('CLI Output Format Support', () => {
         stdio: 'pipe'
       });
       throw new Error('Expected command to throw an error');
-    } catch (error: any) {
-      expect(error.message).toContain('Unsupported output format');
+    } catch (error: unknown) {
+      expect((error as Error).message).toContain('Unsupported output format');
     }
   });
 
