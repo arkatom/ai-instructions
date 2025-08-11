@@ -205,7 +205,7 @@ describe('InteractivePrompts', () => {
         }
         
         return Promise.resolve(responses);
-      }) as jest.MockedFunction<typeof inquirer.prompt>);
+      }) as unknown as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       const config = await prompts.runInteractiveFlow();
@@ -239,7 +239,7 @@ describe('InteractivePrompts', () => {
         }
         
         return Promise.resolve(responses);
-      }) as jest.MockedFunction<typeof inquirer.prompt>);
+      }) as unknown as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       const config = await prompts.runInteractiveFlow();
@@ -296,7 +296,7 @@ describe('InteractivePrompts', () => {
         return Promise.resolve({
           confirmGeneration: true
         });
-      }) as jest.MockedFunction<typeof inquirer.prompt>);
+      }) as unknown as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       await prompts.runInteractiveFlow();
@@ -360,7 +360,7 @@ describe('InteractivePrompts', () => {
           return Promise.resolve({
             confirmGeneration: true
           });
-        }) as jest.MockedFunction<typeof inquirer.prompt>);
+        }) as unknown as jest.MockedFunction<typeof inquirer.prompt>);
 
       // Act
       await prompts.runInteractiveFlow(existingConfig);

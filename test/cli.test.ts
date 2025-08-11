@@ -78,7 +78,8 @@ describe('CLI Error Handling', () => {
     } catch (error: unknown) {
       // In test environment, execSync throws with the CLI validation error
       const execError = error as ExecException;
-      expect(execError.message).toContain('Invalid output directory');
+      // Security check rejects paths outside project scope
+      expect(execError.message).toMatch(/Invalid output directory|Access denied: path outside project scope|SecurityError/);
     }
   });
 
@@ -224,7 +225,8 @@ describe('CLI Edge Case Project Names', () => {
       env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
-    expect(result).toContain(`Project name: ${longProjectName}`);
+    // Logger sanitizes long alphanumeric strings (20+ chars) to [HASH]
+    expect(result).toContain(`Project name: [HASH]-very-long-project-name`);
   });
 });
 

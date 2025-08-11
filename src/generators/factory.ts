@@ -3,8 +3,10 @@ import { ClaudeGenerator } from './claude';
 import { GitHubCopilotGenerator } from './github-copilot';
 import { CursorGenerator } from './cursor';
 import { ClineGenerator } from './cline';
+import { SupportedTool } from './types';
 
-export type SupportedTool = 'claude' | 'github-copilot' | 'cursor' | 'cline';
+// Re-export for backward compatibility
+export { SupportedTool };
 
 /**
  * Factory class for creating AI tool generators
@@ -23,6 +25,9 @@ export class GeneratorFactory {
         return new CursorGenerator();
       case 'cline':
         return new ClineGenerator();
+      case 'windsurf':
+        // Windsurf uses Claude format and converts via converter
+        return new ClaudeGenerator();
       default:
         throw new Error(`Unsupported tool: ${tool}`);
     }
@@ -32,7 +37,7 @@ export class GeneratorFactory {
    * Get list of supported tools
    */
   static getSupportedTools(): SupportedTool[] {
-    return ['claude', 'github-copilot', 'cursor', 'cline'];
+    return ['claude', 'github-copilot', 'cursor', 'cline', 'windsurf'];
   }
 
   /**
