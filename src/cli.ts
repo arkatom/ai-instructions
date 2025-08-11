@@ -6,12 +6,13 @@
  */
 
 import { Command } from 'commander';
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { GeneratorFactory, SupportedTool } from './generators/factory';
 import { ConverterFactory, OutputFormat } from './converters';
 import { InteractiveInitializer, InteractiveUtils } from './init/interactive';
 import { InteractivePrompts } from './init/prompts';
+import { Logger } from './utils/logger';
 
 /**
  * Validates project name for filesystem safety
@@ -93,7 +94,20 @@ function validateConflictResolution(strategy: string): void {
  * - No explicit tool/configuration options are provided
  * - Environment supports TTY interaction
  */
-function shouldUseInteractiveMode(rawArgs: string[], options: any): boolean {
+interface InitOptions {
+  interactive?: boolean;
+  tool?: string;
+  projectName?: string;
+  lang?: string;
+  outputFormat?: string;
+  output?: string;
+  force?: boolean;
+  preview?: boolean;
+  conflictResolution?: string;
+  backup?: boolean;
+}
+
+function shouldUseInteractiveMode(rawArgs: string[], options: InitOptions): boolean {
   // If user explicitly disabled interactive, respect that
   if (options.interactive === false) {
     return false;
@@ -105,13 +119,13 @@ function shouldUseInteractiveMode(rawArgs: string[], options: any): boolean {
   }
 
   // If user provided specific configuration options, use non-interactive
-  const configOptions = ['tool', 'projectName', 'lang', 'outputFormat'];
+  const configOptions = ['tool', 'projectName', 'lang', 'outputFormat'] as const;
   const hasConfigOptions = configOptions.some(opt => {
     const originalValue = opt === 'projectName' ? 'my-project' : 
                           opt === 'tool' ? 'claude' :
                           opt === 'lang' ? 'ja' :
                           opt === 'outputFormat' ? 'claude' : undefined;
-    return options[opt] && options[opt] !== originalValue;
+    return options[opt as keyof InitOptions] && options[opt as keyof InitOptions] !== originalValue;
   });
 
   // If only output directory is specified, still use interactive
@@ -144,7 +158,7 @@ program
   .option('-r, --conflict-resolution <strategy>', '🛡️  Default conflict resolution (backup, merge, skip, overwrite)', 'backup')
   .option('--no-interactive', '🤖 Disable interactive conflict resolution')
   .option('--no-backup', '🚨 Disable automatic backups (use with caution)')
-  .action(async (options, command) => {
+  .action(async (options) => {
     try {
       // Get raw command line arguments
       const rawArgs = process.argv.slice(2);
@@ -154,11 +168,11 @@ program
       
       if (useInteractive) {
         // 🚀 v0.5.0: Interactive mode
-        console.log('🤖 Starting interactive setup...\n');
+        Logger.info('🤖 Starting interactive setup...\n');
         
         // Check prerequisites
         if (!InteractiveInitializer.validatePrerequisites()) {
-          console.error('❌ Prerequisites not met for interactive mode');
+          Logger.error('Prerequisites not met for interactive mode');
           process.exit(1);
         }
 
@@ -173,7 +187,7 @@ program
       }
 
       // Non-interactive mode (existing functionality)
-      console.log('🤖 Using non-interactive mode with provided options...\n');
+      Logger.info('🤖 Using non-interactive mode with provided options...\n');
       
       // Validate project name before generating files
       validateProjectName(options.projectName);
@@ -199,22 +213,22 @@ program
       if (options.preview) {
         try {
           const chalk = (await import('chalk')).default;
-          console.log(chalk.blue('🔍 Preview mode: Analyzing potential file conflicts...'));
-          console.log(chalk.yellow('⚠️  Preview functionality will be enhanced in v0.3.0'));
-          console.log(chalk.yellow('For now, manually check if CLAUDE.md and instructions/ exist in target directory'));
-          console.log(`📍 Target directory: ${options.output}`);
-          console.log(`🤖 Tool: ${options.tool}`);
-          console.log(`📦 Project name: ${options.projectName}`);
-          console.log(`🌍 Language: ${options.lang}`);
+          Logger.info(chalk.blue('🔍 Preview mode: Analyzing potential file conflicts...'));
+          Logger.warn('Preview functionality will be enhanced in v0.3.0');
+          Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
+          Logger.item('📍 Target directory:', options.output);
+          Logger.item('🤖 Tool:', options.tool);
+          Logger.item('📦 Project name:', options.projectName);
+          Logger.item('🌍 Language:', options.lang);
           return;
-        } catch (error) {
-          console.log('🔍 Preview mode: Analyzing potential file conflicts...');
-          console.log('⚠️  Preview functionality will be enhanced in v0.3.0');
-          console.log('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
-          console.log(`📍 Target directory: ${options.output}`);
-          console.log(`🤖 Tool: ${options.tool}`);
-          console.log(`📦 Project name: ${options.projectName}`);
-          console.log(`🌍 Language: ${options.lang}`);
+        } catch {
+          Logger.info('🔍 Preview mode: Analyzing potential file conflicts...');
+          Logger.warn('Preview functionality will be enhanced in v0.3.0');
+          Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
+          Logger.item('📍 Target directory:', options.output);
+          Logger.item('🤖 Tool:', options.tool);
+          Logger.item('📦 Project name:', options.projectName);
+          Logger.item('🌍 Language:', options.lang);
           return;
         }
       }
@@ -223,11 +237,11 @@ program
       if (options.force) {
         try {
           const chalk = (await import('chalk')).default;
-          console.log(chalk.red('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!'));
-          console.log(chalk.red('💣 Proceeding in 2 seconds...'));
-        } catch (error) {
-          console.log('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!');
-          console.log('💣 Proceeding in 2 seconds...');
+          Logger.raw(chalk.red('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!'));
+          Logger.raw(chalk.red('💣 Proceeding in 2 seconds...'));
+        } catch {
+          Logger.raw('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!');
+          Logger.raw('💣 Proceeding in 2 seconds...');
         }
         // Brief delay to let user see the warning
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -245,26 +259,26 @@ program
         backup: options.backup !== false  // Default to true unless --no-backup
       });
       
-      console.log(`✅ Generated ${generator.getToolName()} template files in ${options.output}`);
-      console.log(`📁 Files created for ${generator.getToolName()} AI tool`);
-      console.log(`🎯 Project name: ${options.projectName}`);
+      Logger.success(`Generated ${generator.getToolName()} template files in ${options.output}`);
+      Logger.info(`📁 Files created for ${generator.getToolName()} AI tool`);
+      Logger.item('🎯 Project name:', options.projectName);
       
       // Show format conversion message when output-format is used
       if (options.outputFormat && options.outputFormat !== 'claude') {
-        console.log(`🔄 Converted from Claude format to ${options.outputFormat}`);
+        Logger.info(`🔄 Converted from Claude format to ${options.outputFormat}`);
       }
       
       // 🚨 EMERGENCY PATCH v0.2.1: Safety reminder
       if (!options.force) {
         try {
           const chalk = (await import('chalk')).default;
-          console.log(chalk.cyan('💡 Tip: Use --preview to check for conflicts before generating'));
-          console.log(chalk.cyan('💡 Tip: Use --force to skip warnings (be careful!)'));
-          console.log(chalk.cyan('💡 Tip: Run "ai-instructions init" without options for interactive setup'));
-        } catch (error) {
-          console.log('💡 Tip: Use --preview to check for conflicts before generating');
-          console.log('💡 Tip: Use --force to skip warnings (be careful!)');
-          console.log('💡 Tip: Run "ai-instructions init" without options for interactive setup');
+          Logger.tip('Use --preview to check for conflicts before generating');
+          Logger.tip('Use --force to skip warnings (be careful!)');
+          Logger.tip('Run "ai-instructions init" without options for interactive setup');
+        } catch {
+          Logger.tip('Use --preview to check for conflicts before generating');
+          Logger.tip('Use --force to skip warnings (be careful!)');
+          Logger.tip('Run "ai-instructions init" without options for interactive setup');
         }
       }
       
@@ -273,7 +287,7 @@ program
         // In test environment, throw the error so tests can catch it
         throw error;
       } else {
-        console.error('❌ Failed to generate template files:', error);
+        Logger.error('Failed to generate template files:', error);
         if (!InteractiveUtils.canRunInteractive()) {
           InteractiveUtils.showInteractiveWarning();
         }
@@ -291,7 +305,7 @@ program
     try {
       InteractiveInitializer.showStatus(options.directory);
     } catch (error) {
-      console.error('❌ Failed to show status:', error);
+      Logger.error('Failed to show status:', error);
       process.exit(1);
     }
   });
@@ -304,7 +318,7 @@ program
     try {
       InteractivePrompts.showHelp();
     } catch (error) {
-      console.error('❌ Failed to show help:', error);
+      Logger.error('Failed to show help:', error);
       process.exit(1);
     }
   });

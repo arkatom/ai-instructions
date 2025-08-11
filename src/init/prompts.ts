@@ -75,7 +75,7 @@ export class InteractivePrompts {
     existingConfig?: ProjectConfig | null,
     defaultOutputDir: string = process.cwd()
   ): Promise<InteractiveResponses> {
-    const questions: any[] = [
+    const questions = [
       // Project metadata
       {
         type: 'input',
@@ -178,12 +178,13 @@ export class InteractivePrompts {
         value: option.value,
         checked: existingConfig?.agents?.includes(option.value) || false
       })),
-      when: (answers: any) => {
-        const toolConfig = AVAILABLE_TOOLS[answers.tool];
+      when: (answers: Record<string, unknown>) => {
+        const toolConfig = AVAILABLE_TOOLS[answers.tool as string];
         return toolConfig ? toolConfig.supportsAgents : false;
       },
-      validate: (choices: string[], answers: any) => {
-        const toolConfig = AVAILABLE_TOOLS[answers.tool];
+      // @ts-expect-error - Inquirer types don't properly support validate function with answers parameter
+      validate: (choices: string[], answers: Record<string, unknown>) => {
+        const toolConfig = answers.tool ? AVAILABLE_TOOLS[answers.tool as string] : undefined;
         if (toolConfig && toolConfig.supportsAgents && choices.length === 0) {
           return 'Please select at least one agent for Claude';
         }
@@ -191,7 +192,7 @@ export class InteractivePrompts {
       }
     });
 
-    const responses = await inquirer.prompt(questions);
+    const responses = await inquirer.prompt(questions as unknown as Parameters<typeof inquirer.prompt>[0]);
 
     // Show configuration summary
     console.log(chalk.green('\n📋 Configuration Summary:'));
@@ -234,8 +235,8 @@ export class InteractivePrompts {
    */
   private createConfigFromResponses(responses: InteractiveResponses): ProjectConfig {
     const configOverrides: Partial<ProjectConfig> = {
-      tool: responses.tool as any,
-      workflow: responses.workflow as any,
+      tool: responses.tool as 'claude' | 'cursor' | 'cline' | 'github-copilot',
+      workflow: responses.workflow as 'github-flow' | 'git-flow',
       methodologies: responses.methodologies,
       languages: responses.languages,
       projectName: responses.projectName,
