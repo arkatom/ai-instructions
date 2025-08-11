@@ -16,9 +16,9 @@ alwaysApply: true
 
 すべてのタスク・コマンド・ツール実行前に必ず読み込み
 
-- [基本ルール](./instructions/core/base.md) - 絶対厳守事項
-- [深層思考](./instructions/core/deep-think.md)
-- [memory](./instructions/core/memory.md)
+- [基本ルール](./instructions/base.md) - 絶対厳守事項
+- [深層思考](./instructions/deep-think.md)
+- [memory](./instructions/memory.md)
 
 ## プロジェクト固有のアーキテクチャ・ルール・ドキュメント
 
@@ -26,15 +26,17 @@ alwaysApply: true
 
 ## 📋 場面別必須参照ファイル
 
+### 実行環境
+
+- [コマンド実行](./instructions/command.md) - シェル、実行ルール
+
 ### Git・コミット関連
 
-- [Github Flow](./instructions/workflows/github-flow.md) - ブランチ・コミット・PRのルール
+- [Gitルール](./instructions/git.md) - GitHub操作、Issue、ブランチ戦略
+- [コミット規約](./instructions/commit-rules.md) - コミットメッセージ形式
+- [PRルール](./instructions/pr-rules.md) - プルリクエスト作成規約
 
 ### 開発プロセス
 
-- [Github Issue Driven Development](./instructions/methodologies/github-idd.md) - Githubに関するルール
-- [TDD開発スタイル](./instructions/methodologies/tdd.md)
-
-### 記録・管理（ノートを書く際は必ず参照する）
-
-- [ノート・日誌](./instructions/note.md) - 作業記録の書き方
+- [開発スタイル](./instructions/develop.md) - Issue駆動、TDD、スクラム
+- [TDDルール](./instructions/KentBeck-tdd-rules.md) - テスト駆動開発

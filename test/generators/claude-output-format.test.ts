@@ -10,7 +10,7 @@ describe('ClaudeGenerator OutputFormat Support', () => {
 
   beforeEach(async () => {
     generator = new ClaudeGenerator();
-    tempDir = join(__dirname, '../../temp-test-output-format');
+    tempDir = join(__dirname, '../.temp-claude-output-format');
     
     // Ensure clean test environment
     try {
