@@ -14,6 +14,7 @@ import { OutputPathValidator } from '../validators/OutputPathValidator';
 import { ConflictResolutionValidator } from '../validators/ConflictResolutionValidator';
 
 import { GeneratorFactory } from '../../generators/factory';
+import { isStringOrUndefined } from '../../utils/type-guards';
 
 /**
  * ValidationCoordinator validators interface for dependency injection
@@ -49,7 +50,7 @@ export class ValidationCoordinator {
     const initArgs = args as InitCommandArgs;
     const errors: string[] = [];
 
-    // Validate project name
+    // Validate project name (validate if string provided, including empty strings)
     if (typeof initArgs.projectName === 'string') {
       const projectNameResult = this.validators.projectName.validate(initArgs.projectName);
       if (!projectNameResult.isValid) {
@@ -57,40 +58,40 @@ export class ValidationCoordinator {
       }
     }
 
-    // Validate language
-    if (initArgs.lang && typeof initArgs.lang === 'string') {
+    // Validate language (only validate non-empty strings)
+    if (typeof initArgs.lang === 'string' && initArgs.lang.length > 0) {
       const languageResult = this.validators.language.validate(initArgs.lang);
       if (!languageResult.isValid) {
         errors.push(...languageResult.errors);
       }
     }
 
-    // Validate output format
-    if (initArgs.outputFormat && typeof initArgs.outputFormat === 'string') {
+    // Validate output format (only validate non-empty strings)
+    if (typeof initArgs.outputFormat === 'string' && initArgs.outputFormat.length > 0) {
       const outputFormatResult = this.validators.outputFormat.validate(initArgs.outputFormat);
       if (!outputFormatResult.isValid) {
         errors.push(...outputFormatResult.errors);
       }
     }
 
-    // Validate output path
-    if (initArgs.output && typeof initArgs.output === 'string') {
+    // Validate output path (only validate non-empty strings)
+    if (typeof initArgs.output === 'string' && initArgs.output.length > 0) {
       const outputPathResult = this.validators.outputPath.validate(initArgs.output);
       if (!outputPathResult.isValid) {
         errors.push(...outputPathResult.errors);
       }
     }
 
-    // Validate conflict resolution
-    if (initArgs.conflictResolution && typeof initArgs.conflictResolution === 'string') {
+    // Validate conflict resolution (only validate non-empty strings)
+    if (typeof initArgs.conflictResolution === 'string' && initArgs.conflictResolution.length > 0) {
       const conflictResult = this.validators.conflictResolution.validate(initArgs.conflictResolution);
       if (!conflictResult.isValid) {
         errors.push(...conflictResult.errors);
       }
     }
 
-    // Validate tool
-    if (initArgs.tool && typeof initArgs.tool === 'string' && !GeneratorFactory.isValidTool(initArgs.tool)) {
+    // Validate tool (only validate non-empty strings)
+    if (typeof initArgs.tool === 'string' && initArgs.tool.length > 0 && !GeneratorFactory.isValidTool(initArgs.tool)) {
       errors.push(`Unsupported tool: ${initArgs.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
     }
 

@@ -27,6 +27,7 @@ import { ValidationCoordinator } from '../services/ValidationCoordinator';
 
 import { Logger } from '../../utils/logger';
 import { EnvironmentService } from '../../services/EnvironmentService';
+import { getOptionalStringValue } from '../../utils/type-guards';
 
 /**
  * InitCommand validators interface for dependency injection
@@ -97,13 +98,13 @@ export class InitCommand implements Command {
         };
       }
 
-      // Set defaults
-      const output = (typeof initArgs.output === 'string') ? initArgs.output : this.environmentService.getCurrentWorkingDirectory();
-      const projectName = (typeof initArgs.projectName === 'string') ? initArgs.projectName : 'my-project';
-      const tool = (typeof initArgs.tool === 'string') ? initArgs.tool : 'claude';
-      const lang = (typeof initArgs.lang === 'string') ? initArgs.lang : 'ja';
-      const outputFormat = (typeof initArgs.outputFormat === 'string') ? initArgs.outputFormat : 'claude';
-      const conflictResolution = (typeof initArgs.conflictResolution === 'string') ? initArgs.conflictResolution : 'backup';
+      // Set defaults using type guards
+      const output = getOptionalStringValue(initArgs.output, this.environmentService.getCurrentWorkingDirectory());
+      const projectName = getOptionalStringValue(initArgs.projectName, 'my-project');
+      const tool = getOptionalStringValue(initArgs.tool, 'claude');
+      const lang = getOptionalStringValue(initArgs.lang, 'ja');
+      const outputFormat = getOptionalStringValue(initArgs.outputFormat, 'claude');
+      const conflictResolution = getOptionalStringValue(initArgs.conflictResolution, 'backup');
 
       // Validate output directory for security
       let validatedOutputDir: string;
