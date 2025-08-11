@@ -26,6 +26,7 @@ import { FileGenerationOrchestrator } from '../services/FileGenerationOrchestrat
 import { ValidationCoordinator } from '../services/ValidationCoordinator';
 
 import { Logger } from '../../utils/logger';
+import { EnvironmentService } from '../../services/EnvironmentService';
 
 /**
  * InitCommand validators interface for dependency injection
@@ -48,6 +49,7 @@ export class InitCommand implements Command {
   private readonly forceWarningHandler: ForceWarningHandler;
   private readonly fileGenerationOrchestrator: FileGenerationOrchestrator;
   private readonly validationCoordinator: ValidationCoordinator;
+  private readonly environmentService: EnvironmentService;
 
   constructor(
     validators?: InitCommandValidators,
@@ -55,7 +57,8 @@ export class InitCommand implements Command {
     previewHandler?: PreviewHandler,
     forceWarningHandler?: ForceWarningHandler,
     fileGenerationOrchestrator?: FileGenerationOrchestrator,
-    validationCoordinator?: ValidationCoordinator
+    validationCoordinator?: ValidationCoordinator,
+    environmentService?: EnvironmentService
   ) {
     this.validators = validators || {
       projectName: new ProjectNameValidator(),
@@ -69,6 +72,7 @@ export class InitCommand implements Command {
     this.forceWarningHandler = forceWarningHandler || new ForceWarningHandler();
     this.fileGenerationOrchestrator = fileGenerationOrchestrator || new FileGenerationOrchestrator();
     this.validationCoordinator = validationCoordinator || new ValidationCoordinator(this.validators);
+    this.environmentService = environmentService || new EnvironmentService();
   }
 
   /**
@@ -94,7 +98,7 @@ export class InitCommand implements Command {
       }
 
       // Set defaults
-      const output = (typeof initArgs.output === 'string') ? initArgs.output : process.cwd();
+      const output = (typeof initArgs.output === 'string') ? initArgs.output : this.environmentService.getCurrentWorkingDirectory();
       const projectName = (typeof initArgs.projectName === 'string') ? initArgs.projectName : 'my-project';
       const tool = (typeof initArgs.tool === 'string') ? initArgs.tool : 'claude';
       const lang = (typeof initArgs.lang === 'string') ? initArgs.lang : 'ja';
