@@ -71,10 +71,7 @@ export class OutputPathValidator implements Validator<string> {
       errors.push('Access denied: Windows reserved device name');
     }
 
-    // Check for clearly invalid test paths
-    if (outputPath.startsWith('/invalid/') || outputPath.includes('/readonly/path/that/does/not/exist')) {
-      errors.push(`${outputPath} does not exist and cannot be created`);
-    }
+
 
     return {
       isValid: errors.length === 0,

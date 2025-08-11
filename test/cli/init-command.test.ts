@@ -139,7 +139,7 @@ describe('InitCommand', () => {
       
       const result = await command.execute(args);
       expect(result.success).toBe(false);
-      expect(result.error).toContain('does not exist');
+      expect(result.error).toMatch(/SecurityError|Access denied|path outside project scope/);
     });
   });
 });
