@@ -7,7 +7,7 @@ import {
   AVAILABLE_LANGUAGES,
   DEFAULT_CONFIG
 } from '../../src/init/config';
-import { writeFileSync, unlinkSync, existsSync, mkdirSync, rmSync } from 'fs';
+import { writeFileSync, existsSync, mkdirSync, rmSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 describe('Configuration Management', () => {
@@ -112,7 +112,7 @@ describe('Configuration Management', () => {
 
         // Assert
         expect(existsSync(configFile)).toBe(true);
-        const savedContent = require(configFile);
+        const savedContent = JSON.parse(readFileSync(configFile, 'utf-8'));
         expect(savedContent.projectName).toBe('save-test');
         expect(savedContent.outputDirectory).toBe(testDir);
       });
@@ -125,7 +125,7 @@ describe('Configuration Management', () => {
         ConfigManager.saveConfig(testDir, config);
 
         // Assert
-        const content = require('fs').readFileSync(configFile, 'utf-8');
+        const content = readFileSync(configFile, 'utf-8');
         expect(content).toContain('  "tool"');
         expect(content).toContain('  "workflow"');
       });

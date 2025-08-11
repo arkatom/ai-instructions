@@ -1,35 +1,21 @@
 import { 
   InteractiveInitializer, 
-  InteractiveUtils, 
-  InteractiveOptions 
+  InteractiveUtils
 } from '../../src/init/interactive';
-import { ProjectConfig, ConfigManager, AVAILABLE_TOOLS } from '../../src/init/config';
+import { ProjectConfig, ConfigManager } from '../../src/init/config';
 import { InteractivePrompts } from '../../src/init/prompts';
 import { GeneratorFactory } from '../../src/generators/factory';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, rmSync } from 'fs';
+import * as fs from 'fs';
+
+const mockedFs = fs as jest.Mocked<typeof fs>;
 import { join } from 'path';
-import chalk from 'chalk';
 
 // Mock dependencies
 jest.mock('../../src/init/prompts');
 jest.mock('../../src/init/config');
 jest.mock('../../src/generators/factory');
-jest.mock('chalk', () => ({
-  default: {
-    blue: jest.fn((str) => str),
-    gray: jest.fn((str) => str),
-    yellow: jest.fn((str) => str),
-    green: jest.fn((str) => str),
-    cyan: jest.fn((str) => str),
-    red: jest.fn((str) => str)
-  },
-  blue: jest.fn((str) => str),
-  gray: jest.fn((str) => str),
-  yellow: jest.fn((str) => str),
-  green: jest.fn((str) => str),
-  cyan: jest.fn((str) => str),
-  red: jest.fn((str) => str)
-}));
+jest.mock('fs');
 
 describe('InteractiveInitializer', () => {
   let initializer: InteractiveInitializer;
@@ -38,6 +24,7 @@ describe('InteractiveInitializer', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
     jest.spyOn(console, 'log').mockImplementation();
     jest.spyOn(console, 'error').mockImplementation();
     
@@ -181,7 +168,16 @@ describe('InteractiveInitializer', () => {
 
     it('should use verbose mode when specified', async () => {
       // Arrange
-      const mockConfig: ProjectConfig = ConfigManager.createConfig();
+      const mockConfig: ProjectConfig = {
+        tool: 'claude',
+        workflow: 'github-flow',
+        methodologies: ['github-idd'],
+        languages: ['typescript'],
+        projectName: 'test-project',
+        outputDirectory: process.cwd(),
+        generatedAt: new Date().toISOString(),
+        version: '0.5.0'
+      };
       
       jest.spyOn(ConfigManager, 'loadConfig').mockReturnValue(null);
       jest.spyOn(InteractivePrompts.prototype, 'runInteractiveFlow')
@@ -214,14 +210,13 @@ describe('InteractiveInitializer', () => {
   describe('validatePrerequisites', () => {
     it('should return true when all required directories exist', () => {
       // Arrange
-      jest.spyOn(require('fs'), 'existsSync')
-        .mockImplementation((path: string) => {
-          const pathStr = path.toString();
-          return pathStr.includes('templates') ||
-                 pathStr.includes('instructions') ||
-                 pathStr.includes('agents') ||
-                 pathStr.includes('configs');
-        });
+      mockedFs.existsSync.mockImplementation((path) => {
+        const pathStr = path.toString();
+        return pathStr.includes('templates') ||
+               pathStr.includes('instructions') ||
+               pathStr.includes('agents') ||
+               pathStr.includes('configs');
+      });
 
       // Act
       const result = InteractiveInitializer.validatePrerequisites(mockTemplatesDir);
@@ -232,8 +227,7 @@ describe('InteractiveInitializer', () => {
 
     it('should return false when templates directory does not exist', () => {
       // Arrange
-      jest.spyOn(require('fs'), 'existsSync')
-        .mockReturnValue(false);
+      mockedFs.existsSync.mockReturnValue(false);
 
       // Act
       const result = InteractiveInitializer.validatePrerequisites('/non-existent');
@@ -247,15 +241,14 @@ describe('InteractiveInitializer', () => {
 
     it('should return false when required subdirectory is missing', () => {
       // Arrange
-      jest.spyOn(require('fs'), 'existsSync')
-        .mockImplementation((path: string) => {
-          const pathStr = path.toString();
-          if (pathStr.endsWith('templates')) return true;
-          if (pathStr.includes('instructions')) return true;
-          if (pathStr.includes('agents')) return false; // Missing agents
-          if (pathStr.includes('configs')) return true;
-          return false;
-        });
+      mockedFs.existsSync.mockImplementation((path) => {
+        const pathStr = path.toString();
+        if (pathStr.endsWith('templates')) return true;
+        if (pathStr.endsWith('instructions')) return true;
+        if (pathStr.endsWith('agents')) return false; // Missing agents
+        if (pathStr.endsWith('configs')) return true;
+        return false;
+      });
 
       // Act
       const result = InteractiveInitializer.validatePrerequisites(mockTemplatesDir);
@@ -320,7 +313,7 @@ describe('InteractiveInitializer', () => {
       };
 
       jest.spyOn(ConfigManager, 'loadConfig').mockReturnValue(mockConfig);
-      jest.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+      mockedFs.existsSync.mockReturnValue(true);
 
       const consoleSpy = jest.spyOn(console, 'log');
 

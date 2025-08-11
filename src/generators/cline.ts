@@ -80,7 +80,8 @@ export class ClineGenerator extends BaseGenerator {
       const stats = await ParallelGeneratorOperations.generateMultipleSpecializedFilesParallel(
         coreContent, 
         ruleFiles, 
-        options
+        options,
+        'Cline'  // Pass Cline as the tool name
       );
       
       // Log performance improvement if enabled

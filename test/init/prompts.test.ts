@@ -1,7 +1,6 @@
-import { InteractivePrompts, InteractiveResponses, PromptValidators } from '../../src/init/prompts';
-import { ProjectConfig, ConfigManager, AVAILABLE_TOOLS } from '../../src/init/config';
+import { InteractivePrompts, PromptValidators } from '../../src/init/prompts';
+import { ProjectConfig } from '../../src/init/config';
 import inquirer from 'inquirer';
-import chalk from 'chalk';
 
 // Mock inquirer
 jest.mock('inquirer');
@@ -98,7 +97,11 @@ describe('InteractivePrompts', () => {
         workflow: 'github-flow',
         methodologies: ['github-idd'],
         languages: ['typescript'],
-        agents: ['backend-architect'],
+        agents: ['backend-architect']
+      });
+
+      // Third prompt: confirmation
+      mockedInquirer.prompt.mockResolvedValueOnce({
         confirmGeneration: true
       });
 
@@ -106,7 +109,7 @@ describe('InteractivePrompts', () => {
       const config = await prompts.runInteractiveFlow(existingConfig, '/default');
 
       // Assert
-      expect(mockedInquirer.prompt).toHaveBeenCalledTimes(2);
+      expect(mockedInquirer.prompt).toHaveBeenCalledTimes(3);
       expect(config.projectName).toBe('updated-project');
       expect(config.tool).toBe('claude');
     });
@@ -140,13 +143,18 @@ describe('InteractivePrompts', () => {
         throw new Error(`Process exited with code ${code}`);
       }) as any;
 
+      // First prompt: configuration questions
       mockedInquirer.prompt.mockResolvedValueOnce({
         projectName: 'cancelled-project',
         outputDirectory: '/cancelled',
         tool: 'claude',
         workflow: 'github-flow',
         methodologies: ['github-idd'],
-        languages: ['typescript'],
+        languages: ['typescript']
+      });
+
+      // Second prompt: confirmation (user cancels)
+      mockedInquirer.prompt.mockResolvedValueOnce({
         confirmGeneration: false
       });
 
@@ -225,38 +233,50 @@ describe('InteractivePrompts', () => {
 
     it('should validate required fields', async () => {
       // Arrange
+      let validationTested = false;
+      
       mockedInquirer.prompt.mockImplementation(((questions: any) => {
-        // Test validations
-        const projectNameQ = questions.find((q: any) => q.name === 'projectName');
-        const outputDirQ = questions.find((q: any) => q.name === 'outputDirectory');
-        const methodologiesQ = questions.find((q: any) => q.name === 'methodologies');
-        const languagesQ = questions.find((q: any) => q.name === 'languages');
+        if (!validationTested && Array.isArray(questions)) {
+          // Test validations on first call (configuration questions)
+          const projectNameQ = questions.find((q: any) => q.name === 'projectName');
+          const outputDirQ = questions.find((q: any) => q.name === 'outputDirectory');
+          const methodologiesQ = questions.find((q: any) => q.name === 'methodologies');
+          const languagesQ = questions.find((q: any) => q.name === 'languages');
 
-        // Test project name validation
-        expect(projectNameQ.validate('')).toBe('Project name cannot be empty');
-        expect(projectNameQ.validate('valid-name')).toBe(true);
-        expect(projectNameQ.validate('name<with>pipe|')).toBe('Project name cannot contain forbidden characters (<, >, |)');
+          if (projectNameQ && outputDirQ && methodologiesQ && languagesQ) {
+            // Test project name validation
+            expect(projectNameQ.validate('')).toBe('Project name cannot be empty');
+            expect(projectNameQ.validate('valid-name')).toBe(true);
+            expect(projectNameQ.validate('name<with>pipe|')).toBe('Project name cannot contain forbidden characters (<, >, |)');
 
-        // Test output directory validation
-        expect(outputDirQ.validate('')).toBe('Output directory cannot be empty');
-        expect(outputDirQ.validate('/valid/path')).toBe(true);
+            // Test output directory validation
+            expect(outputDirQ.validate('')).toBe('Output directory cannot be empty');
+            expect(outputDirQ.validate('/valid/path')).toBe(true);
 
-        // Test methodologies validation
-        expect(methodologiesQ.validate([])).toBe('Please select at least one methodology');
-        expect(methodologiesQ.validate(['github-idd'])).toBe(true);
+            // Test methodologies validation
+            expect(methodologiesQ.validate([])).toBe('Please select at least one methodology');
+            expect(methodologiesQ.validate(['github-idd'])).toBe(true);
 
-        // Test languages validation
-        expect(languagesQ.validate([])).toBe('Please select at least one language');
-        expect(languagesQ.validate(['typescript'])).toBe(true);
+            // Test languages validation
+            expect(languagesQ.validate([])).toBe('Please select at least one language');
+            expect(languagesQ.validate(['typescript'])).toBe(true);
 
+            validationTested = true;
+            
+            return Promise.resolve({
+              projectName: 'test',
+              outputDirectory: '/test',
+              tool: 'claude',
+              workflow: 'github-flow',
+              methodologies: ['github-idd'],
+              languages: ['typescript'],
+              agents: ['frontend-specialist']
+            });
+          }
+        }
+        
+        // Second call (confirmation)
         return Promise.resolve({
-          projectName: 'test',
-          outputDirectory: '/test',
-          tool: 'claude',
-          workflow: 'github-flow',
-          methodologies: ['github-idd'],
-          languages: ['typescript'],
-          agents: ['frontend-specialist'],
           confirmGeneration: true
         });
       }) as any);
@@ -265,7 +285,8 @@ describe('InteractivePrompts', () => {
       await prompts.runInteractiveFlow();
 
       // Assert
-      expect(mockedInquirer.prompt).toHaveBeenCalled();
+      expect(mockedInquirer.prompt).toHaveBeenCalledTimes(2);
+      expect(validationTested).toBe(true);
     });
 
     it('should set default values from existing config', async () => {
@@ -282,30 +303,44 @@ describe('InteractivePrompts', () => {
         version: '0.5.0'
       };
 
+      let defaultsTested = false;
+
       mockedInquirer.prompt
         .mockResolvedValueOnce({ shouldUpdate: true })
         .mockImplementation(((questions: any) => {
-          // Check defaults are set from existing config
-          const projectNameQ = questions.find((q: any) => q.name === 'projectName');
-          const toolQ = questions.find((q: any) => q.name === 'tool');
-          const workflowQ = questions.find((q: any) => q.name === 'workflow');
+          if (!defaultsTested && Array.isArray(questions)) {
+            // Check defaults are set from existing config
+            const projectNameQ = questions.find((q: any) => q.name === 'projectName');
+            const toolQ = questions.find((q: any) => q.name === 'tool');
+            const workflowQ = questions.find((q: any) => q.name === 'workflow');
 
-          expect(projectNameQ.default).toBe('existing-name');
-          expect(toolQ.default).toBe('github-copilot');
-          expect(workflowQ.default).toBe('git-flow');
+            if (projectNameQ && toolQ && workflowQ) {
+              expect(projectNameQ.default).toBe('existing-name');
+              expect(toolQ.default).toBe('github-copilot');
+              expect(workflowQ.default).toBe('git-flow');
 
-          // Check checkbox defaults
-          const methodologiesQ = questions.find((q: any) => q.name === 'methodologies');
-          const scrumChoice = methodologiesQ.choices.find((c: any) => c.value === 'scrum');
-          expect(scrumChoice.checked).toBe(true);
+              // Check checkbox defaults
+              const methodologiesQ = questions.find((q: any) => q.name === 'methodologies');
+              if (methodologiesQ) {
+                const scrumChoice = methodologiesQ.choices.find((c: any) => c.value === 'scrum');
+                expect(scrumChoice.checked).toBe(true);
+              }
 
+              defaultsTested = true;
+
+              return Promise.resolve({
+                projectName: 'new-name',
+                outputDirectory: '/new/dir',
+                tool: 'claude',
+                workflow: 'github-flow',
+                methodologies: ['github-idd'],
+                languages: ['typescript']
+              });
+            }
+          }
+          
+          // Third call (confirmation)
           return Promise.resolve({
-            projectName: 'new-name',
-            outputDirectory: '/new/dir',
-            tool: 'claude',
-            workflow: 'github-flow',
-            methodologies: ['github-idd'],
-            languages: ['typescript'],
             confirmGeneration: true
           });
         }) as any);
@@ -315,6 +350,7 @@ describe('InteractivePrompts', () => {
 
       // Assert
       expect(mockedInquirer.prompt).toHaveBeenCalledTimes(3);
+      expect(defaultsTested).toBe(true);
     });
   });
 

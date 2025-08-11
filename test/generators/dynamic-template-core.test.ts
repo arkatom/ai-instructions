@@ -1,5 +1,4 @@
 import { GeneratorFactory } from '../../src/generators/factory';
-import { BaseGenerator } from '../../src/generators/base';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
