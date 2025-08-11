@@ -17,8 +17,8 @@ import { ConflictResolutionValidator } from '../validators/ConflictResolutionVal
 
 
 import { OutputFormat } from '../../converters';
-import { InteractiveInitializer, InteractiveUtils } from '../../init/interactive';
-import { PathValidator, SecurityError } from '../../utils/security';
+import { InteractiveInitializer } from '../../init/interactive';
+import { PathValidator } from '../../utils/security';
 import { InteractiveModeDetector } from '../services/InteractiveModeDetector';
 import { PreviewHandler } from '../services/PreviewHandler';
 import { ForceWarningHandler } from '../services/ForceWarningHandler';
@@ -28,6 +28,7 @@ import { ValidationCoordinator } from '../services/ValidationCoordinator';
 import { Logger } from '../../utils/logger';
 import { EnvironmentService } from '../../services/EnvironmentService';
 import { getOptionalStringValue } from '../../utils/type-guards';
+import { ErrorHandler } from '../../utils/error-handler';
 
 /**
  * InitCommand validators interface for dependency injection
@@ -111,10 +112,7 @@ export class InitCommand implements Command {
       try {
         validatedOutputDir = PathValidator.validateCliPath(output);
       } catch (error) {
-        return {
-          success: false,
-          error: `SecurityError: ${(error as Error).message}`
-        };
+        return ErrorHandler.handleCommandError(error, { operation: 'output path validation' }, false);
       }
 
       // Determine if we should use interactive mode
@@ -174,30 +172,10 @@ export class InitCommand implements Command {
       });
 
     } catch (error) {
-      if (process.env.NODE_ENV === 'test') {
-        // In test environment, throw the error so tests can catch it
-        throw error;
-      } else {
-        let errorMessage: string;
-        
-        if (error instanceof SecurityError) {
-          errorMessage = `Security violation: ${error.message}`;
-          if (error.details) {
-            Logger.debug(`Security details: ${error.details}`);
-          }
-        } else {
-          errorMessage = `Failed to generate template files: ${error}`;
-          if (!InteractiveUtils.canRunInteractive()) {
-            Logger.tip('Interactive mode unavailable. Use command-line options.');
-          }
-        }
-        
-        Logger.error(errorMessage);
-        return {
-          success: false,
-          error: errorMessage
-        };
-      }
+      return ErrorHandler.handleCommandError(error, { 
+        operation: 'template file generation',
+        suggestions: ['Try using --force flag to skip warnings', 'Check file permissions in the output directory']
+      }, false);
     }
   }
 }
