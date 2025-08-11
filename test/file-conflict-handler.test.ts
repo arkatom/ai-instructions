@@ -15,9 +15,10 @@ jest.mock('inquirer', () => ({
 }));
 
 describe('FileConflictHandler', () => {
-  const testDir = join(__dirname, 'temp-conflict-test');
+  const testDir = join(__dirname, '.temp-file-conflict-test');
   const testFile = join(testDir, 'test-file.md');
   const backupFile = join(testDir, 'test-file.md.backup');
+  const mockProjectRoot = testDir; // Use test directory as mock project root
 
   beforeEach(() => {
     // Create test directory
@@ -26,9 +27,8 @@ describe('FileConflictHandler', () => {
     }
     mkdirSync(testDir, { recursive: true });
     
-    // Clean up any existing backup files from project root
-    const projectRoot = process.cwd();
-    const backupDir = join(projectRoot, 'backups');
+    // Clean up any existing backup files from test directory
+    const backupDir = join(mockProjectRoot, 'backups');
     if (existsSync(backupDir)) {
       rmSync(backupDir, { recursive: true, force: true });
     }
@@ -47,8 +47,7 @@ describe('FileConflictHandler', () => {
     }
     
     // Clean up any backup files created during testing
-    const projectRoot = process.cwd();
-    const backupDir = join(projectRoot, 'backups');
+    const backupDir = join(mockProjectRoot, 'backups');
     if (existsSync(backupDir)) {
       rmSync(backupDir, { recursive: true, force: true });
     }
@@ -82,8 +81,7 @@ describe('FileConflictHandler', () => {
     beforeEach(() => {
       writeFileSync(testFile, existingContent);
       // Clean up any existing backup files to ensure clean test state
-      const projectRoot = process.cwd();
-      const backupDir = join(projectRoot, 'backups');
+      const backupDir = join(mockProjectRoot, 'backups');
       if (existsSync(backupDir)) {
         rmSync(backupDir, { recursive: true, force: true });
       }
@@ -98,9 +96,8 @@ describe('FileConflictHandler', () => {
       const handler = new FileConflictHandler();
       await handler.resolveConflict(testFile, newContent, ConflictResolution.BACKUP);
 
-      // Check for timestamped backup file in project backups directory
-      const projectRoot = process.cwd();
-      const testBackupDir = join(projectRoot, 'backups', 'test', 'temp-conflict-test');
+      // Check for timestamped backup file in test backups directory
+      const testBackupDir = join(mockProjectRoot, 'backups', 'test', '.temp-file-conflict-test');
       const files = readdirSync(testBackupDir);
       const backupFiles = files.filter((f: string) => f.includes('test-file.md.backup.'));
       
