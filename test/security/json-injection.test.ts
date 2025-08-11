@@ -85,6 +85,36 @@ describe('JSON Injection Security Tests', () => {
         JsonValidator.secureJsonParse(maliciousJson);
       }).toThrow(/Dangerous JSON content detected/);
     });
+
+    test('should reject JSON with Unicode-encoded dangerous patterns', () => {
+      const unicodeAttacks = [
+        // Unicode-encoded __proto__
+        JSON.stringify({
+          name: 'Unicode Tool',
+          '\\u005f\\u005f\\u0070\\u0072\\u006f\\u0074\\u006f\\u005f\\u005f': {
+            isAdmin: true
+          }
+        }),
+        // Unicode-encoded constructor
+        JSON.stringify({
+          name: 'Unicode Tool',
+          '\\u0063\\u006f\\u006e\\u0073\\u0074\\u0072\\u0075\\u0063\\u0074\\u006f\\u0072': {
+            prototype: { isAdmin: true }
+          }
+        }),
+        // Unicode-encoded eval patterns
+        JSON.stringify({
+          name: 'Unicode Tool',
+          code: '\\u0065\\u0076\\u0061\\u006c("malicious code")'
+        })
+      ];
+      
+      for (const maliciousJson of unicodeAttacks) {
+        expect(() => {
+          JsonValidator.secureJsonParse(maliciousJson);
+        }).toThrow(/Dangerous JSON content detected/);
+      }
+    });
   });
 
   describe('JSON security validation', () => {

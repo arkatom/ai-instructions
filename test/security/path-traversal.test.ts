@@ -50,8 +50,32 @@ describe('Path Traversal Security Tests', () => {
       }
     });
 
+    test('should reject Windows case-insensitive system paths', () => {
+      const windowsCaseAttacks = [
+        'C:\\windows\\system32',           // lowercase
+        'C:\\WINDOWS\\SYSTEM32',           // uppercase  
+        'C:\\Windows\\system32',           // mixed case
+        'C:\\wInDoWs\\SyStEm32',           // random case
+        'c:\\windows\\system32',           // lowercase drive
+        'C:\\program files\\',             // program files variations
+        'C:\\Program Files\\',
+        'C:\\PROGRAM FILES\\',
+        'c:\\program files (x86)\\'        // 32-bit program files
+      ];
+      
+      for (const maliciousPath of windowsCaseAttacks) {
+        expect(() => {
+          execSync(`npx ts-node "${join(projectRoot, 'src/cli.ts')}" status -d "${maliciousPath}"`, {
+            encoding: 'utf-8',
+            cwd: testDir,
+            env: { ...process.env, NODE_ENV: 'test' }
+          });
+        }).toThrow(/Path traversal detected/);
+      }
+    });
+
     test('should reject paths containing null bytes', () => {
-      const maliciousPath = 'valid/path\\0../../../etc/passwd';
+      const maliciousPath = 'valid/path\0../../../etc/passwd';
       
       expect(() => {
         execSync(`npx ts-node "${join(projectRoot, 'src/cli.ts')}" status -d "${maliciousPath}"`, {
@@ -60,6 +84,44 @@ describe('Path Traversal Security Tests', () => {
           env: { ...process.env, NODE_ENV: 'test' }
         });
       }).toThrow(/Path traversal detected/);
+    });
+
+    test('should reject URL encoded path traversal attacks', () => {
+      const urlEncodedAttacks = [
+        '%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd',     // ../../../etc/passwd
+        '%252e%252e%252f%252e%252e%252f%252e%252e%252fetc%252fpasswd', // double encoding
+        '%2e%2e/%2e%2e/%2e%2e/etc/passwd',             // mixed encoding
+        'valid%2f%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd' // embedded in valid path
+      ];
+      
+      for (const maliciousPath of urlEncodedAttacks) {
+        expect(() => {
+          execSync(`npx ts-node "${join(projectRoot, 'src/cli.ts')}" status -d "${maliciousPath}"`, {
+            encoding: 'utf-8',
+            cwd: testDir,
+            env: { ...process.env, NODE_ENV: 'test' }
+          });
+        }).toThrow(/Path traversal detected/);
+      }
+    });
+
+    test('should reject Unicode normalization attacks', () => {
+      const unicodeAttacks = [
+        '\\u002e\\u002e\\u002f\\u002e\\u002e\\u002f\\u002e\\u002e\\u002fetc\\u002fpasswd', // Unicode escapes
+        String.fromCharCode(0x002e, 0x002e, 0x002f, 0x002e, 0x002e, 0x002f, 0x002e, 0x002e, 0x002f) + 'etc' + String.fromCharCode(0x002f) + 'passwd', // Actual Unicode chars
+        '..\\u002f..\\u002f..\\u002fetc\\u002fpasswd',                                 // Mixed Unicode
+        'valid\\u002f\\u002e\\u002e\\u002f\\u002e\\u002e\\u002fetc'                   // Embedded Unicode
+      ];
+      
+      for (const maliciousPath of unicodeAttacks) {
+        expect(() => {
+          execSync(`npx ts-node "${join(projectRoot, 'src/cli.ts')}" status -d "${maliciousPath}"`, {
+            encoding: 'utf-8',
+            cwd: testDir,
+            env: { ...process.env, NODE_ENV: 'test' }
+          });
+        }).toThrow(/Path traversal detected/);
+      }
     });
 
     test('should accept valid relative paths within project scope', () => {
