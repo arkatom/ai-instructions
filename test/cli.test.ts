@@ -348,24 +348,29 @@ describe('CLI Deep Content Verification', () => {
   });
 });
 
-describe.skip('CLI Init Command Integration', () => {
+describe('CLI Init Command Integration', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
   const testOutputDir = join(__dirname, './temp-cli-test');
+  const baseCwd = join(__dirname, '..');
+  const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
+
+  // 共通のCLI実行ヘルパー
+  const runCliInit = (projectName: string) => {
+    return execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${projectName}"`, { 
+      encoding: 'utf-8',
+      cwd: baseCwd,
+      env: testEnv
+    });
+  };
 
   afterEach(async () => {
-    // テスト後のクリーンアップ
     if (existsSync(testOutputDir)) {
       await rm(testOutputDir, { recursive: true, force: true });
     }
   });
 
   it('should generate Claude Code template files with init command', () => {
-    // Red: CLI initコマンドがClaudeGenerator統合で実際にファイル生成
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "test-cli-project"`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('test-cli-project');
     
     expect(result).toContain('Generated claude template');
     expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
