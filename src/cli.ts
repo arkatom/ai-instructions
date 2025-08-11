@@ -10,7 +10,7 @@ import { join } from 'path';
 import { CommandRegistry } from './cli/CommandRegistry';
 import { InitCommand } from './cli/commands/InitCommand';
 import { EnvironmentService } from './services/EnvironmentService';
-import { InitCommandArgs } from './cli/interfaces/CommandArgs';
+import { InitCommandArgs, CommanderInitOptions } from './cli/interfaces/CommandArgs';
 import { Logger } from './utils/logger';
 import { InteractivePrompts } from './init/prompts';
 import { InteractiveInitializer } from './init/interactive';
@@ -92,7 +92,7 @@ class CLICoordinator {
   /**
    * Execute init command
    */
-  private async executeInitCommand(options: any): Promise<void> {
+  private async executeInitCommand(options: CommanderInitOptions): Promise<void> {
     try {
       const command = this.registry.get('init');
       if (!command) {
@@ -103,16 +103,16 @@ class CLICoordinator {
       // Convert Commander options to InitCommandArgs
       const args: InitCommandArgs = {
         command: 'init',
-        output: options.output,
-        projectName: options.projectName,
-        tool: options.tool,
-        lang: options.lang,
-        outputFormat: options.outputFormat,
-        force: options.force,
-        preview: options.preview,
-        conflictResolution: options.conflictResolution,
-        interactive: options.interactive,
-        backup: options.backup
+        ...(options.output !== undefined && { output: options.output }),
+        ...(options.projectName !== undefined && { projectName: options.projectName }),
+        ...(options.tool !== undefined && { tool: options.tool }),
+        ...(options.lang !== undefined && { lang: options.lang }),
+        ...(options.outputFormat !== undefined && { outputFormat: options.outputFormat }),
+        ...(options.force !== undefined && { force: options.force }),
+        ...(options.preview !== undefined && { preview: options.preview }),
+        ...(options.conflictResolution !== undefined && { conflictResolution: options.conflictResolution }),
+        ...(options.interactive !== undefined && { interactive: options.interactive }),
+        ...(options.backup !== undefined && { backup: options.backup })
       };
 
       const result = await command.execute(args);

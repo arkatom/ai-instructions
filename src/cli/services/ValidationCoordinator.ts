@@ -14,7 +14,6 @@ import { OutputPathValidator } from '../validators/OutputPathValidator';
 import { ConflictResolutionValidator } from '../validators/ConflictResolutionValidator';
 
 import { GeneratorFactory } from '../../generators/factory';
-import { isStringOrUndefined } from '../../utils/type-guards';
 
 /**
  * ValidationCoordinator validators interface for dependency injection

@@ -1,5 +1,6 @@
 import { FileGenerationOrchestrator } from '../../src/cli/services/FileGenerationOrchestrator';
 import { GeneratorFactory } from '../../src/generators/factory';
+import { BaseGenerator } from '../../src/generators/base';
 import { Logger } from '../../src/utils/logger';
 import { OutputFormat } from '../../src/converters';
 
@@ -26,7 +27,7 @@ describe('FileGenerationOrchestrator', () => {
         getToolName: jest.fn().mockReturnValue('Claude')
       };
       
-      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as any);
+      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as unknown as BaseGenerator);
 
       const options = {
         tool: 'claude',
@@ -64,7 +65,7 @@ describe('FileGenerationOrchestrator', () => {
         getToolName: jest.fn().mockReturnValue('Cursor')
       };
       
-      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as any);
+      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as unknown as BaseGenerator);
 
       const options = {
         tool: 'cursor',
@@ -96,7 +97,7 @@ describe('FileGenerationOrchestrator', () => {
         getToolName: jest.fn().mockReturnValue('Claude')
       };
       
-      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as any);
+      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as unknown as BaseGenerator);
 
       const options = {
         tool: 'claude',
@@ -124,7 +125,7 @@ describe('FileGenerationOrchestrator', () => {
         getToolName: jest.fn().mockReturnValue('Claude')
       };
       
-      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as any);
+      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as unknown as BaseGenerator);
 
       const options = {
         tool: 'claude',
@@ -154,7 +155,7 @@ describe('FileGenerationOrchestrator', () => {
         getToolName: jest.fn().mockReturnValue('Claude')
       };
       
-      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as any);
+      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as unknown as BaseGenerator);
 
       const options = {
         tool: 'claude',
@@ -182,7 +183,7 @@ describe('FileGenerationOrchestrator', () => {
         getToolName: jest.fn().mockReturnValue('Claude')
       };
       
-      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as any);
+      mockGeneratorFactory.createGenerator.mockReturnValue(mockGenerator as unknown as BaseGenerator);
 
       const options = {
         tool: 'claude',
