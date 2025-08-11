@@ -5,11 +5,12 @@
 
 import { join, resolve } from 'path';
 import { existsSync } from 'fs';
-import chalk from 'chalk';
+
 import { ProjectConfig, ConfigManager, AVAILABLE_TOOLS } from './config';
 import { InteractivePrompts } from './prompts';
 import { GeneratorFactory, SupportedTool } from '../generators/factory';
 import { OutputFormat } from '../converters';
+import { Logger } from '../utils/logger';
 
 export interface InteractiveOptions {
   outputDirectory?: string;
@@ -39,10 +40,10 @@ export class InteractiveInitializer {
       const existingConfig = ConfigManager.loadConfig(outputDir);
       
       if (options.verbose) {
-        console.log(chalk.gray(`Templates directory: ${this.templatesDir}`));
-        console.log(chalk.gray(`Output directory: ${outputDir}`));
+        Logger.debug(`Templates directory: ${this.templatesDir}`);
+        Logger.debug(`Output directory: ${outputDir}`);
         if (existingConfig) {
-          console.log(chalk.gray('Found existing configuration\n'));
+          Logger.debug('Found existing configuration');
         }
       }
 
@@ -55,11 +56,11 @@ export class InteractiveInitializer {
       // Save configuration
       ConfigManager.saveConfig(config.outputDirectory, config);
       
-      console.log(chalk.green('✅ Configuration saved successfully!'));
-      console.log(chalk.gray(`Configuration saved to: ${join(config.outputDirectory, '.ai-instructions.json')}`));
+      Logger.success('Configuration saved successfully!');
+      Logger.info(`Configuration saved to: ${join(config.outputDirectory, '.ai-instructions.json')}`);
       
     } catch (error) {
-      console.error(chalk.red('❌ Interactive initialization failed:'), error);
+      Logger.error('Interactive initialization failed:', error);
       process.exit(1);
     }
   }
@@ -68,7 +69,7 @@ export class InteractiveInitializer {
    * Generate files based on configuration
    */
   private async generateFiles(config: ProjectConfig, options: InteractiveOptions): Promise<void> {
-    console.log(chalk.blue('📁 Generating files...'));
+    Logger.section('Generating files...');
     
     try {
       // Use existing generator system with enhanced options
@@ -86,18 +87,18 @@ export class InteractiveInitializer {
       };
 
       if (options.verbose) {
-        console.log(chalk.gray('Generator options:'), generatorOptions);
+        Logger.debug(`Generator options: ${JSON.stringify(generatorOptions, null, 2)}`);
       }
 
       await generator.generateFiles(config.outputDirectory, generatorOptions);
       
-      console.log(chalk.green(`✅ Generated ${generator.getToolName()} configuration files`));
+      Logger.success(`Generated ${generator.getToolName()} configuration files`);
       
       // Display generated files summary
       this.displayGeneratedFiles(config);
       
     } catch (error) {
-      console.error(chalk.red('❌ File generation failed:'), error);
+      Logger.error('File generation failed:', error);
       throw error;
     }
   }
@@ -108,36 +109,36 @@ export class InteractiveInitializer {
   private displayGeneratedFiles(config: ProjectConfig): void {
     const toolConfig = AVAILABLE_TOOLS[config.tool];
     
-    console.log(chalk.green('\n📋 Generated Files:'));
+    Logger.section('Generated Files');
     if (toolConfig) {
-      console.log(`  ${chalk.cyan('Main config:')} ${toolConfig.configFile}`);
+      Logger.item('Main config:', toolConfig.configFile);
     }
-    console.log(`  ${chalk.cyan('Instructions:')} instructions/`);
+    Logger.item('Instructions:', 'instructions/');
     
     if (config.methodologies.length > 0) {
-      console.log(`  ${chalk.cyan('Methodologies:')} ${config.methodologies.map(m => `instructions/methodologies/${m}.md`).join(', ')}`);
+      Logger.item('Methodologies:', config.methodologies.map(m => `instructions/methodologies/${m}.md`).join(', '));
     }
     
     if (config.languages.length > 0) {
-      console.log(`  ${chalk.cyan('Language patterns:')} ${config.languages.map(l => `instructions/patterns/${l}/`).join(', ')}`);
+      Logger.item('Language patterns:', config.languages.map(l => `instructions/patterns/${l}/`).join(', '));
     }
     
     if (config.agents && config.agents.length > 0) {
-      console.log(`  ${chalk.cyan('Agents:')} ${config.agents.map(a => `${a}.md`).join(', ')}`);
+      Logger.item('Agents:', config.agents.map(a => `${a}.md`).join(', '));
     }
 
-    console.log(chalk.gray(`\n📍 All files created in: ${config.outputDirectory}`));
+    Logger.info(`All files created in: ${config.outputDirectory}`);
     
     // Show next steps
-    console.log(chalk.blue('\n🚀 Next Steps:'));
+    Logger.section('Next Steps');
     if (toolConfig) {
-      console.log(`  1. Review generated ${toolConfig.configFile}`);
+      Logger.info(`1. Review generated ${toolConfig.configFile}`);
     }
-    console.log('  2. Customize instructions for your project');
-    console.log('  3. Start using your AI tool with enhanced instructions');
+    Logger.info('2. Customize instructions for your project');
+    Logger.info('3. Start using your AI tool with enhanced instructions');
     
     if (config.tool === 'claude') {
-      console.log(chalk.cyan('  💡 Tip: Use /serena to activate agents in Claude'));
+      Logger.tip('Use /serena to activate agents in Claude');
     }
   }
 
@@ -148,7 +149,7 @@ export class InteractiveInitializer {
     const templatePath = templatesDir || resolve(join(__dirname, '../../templates'));
     
     if (!existsSync(templatePath)) {
-      console.error(chalk.red(`❌ Templates directory not found: ${templatePath}`));
+      Logger.error(`Templates directory not found: ${templatePath}`);
       return false;
     }
 
@@ -160,7 +161,7 @@ export class InteractiveInitializer {
 
     for (const dir of requiredDirs) {
       if (!existsSync(join(templatePath, dir))) {
-        console.error(chalk.red(`❌ Required template directory missing: ${dir}`));
+        Logger.error(`Required template directory missing: ${dir}`);
         return false;
       }
     }
@@ -182,25 +183,25 @@ export class InteractiveInitializer {
     const config = ConfigManager.loadConfig(directory);
     
     if (config) {
-      console.log(chalk.green('📋 Current Configuration:'));
+      Logger.section('Current Configuration');
       const toolConfig = AVAILABLE_TOOLS[config.tool];
       if (toolConfig) {
-        console.log(`  ${chalk.cyan('Tool:')} ${toolConfig.name}`);
+        Logger.item('Tool:', toolConfig.name);
       } else {
-        console.log(`  ${chalk.cyan('Tool:')} ${config.tool} (unknown)`);
+        Logger.item('Tool:', `${config.tool} (unknown)`);
       }
-      console.log(`  ${chalk.cyan('Project:')} ${config.projectName}`);
-      console.log(`  ${chalk.cyan('Generated:')} ${new Date(config.generatedAt).toLocaleString()}`);
+      Logger.item('Project:', config.projectName);
+      Logger.item('Generated:', new Date(config.generatedAt).toLocaleString());
       
       // Check for config files
       if (toolConfig) {
         const configExists = existsSync(join(directory, toolConfig.configFile));
-        console.log(`  ${chalk.cyan('Config file:')} ${configExists ? '✅' : '❌'} ${toolConfig.configFile}`);
+        Logger.item('Config file:', `${configExists ? '✅' : '❌'} ${toolConfig.configFile}`);
       }
       
     } else {
-      console.log(chalk.yellow('📋 No configuration found in current directory'));
-      console.log(chalk.gray('Run "ai-instructions init" to set up AI instructions'));
+      Logger.warn('No configuration found in current directory');
+      Logger.info('Run "ai-instructions init" to set up AI instructions');
     }
   }
 }
@@ -234,9 +235,9 @@ export class InteractiveUtils {
    * Show warning when interactive mode is not available
    */
   static showInteractiveWarning(): void {
-    console.log(chalk.yellow('⚠️  Interactive mode not available in this environment'));
-    console.log(chalk.gray('Use command-line options for non-interactive setup:'));
-    console.log(chalk.gray('  ai-instructions init --tool claude --lang ja'));
-    console.log(chalk.gray('  ai-instructions init --help'));
+    Logger.warn('Interactive mode not available in this environment');
+    Logger.info('Use command-line options for non-interactive setup:');
+    Logger.info('  ai-instructions init --tool claude --lang ja');
+    Logger.info('  ai-instructions init --help');
   }
 }
