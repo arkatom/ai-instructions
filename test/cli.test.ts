@@ -3,12 +3,12 @@ import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { rm } from 'fs/promises';
 
-describe.skip('CLI Basic Functionality (TODO: Fix complex integration tests)', () => {
+describe('CLI Basic Functionality', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
 
   it('should display version when --version flag is used', () => {
     // Arrange
-    const expectedVersion = '0.4.0';
+    const expectedVersion = '0.5.0';
     
     // Act
     const result = execSync(`npx ts-node "${cliPath}" --version`, { 
