@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { JsonValidator, SecurityError } from '../utils/security';
+import { EnvironmentService } from '../services/EnvironmentService';
 
 export interface ProjectConfig {
   /** AI tool selection */
@@ -197,7 +198,7 @@ export class ConfigManager {
       generatedAt: new Date().toISOString(),
       version: '0.5.0', // TODO: Read from package.json
       projectName: 'my-project',
-      outputDirectory: process.cwd()
+      outputDirectory: new EnvironmentService().getCurrentWorkingDirectory()
     };
     
     // Only add agents if specified in overrides

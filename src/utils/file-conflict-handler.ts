@@ -14,6 +14,7 @@ import { existsSync, readFileSync, statSync } from 'fs';
 import { copyFile, writeFile, mkdir } from 'fs/promises';
 import { extname, join, dirname, basename, relative } from 'path';
 import inquirer from 'inquirer';
+import { EnvironmentService } from '../services/EnvironmentService';
 
 export enum ConflictResolution {
   BACKUP = 'backup',
@@ -32,6 +33,11 @@ export interface ConflictInfo {
 }
 
 export class FileConflictHandler {
+  private environmentService: EnvironmentService;
+
+  constructor() {
+    this.environmentService = new EnvironmentService();
+  }
   /**
    * Detect if a file conflict exists
    */
@@ -160,7 +166,7 @@ export class FileConflictHandler {
       .replace(/(\d{8})(\d{6})/, '$1_$2');
     
     // Create backup directory structure
-    const projectRoot = process.cwd();
+    const projectRoot = this.environmentService.getCurrentWorkingDirectory();
     const backupDir = join(projectRoot, 'backups');
     
     // Ensure backup directory exists

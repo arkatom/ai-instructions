@@ -11,6 +11,7 @@ import { InteractivePrompts } from './prompts';
 import { GeneratorFactory, SupportedTool } from '../generators/factory';
 import { OutputFormat } from '../converters';
 import { Logger } from '../utils/logger';
+import { EnvironmentService } from '../services/EnvironmentService';
 
 export interface InteractiveOptions {
   outputDirectory?: string;
@@ -22,11 +23,13 @@ export interface InteractiveOptions {
 export class InteractiveInitializer {
   private templatesDir: string;
   private prompts: InteractivePrompts;
+  private environmentService: EnvironmentService;
 
   constructor(templatesDir?: string) {
     // Default to templates directory relative to this file
     this.templatesDir = templatesDir || resolve(join(__dirname, '../../templates'));
     this.prompts = new InteractivePrompts(this.templatesDir);
+    this.environmentService = new EnvironmentService();
   }
 
   /**
@@ -34,7 +37,7 @@ export class InteractiveInitializer {
    */
   async initialize(options: InteractiveOptions = {}): Promise<void> {
     try {
-      const outputDir = options.outputDirectory || process.cwd();
+      const outputDir = options.outputDirectory || this.environmentService.getCurrentWorkingDirectory();
       
       // Check for existing configuration
       const existingConfig = ConfigManager.loadConfig(outputDir);
@@ -172,14 +175,14 @@ export class InteractiveInitializer {
   /**
    * Check if current directory already has configuration
    */
-  static hasExistingConfig(directory: string = process.cwd()): boolean {
+  static hasExistingConfig(directory: string = new EnvironmentService().getCurrentWorkingDirectory()): boolean {
     return ConfigManager.loadConfig(directory) !== null;
   }
 
   /**
    * Display quick status of current directory
    */
-  static showStatus(directory: string = process.cwd()): void {
+  static showStatus(directory: string = new EnvironmentService().getCurrentWorkingDirectory()): void {
     const config = ConfigManager.loadConfig(directory);
     
     if (config) {

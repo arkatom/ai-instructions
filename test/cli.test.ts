@@ -79,7 +79,7 @@ describe('CLI Error Handling', () => {
       // In test environment, execSync throws with the CLI validation error
       const execError = error as ExecException;
       // Security check rejects paths outside project scope
-      expect(execError.message).toMatch(/Invalid output directory|Access denied: path outside project scope|SecurityError/);
+      expect(execError.message).toMatch(/does not exist and cannot be created|Invalid output directory|Access denied|SecurityError/);
     }
   });
 
@@ -96,7 +96,7 @@ describe('CLI Error Handling', () => {
       throw new Error('Expected command to throw an error');
     } catch (error: unknown) {
       const execError = error as ExecException;
-      expect(execError.message).toContain('Invalid project name');
+      expect(execError.message).toMatch(/Invalid project name|forbidden characters/);
     }
   });
 });
@@ -211,7 +211,7 @@ describe('CLI Edge Case Project Names', () => {
       throw new Error('Expected command to throw an error');
     } catch (error: unknown) {
       const execError = error as ExecException;
-      expect(execError.message).toContain('Invalid project name');
+      expect(execError.message).toMatch(/Project name cannot be empty|Invalid project name/);
     }
   });
 

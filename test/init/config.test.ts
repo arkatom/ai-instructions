@@ -31,8 +31,15 @@ describe('Configuration Management', () => {
   describe('ConfigManager', () => {
     describe('createConfig', () => {
       it('should create config with default values', () => {
+        // Arrange - Mock process.cwd() to avoid contamination detection
+        const originalCwd = process.cwd;
+        process.cwd = jest.fn().mockReturnValue('/mock/current/directory');
+        
         // Act
         const config = ConfigManager.createConfig();
+        
+        // Restore
+        process.cwd = originalCwd;
 
         // Assert
         expect(config.tool).toBe('claude');
@@ -42,7 +49,7 @@ describe('Configuration Management', () => {
         expect(config.projectName).toBe('my-project');
         expect(config.version).toBe('0.5.0');
         expect(config.generatedAt).toBeDefined();
-        expect(config.outputDirectory).toBe(process.cwd());
+        expect(config.outputDirectory).toBe('/mock/current/directory');
         expect(config.agents).toBeUndefined();
       });
 

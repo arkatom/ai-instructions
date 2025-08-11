@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { readFile, mkdir, rm } from 'fs/promises';
 import { ClaudeGenerator } from '../../src/generators/claude';
-import { OutputFormat } from '../../src/converters';
+import { OutputFormat, ConverterFactory } from '../../src/converters';
 import { FileUtils } from '../../src/utils/file-utils';
 
 describe('ClaudeGenerator OutputFormat Support', () => {
@@ -10,7 +10,7 @@ describe('ClaudeGenerator OutputFormat Support', () => {
 
   beforeEach(async () => {
     generator = new ClaudeGenerator();
-    tempDir = join(__dirname, '../../temp-test-output-format');
+    tempDir = join(__dirname, '../.temp-claude-output-format');
     
     // Ensure clean test environment
     try {
@@ -194,12 +194,9 @@ describe('ClaudeGenerator OutputFormat Support', () => {
 
   describe('Error Handling', () => {
     it('should throw meaningful error when conversion fails', async () => {
-      // Mock the ConverterFactory to throw an error
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const originalConvert = require('../../src/converters').ConverterFactory.convert;
-      const mockConvert = jest.fn().mockRejectedValue(new Error('Conversion failed'));
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('../../src/converters').ConverterFactory.convert = mockConvert;
+      // Mock the ConverterFactory to throw an error using jest.spyOn
+      const convertSpy = jest.spyOn(ConverterFactory, 'convert')
+        .mockRejectedValue(new Error('Conversion failed'));
 
       await expect(generator.generateFiles(tempDir, {
         projectName: 'error-test-project',
@@ -208,8 +205,7 @@ describe('ClaudeGenerator OutputFormat Support', () => {
       })).rejects.toThrow('Failed to generate cursor format');
 
       // Restore original function
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('../../src/converters').ConverterFactory.convert = originalConvert;
+      convertSpy.mockRestore();
     });
 
     it('should handle empty project name gracefully', async () => {
