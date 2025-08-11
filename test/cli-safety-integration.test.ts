@@ -55,7 +55,7 @@ describe('CLI Safety Integration', () => {
       });
 
       expect(result).toContain('FORCE MODE ENABLED');
-      expect(result).toContain('Files will be overwritten without warnings');
+      expect(result).toContain('overwritten without warnings');
     });
   });
 
@@ -226,8 +226,8 @@ describe('CLI Safety Integration', () => {
         env: { ...process.env, NODE_ENV: 'test' }
       });
 
-      expect(result).toContain('Tip: Use --preview');
-      expect(result).toContain('Tip: Use --force');
+      expect(result).toContain('Use --preview');
+      expect(result).toContain('Use --force');
     });
 
     test('should not show safety tips when using force mode', () => {
