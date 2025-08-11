@@ -57,7 +57,7 @@ export class ConfigurationValidationError extends GeneratorError {
   readonly code = 'CONFIGURATION_VALIDATION_ERROR';
   readonly category = 'configuration' as const;
 
-  constructor(configType: 'tool' | 'language', configName: string, validationErrors: string[]) {
+  constructor(configType: 'tool' | 'language' | 'security', configName: string, validationErrors: string[]) {
     super(`${configType} configuration "${configName}" is invalid: ${validationErrors.join(', ')}`,
       { configType, configName, validationErrors });
   }
