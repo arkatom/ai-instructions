@@ -587,24 +587,37 @@ describe('CLI Multi-Language Support', () => {
   });
 });
 
-describe.skip('CLI Output Format Support', () => {
+describe('CLI Output Format Support', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
   const testOutputDir = join(__dirname, './temp-cli-output-format-test');
+  const baseCwd = join(__dirname, '..');
+  const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
+
+  // 共通のCLI実行ヘルパー
+  const runCliInit = (projectName: string, options: string = '') => {
+    return execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${projectName}" ${options}`, { 
+      encoding: 'utf-8',
+      cwd: baseCwd,
+      env: testEnv
+    });
+  };
+
+  const runCliCommand = (command: string) => {
+    return execSync(`npx ts-node "${cliPath}" ${command}`, { 
+      encoding: 'utf-8',
+      cwd: baseCwd,
+      env: testEnv
+    });
+  };
 
   afterEach(async () => {
-    // テスト後のクリーンアップ
     if (existsSync(testOutputDir)) {
       await rm(testOutputDir, { recursive: true, force: true });
     }
   });
 
   it('should accept --output-format claude and generate standard Claude format', () => {
-    // RED PHASE: Test for claude output format (explicit)
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "claude-format-test" --output-format claude --lang ja`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('claude-format-test', '--output-format claude --lang ja');
     
     expect(result).toContain('Generated claude template');
     expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
@@ -617,12 +630,7 @@ describe.skip('CLI Output Format Support', () => {
   });
 
   it('should accept --output-format cursor and generate Cursor MDC format', () => {
-    // RED PHASE: Test for cursor output format 
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "cursor-format-test" --output-format cursor`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('cursor-format-test', '--output-format cursor');
     
     expect(result).toContain('Converted from Claude format to cursor');
     expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
@@ -637,12 +645,7 @@ describe.skip('CLI Output Format Support', () => {
   });
 
   it('should accept --output-format copilot and generate GitHub Copilot 2024 format', () => {
-    // RED PHASE: Test for copilot output format
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-format-test" --output-format copilot --lang en`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('copilot-format-test', '--output-format copilot --lang en');
     
     expect(result).toContain('Converted from Claude format to copilot');
     expect(existsSync(join(testOutputDir, '.github', 'copilot-instructions.md'))).toBe(true);
@@ -675,12 +678,7 @@ describe.skip('CLI Output Format Support', () => {
   });
 
   it('should accept -f as short form for --output-format', () => {
-    // RED PHASE: Test for short form option -f
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "short-form-test" -f cursor`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('short-form-test', '-f cursor');
     
     expect(result).toContain('Converted from Claude format to cursor');
     expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
@@ -690,12 +688,7 @@ describe.skip('CLI Output Format Support', () => {
   });
 
   it('should default to claude format when --output-format is not specified', () => {
-    // RED PHASE: Test default output format behavior
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-format-test"`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('default-format-test');
     
     expect(result).toContain('Generated claude template');
     expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
@@ -716,12 +709,7 @@ describe.skip('CLI Output Format Support', () => {
   });
 
   it('should display output-format option in help with supported formats', () => {
-    // RED PHASE: Test help display for output-format option
-    const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliCommand('init --help');
     
     expect(result).toContain('--output-format');
     expect(result).toContain('-f');
@@ -732,12 +720,7 @@ describe.skip('CLI Output Format Support', () => {
   });
 
   it('should work with combined --tool, --lang, and --output-format options', () => {
-    // RED PHASE: Test combined options - note: --tool and --output-format should be consistent  
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "combined-options-test" --tool claude --lang ja --output-format cursor`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('combined-options-test', '--tool claude --lang ja --output-format cursor');
     
     expect(result).toContain('Converted from Claude format to cursor');
     expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
@@ -772,20 +755,16 @@ describe.skip('CLI Output Format Support', () => {
     const formats = [
       { format: 'claude', expectedFiles: [
         'CLAUDE.md', 
-        'instructions/base.md',
-        'instructions/anytime.md',
-        'instructions/command.md', 
-        'instructions/commit-rules.md',
-        'instructions/deep-think.md',
-        'instructions/develop.md',
-        'instructions/git.md',
-        'instructions/KentBeck-tdd-rules.md',
-        'instructions/memory.md',
-        'instructions/note.md',
-        'instructions/notion-retrospective.md',
-        'instructions/pr-rules.md',
-        'instructions/search-patterns.md',
-        'instructions/troubleshooting.md'
+        'instructions/core/base.md',
+        'instructions/core/deep-think.md',
+        'instructions/core/memory.md',
+        'instructions/methodologies/github-idd.md',
+        'instructions/methodologies/scrum.md',
+        'instructions/methodologies/tdd.md',
+        'instructions/patterns/general/README.md',
+        'instructions/patterns/python/README.md',
+        'instructions/patterns/typescript/README.md',
+        'instructions/workflows/github-flow.md'
       ] },
       { format: 'cursor', expectedFiles: ['.cursor/rules/main.mdc'] },
       { format: 'copilot', expectedFiles: ['.github/copilot-instructions.md'] }
