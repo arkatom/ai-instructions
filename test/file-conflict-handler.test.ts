@@ -105,7 +105,8 @@ describe('FileConflictHandler', () => {
       const backupFiles = files.filter((f: string) => f.includes('test-file.md.backup.'));
       
       expect(backupFiles.length).toBe(1);
-      const actualBackupFile = join(testBackupDir, backupFiles[0]);
+      expect(backupFiles[0]).toBeDefined();
+      const actualBackupFile = join(testBackupDir, backupFiles[0] as string);
       expect(readFileSync(actualBackupFile, 'utf-8')).toBe(existingContent);
       expect(readFileSync(testFile, 'utf-8')).toBe(newContent);
     });

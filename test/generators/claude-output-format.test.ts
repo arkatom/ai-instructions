@@ -1,6 +1,5 @@
 import { join } from 'path';
 import { readFile, mkdir, rm } from 'fs/promises';
-import { join } from 'path';
 import { ClaudeGenerator } from '../../src/generators/claude';
 import { OutputFormat } from '../../src/converters';
 import { FileUtils } from '../../src/utils/file-utils';
