@@ -6,8 +6,8 @@
  */
 
 import { Command } from 'commander';
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { GeneratorFactory, SupportedTool } from './generators/factory';
 import { ConverterFactory, OutputFormat } from './converters';
 import { InteractiveInitializer, InteractiveUtils } from './init/interactive';
@@ -93,7 +93,20 @@ function validateConflictResolution(strategy: string): void {
  * - No explicit tool/configuration options are provided
  * - Environment supports TTY interaction
  */
-function shouldUseInteractiveMode(rawArgs: string[], options: any): boolean {
+interface InitOptions {
+  interactive?: boolean;
+  tool?: string;
+  projectName?: string;
+  lang?: string;
+  outputFormat?: string;
+  output?: string;
+  force?: boolean;
+  preview?: boolean;
+  conflictResolution?: string;
+  backup?: boolean;
+}
+
+function shouldUseInteractiveMode(rawArgs: string[], options: InitOptions): boolean {
   // If user explicitly disabled interactive, respect that
   if (options.interactive === false) {
     return false;
@@ -105,13 +118,13 @@ function shouldUseInteractiveMode(rawArgs: string[], options: any): boolean {
   }
 
   // If user provided specific configuration options, use non-interactive
-  const configOptions = ['tool', 'projectName', 'lang', 'outputFormat'];
+  const configOptions = ['tool', 'projectName', 'lang', 'outputFormat'] as const;
   const hasConfigOptions = configOptions.some(opt => {
     const originalValue = opt === 'projectName' ? 'my-project' : 
                           opt === 'tool' ? 'claude' :
                           opt === 'lang' ? 'ja' :
                           opt === 'outputFormat' ? 'claude' : undefined;
-    return options[opt] && options[opt] !== originalValue;
+    return options[opt as keyof InitOptions] && options[opt as keyof InitOptions] !== originalValue;
   });
 
   // If only output directory is specified, still use interactive
@@ -144,7 +157,7 @@ program
   .option('-r, --conflict-resolution <strategy>', '🛡️  Default conflict resolution (backup, merge, skip, overwrite)', 'backup')
   .option('--no-interactive', '🤖 Disable interactive conflict resolution')
   .option('--no-backup', '🚨 Disable automatic backups (use with caution)')
-  .action(async (options, command) => {
+  .action(async (options) => {
     try {
       // Get raw command line arguments
       const rawArgs = process.argv.slice(2);
@@ -207,7 +220,7 @@ program
           console.log(`📦 Project name: ${options.projectName}`);
           console.log(`🌍 Language: ${options.lang}`);
           return;
-        } catch (error) {
+        } catch {
           console.log('🔍 Preview mode: Analyzing potential file conflicts...');
           console.log('⚠️  Preview functionality will be enhanced in v0.3.0');
           console.log('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
@@ -225,7 +238,7 @@ program
           const chalk = (await import('chalk')).default;
           console.log(chalk.red('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!'));
           console.log(chalk.red('💣 Proceeding in 2 seconds...'));
-        } catch (error) {
+        } catch {
           console.log('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!');
           console.log('💣 Proceeding in 2 seconds...');
         }
@@ -261,7 +274,7 @@ program
           console.log(chalk.cyan('💡 Tip: Use --preview to check for conflicts before generating'));
           console.log(chalk.cyan('💡 Tip: Use --force to skip warnings (be careful!)'));
           console.log(chalk.cyan('💡 Tip: Run "ai-instructions init" without options for interactive setup'));
-        } catch (error) {
+        } catch {
           console.log('💡 Tip: Use --preview to check for conflicts before generating');
           console.log('💡 Tip: Use --force to skip warnings (be careful!)');
           console.log('💡 Tip: Run "ai-instructions init" without options for interactive setup');
