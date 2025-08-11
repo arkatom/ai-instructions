@@ -172,8 +172,6 @@ describe('CLI Safety Integration', () => {
       expect(newContent).toContain('no-backup-test');
       
       // No backup should exist
-      const projectRoot = process.cwd();
-      const backupDir = join(projectRoot, 'backups');
       // Note: Backup directory might exist from other tests, but should not contain our specific backup
     });
   });

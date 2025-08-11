@@ -46,6 +46,8 @@ build/
 # Test output
 test/output/
 test/generators/temp-*
+test/temp-*/
+test/temp-*
 temp-test-*/
 **/temp-test-*/
 

@@ -49,7 +49,7 @@ describe('Multi-Tool Support', () => {
 
     it('should return list of supported tools', () => {
       const supportedTools = GeneratorFactory.getSupportedTools();
-      expect(supportedTools).toEqual(['claude', 'github-copilot', 'cursor', 'cline']);
+      expect(supportedTools).toEqual(['claude', 'github-copilot', 'cursor', 'cline', 'windsurf']);
     });
 
     it('should validate tool names correctly', () => {
@@ -57,6 +57,7 @@ describe('Multi-Tool Support', () => {
       expect(GeneratorFactory.isValidTool('github-copilot')).toBe(true);
       expect(GeneratorFactory.isValidTool('cursor')).toBe(true);
       expect(GeneratorFactory.isValidTool('cline')).toBe(true);
+      expect(GeneratorFactory.isValidTool('windsurf')).toBe(true);
       expect(GeneratorFactory.isValidTool('invalid')).toBe(false);
     });
   });

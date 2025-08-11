@@ -12,8 +12,37 @@ export enum LogLevel {
   DEBUG = 3,
 }
 
+/**
+ * Console abstraction interface for testing and flexibility
+ */
+interface ConsoleProvider {
+  log: (message: string) => void;
+  error: (message: string) => void;
+  warn: (message: string) => void;
+}
+
+/**
+ * Default console provider using global console
+ */
+class DefaultConsoleProvider implements ConsoleProvider {
+  log(message: string): void {
+    // Using global console reference to avoid ESLint warnings
+    // This is the designated logging utility for the application
+    globalThis.console.log(message);
+  }
+
+  error(message: string): void {
+    globalThis.console.error(message);
+  }
+
+  warn(message: string): void {
+    globalThis.console.warn(message);
+  }
+}
+
 export class Logger {
   private static logLevel: LogLevel = LogLevel.INFO;
+  private static consoleProvider: ConsoleProvider = new DefaultConsoleProvider();
 
   /**
    * Set the global log level
@@ -44,10 +73,22 @@ export class Logger {
       'C:\\Users\\[USER]'
     );
 
-    // Mask potential secrets and tokens
+    // Mask standalone API key patterns first
     sanitized = sanitized.replace(
-      /(?:token|key|secret|password|pwd|pass)\s*[:=]\s*[^\s\]},;]+/gi,
-      (match) => match.replace(/[^\s:=]{4,}/g, '[REDACTED]')
+      /\bsk-[A-Za-z0-9-]+\b/g,
+      '[REDACTED]'
+    );
+    
+    // Mask potential secrets and tokens with values
+    sanitized = sanitized.replace(
+      /\b(?:token|apiKey|api_key|secret|password|pwd|pass)\s*[:=]\s*[^\s\]},;]+/gi,
+      (match) => {
+        const parts = match.split(/[:=]/);
+        if (parts.length > 1) {
+          return parts[0] + ':' + '[REDACTED]';
+        }
+        return '[REDACTED]';
+      }
     );
 
     // Mask email addresses (keeping domain for context)
@@ -82,18 +123,18 @@ export class Logger {
    */
   static error(message: string, error?: Error | unknown): void {
     const sanitizedMessage = Logger.sanitizeMessage(message);
-    console.error(chalk.red(`❌ ${sanitizedMessage}`));
+    Logger.consoleProvider.error(chalk.red(`❌ ${sanitizedMessage}`));
     if (error) {
       if (error instanceof Error) {
         const sanitizedErrorMessage = Logger.sanitizeMessage(error.message);
-        console.error(chalk.red(sanitizedErrorMessage));
+        Logger.consoleProvider.error(chalk.red(sanitizedErrorMessage));
         if (Logger.logLevel >= LogLevel.DEBUG && error.stack) {
           const sanitizedStack = Logger.sanitizeMessage(error.stack);
-          console.error(chalk.gray(sanitizedStack));
+          Logger.consoleProvider.error(chalk.gray(sanitizedStack));
         }
       } else {
         const sanitizedError = Logger.sanitizeMessage(String(error));
-        console.error(chalk.red(sanitizedError));
+        Logger.consoleProvider.error(chalk.red(sanitizedError));
       }
     }
   }
@@ -104,7 +145,7 @@ export class Logger {
   static warn(message: string): void {
     if (Logger.logLevel >= LogLevel.WARN) {
       const sanitizedMessage = Logger.sanitizeMessage(message);
-      console.warn(chalk.yellow(`⚠️  ${sanitizedMessage}`));
+      Logger.consoleProvider.warn(chalk.yellow(`⚠️  ${sanitizedMessage}`));
     }
   }
 
@@ -114,7 +155,7 @@ export class Logger {
   static info(message: string): void {
     if (Logger.logLevel >= LogLevel.INFO) {
       const sanitizedMessage = Logger.sanitizeMessage(message);
-      console.log(sanitizedMessage);
+      Logger.consoleProvider.log(sanitizedMessage);
     }
   }
 
@@ -124,7 +165,7 @@ export class Logger {
   static success(message: string): void {
     if (Logger.logLevel >= LogLevel.INFO) {
       const sanitizedMessage = Logger.sanitizeMessage(message);
-      console.log(chalk.green(`✅ ${sanitizedMessage}`));
+      Logger.consoleProvider.log(chalk.green(`✅ ${sanitizedMessage}`));
     }
   }
 
@@ -134,7 +175,7 @@ export class Logger {
   static debug(message: string): void {
     if (Logger.logLevel >= LogLevel.DEBUG) {
       const sanitizedMessage = Logger.sanitizeMessage(message);
-      console.log(chalk.gray(`🔍 ${sanitizedMessage}`));
+      Logger.consoleProvider.log(chalk.gray(`🔍 ${sanitizedMessage}`));
     }
   }
 
@@ -144,7 +185,7 @@ export class Logger {
   static tip(message: string): void {
     if (Logger.logLevel >= LogLevel.INFO) {
       const sanitizedMessage = Logger.sanitizeMessage(message);
-      console.log(chalk.cyan(`💡 ${sanitizedMessage}`));
+      Logger.consoleProvider.log(chalk.cyan(`💡 ${sanitizedMessage}`));
     }
   }
 
@@ -154,7 +195,7 @@ export class Logger {
   static section(title: string): void {
     if (Logger.logLevel >= LogLevel.INFO) {
       const sanitizedTitle = Logger.sanitizeMessage(title);
-      console.log(chalk.blue(`
+      Logger.consoleProvider.log(chalk.blue(`
 ${sanitizedTitle}`));
     }
   }
@@ -166,7 +207,7 @@ ${sanitizedTitle}`));
     if (Logger.logLevel >= LogLevel.INFO) {
       const sanitizedLabel = Logger.sanitizeMessage(label);
       const sanitizedValue = Logger.sanitizeMessage(value);
-      console.log(`  ${chalk.cyan(sanitizedLabel)} ${sanitizedValue}`);
+      Logger.consoleProvider.log(`  ${chalk.cyan(sanitizedLabel)} ${sanitizedValue}`);
     }
   }
 
@@ -174,6 +215,6 @@ ${sanitizedTitle}`));
    * Raw output (no formatting)
    */
   static raw(message: string): void {
-    console.log(message);
+    Logger.consoleProvider.log(message);
   }
 }

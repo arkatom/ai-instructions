@@ -83,7 +83,7 @@ describe('Core Template Loading', () => {
       const generator = GeneratorFactory.createGenerator('cursor');
       
       // Act & Assert
-      await expect(generator.loadDynamicTemplate('main.md', { lang: 'invalid' as any }))
+      await expect(generator.loadDynamicTemplate('main.md', { lang: 'invalid' as never }))
         .rejects
         .toThrow('Unsupported language: invalid');
     });

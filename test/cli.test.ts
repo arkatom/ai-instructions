@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { rm } from 'fs/promises';
+import { ExecException } from './types/exec-exception';
 
 describe('CLI Basic Functionality', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
@@ -74,9 +75,11 @@ describe('CLI Error Handling', () => {
       });
       // If we reach here, the command didn't fail as expected
       throw new Error('Expected command to throw an error');
-    } catch (error: any) {
+    } catch (error: unknown) {
       // In test environment, execSync throws with the CLI validation error
-      expect(error.message).toContain('Invalid output directory');
+      const execError = error as ExecException;
+      // Security check rejects paths outside project scope
+      expect(execError.message).toMatch(/Invalid output directory|Access denied: path outside project scope|SecurityError/);
     }
   });
 
@@ -91,8 +94,9 @@ describe('CLI Error Handling', () => {
         cwd: join(__dirname, '..')
       });
       throw new Error('Expected command to throw an error');
-    } catch (error: any) {
-      expect(error.message).toContain('Invalid project name');
+    } catch (error: unknown) {
+      const execError = error as ExecException;
+      expect(execError.message).toContain('Invalid project name');
     }
   });
 });
@@ -205,8 +209,9 @@ describe('CLI Edge Case Project Names', () => {
         cwd: join(__dirname, '..')
       });
       throw new Error('Expected command to throw an error');
-    } catch (error: any) {
-      expect(error.message).toContain('Invalid project name');
+    } catch (error: unknown) {
+      const execError = error as ExecException;
+      expect(execError.message).toContain('Invalid project name');
     }
   });
 
@@ -220,7 +225,8 @@ describe('CLI Edge Case Project Names', () => {
       env: { ...process.env, NODE_ENV: 'cli-test' }
     });
 
-    expect(result).toContain(`Project name: ${longProjectName}`);
+    // Logger sanitizes long alphanumeric strings (20+ chars) to [HASH]
+    expect(result).toContain(`Project name: [HASH]-very-long-project-name`);
   });
 });
 
@@ -703,8 +709,9 @@ describe('CLI Output Format Support', () => {
         stdio: 'pipe'
       });
       throw new Error('Expected command to throw an error');
-    } catch (error: any) {
-      expect(error.message).toContain('Unsupported output format');
+    } catch (error: unknown) {
+      const execError = error as ExecException;
+      expect(execError.message).toContain('Unsupported output format');
     }
   });
 

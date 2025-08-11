@@ -7,6 +7,7 @@
  */
 
 import { GeneratorFactory } from '../../src/generators/factory';
+import { SupportedTool, SupportedLanguage } from '../../src/generators/types';
 // BaseGenerator import removed - not used
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { tmpdir } from 'os';
@@ -255,10 +256,10 @@ describe('Dynamic Template Generation - Complete Matrix Test', () => {
         
         ['cursor', 'github-copilot', 'claude'].forEach(tool => {
           ['ja', 'en', 'ch'].forEach(lang => {
-            const generator = GeneratorFactory.createGenerator(tool as any);
+            const generator = GeneratorFactory.createGenerator(tool as SupportedTool);
             singleMatrixPromises.push(
               generator.loadDynamicTemplate('main.md', { 
-                lang: lang as any,
+                lang: lang as SupportedLanguage,
                 projectName: `load-test-${i}`,
                 languageConfig: 'javascript'
               })
@@ -290,13 +291,13 @@ describe('Dynamic Template Generation - Complete Matrix Test', () => {
       const _validLanguages = ['ja', 'en', 'ch'];
       
       // ACT & ASSERT - Invalid tool
-      expect(() => GeneratorFactory.createGenerator('invalid-tool' as any))
+      expect(() => GeneratorFactory.createGenerator('invalid-tool' as never))
         .toThrow('Unsupported tool: invalid-tool');
       
       // ACT & ASSERT - Invalid language (should throw error)
       const generator = GeneratorFactory.createGenerator('cursor');
       await expect(generator.loadDynamicTemplate('main.md', { 
-        lang: 'invalid-lang' as any,
+        lang: 'invalid-lang' as never,
         projectName: 'error-test',
         languageConfig: 'javascript'
       })).rejects.toThrow('Unsupported language: invalid-lang');

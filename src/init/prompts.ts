@@ -5,6 +5,7 @@
 
 import inquirer from 'inquirer';
 import chalk from 'chalk';
+import { Logger } from '../utils/logger';
 import {
   ProjectConfig,
   ConfigManager,
@@ -39,11 +40,11 @@ export class InteractivePrompts {
     existingConfig?: ProjectConfig | null,
     defaultOutputDir: string = process.cwd()
   ): Promise<ProjectConfig> {
-    console.log(chalk.blue('🤖 AI Instructions Interactive Setup'));
-    console.log(chalk.gray('Configure your project with AI development instructions\n'));
+    Logger.section('🤖 AI Instructions Interactive Setup');
+    Logger.info('Configure your project with AI development instructions');
 
     if (existingConfig) {
-      console.log(chalk.yellow('📝 Found existing configuration:'));
+      Logger.warn('📝 Found existing configuration:');
       this.displayConfig(existingConfig);
       
       const { shouldUpdate } = await inquirer.prompt([{
@@ -61,7 +62,7 @@ export class InteractivePrompts {
     const responses = await this.collectUserResponses(existingConfig, defaultOutputDir);
     
     if (!responses.confirmGeneration) {
-      console.log(chalk.yellow('❌ Generation cancelled'));
+      Logger.warn('❌ Generation cancelled');
       process.exit(0);
     }
 
@@ -195,20 +196,20 @@ export class InteractivePrompts {
     const responses = await inquirer.prompt(questions as unknown as Parameters<typeof inquirer.prompt>[0]);
 
     // Show configuration summary
-    console.log(chalk.green('\n📋 Configuration Summary:'));
+    Logger.section('📋 Configuration Summary:');
     const toolConfig = AVAILABLE_TOOLS[responses.tool];
     if (toolConfig) {
-      console.log(`${chalk.cyan('Tool:')} ${toolConfig.name}`);
+      Logger.item('Tool:', toolConfig.name);
     } else {
-      console.log(`${chalk.cyan('Tool:')} ${responses.tool}`);
+      Logger.item('Tool:', responses.tool);
     }
-    console.log(`${chalk.cyan('Workflow:')} ${responses.workflow}`);
-    console.log(`${chalk.cyan('Methodologies:')} ${responses.methodologies.join(', ')}`);
-    console.log(`${chalk.cyan('Languages:')} ${responses.languages.join(', ')}`);
+    Logger.item('Workflow:', responses.workflow);
+    Logger.item('Methodologies:', responses.methodologies.join(', '));
+    Logger.item('Languages:', responses.languages.join(', '));
     if (responses.agents && responses.agents.length > 0) {
-      console.log(`${chalk.cyan('Agents:')} ${responses.agents.join(', ')}`);
+      Logger.item('Agents:', responses.agents.join(', '));
     }
-    console.log(`${chalk.cyan('Output:')} ${responses.outputDirectory}\n`);
+    Logger.item('Output:', responses.outputDirectory);
 
     // Confirmation
     const { confirmGeneration } = await inquirer.prompt([{
@@ -259,50 +260,50 @@ export class InteractivePrompts {
   private displayConfig(config: ProjectConfig): void {
     const toolConfig = AVAILABLE_TOOLS[config.tool];
     if (!toolConfig) {
-      console.log(`  ${chalk.cyan('Tool:')} ${config.tool} (unknown)`);
+      Logger.item('  Tool:', config.tool + ' (unknown)');
     } else {
-      console.log(`  ${chalk.cyan('Tool:')} ${toolConfig.name}`);
+      Logger.item('Tool:', toolConfig.name);
     }
-    console.log(`  ${chalk.cyan('Workflow:')} ${config.workflow}`);
-    console.log(`  ${chalk.cyan('Methodologies:')} ${config.methodologies.join(', ')}`);
-    console.log(`  ${chalk.cyan('Languages:')} ${config.languages.join(', ')}`);
+    Logger.item('Workflow:', config.workflow);
+    Logger.item('Methodologies:', config.methodologies.join(', '));
+    Logger.item('Languages:', config.languages.join(', '));
     if (config.agents && config.agents.length > 0) {
-      console.log(`  ${chalk.cyan('Agents:')} ${config.agents.join(', ')}`);
+      Logger.item('Agents:', config.agents.join(', '));
     }
-    console.log(`  ${chalk.cyan('Generated:')} ${new Date(config.generatedAt).toLocaleString()}`);
-    console.log('');
+    Logger.item('Generated:', new Date(config.generatedAt).toLocaleString());
+    Logger.raw('');
   }
 
   /**
    * Show help information about available options
    */
   static showHelp(): void {
-    console.log(chalk.blue('🤖 AI Instructions - Interactive Setup\n'));
+    Logger.section('🤖 AI Instructions - Interactive Setup');
     
-    console.log(chalk.green('Available Tools:'));
+    Logger.info(chalk.green('Available Tools:'));
     Object.entries(AVAILABLE_TOOLS).forEach(([key, config]) => {
-      console.log(`  ${chalk.cyan(key.padEnd(15))} - ${config.description}`);
+      Logger.item(key.padEnd(15), '- ' + config.description);
     });
     
-    console.log(chalk.green('\nAvailable Workflows:'));
+    Logger.info(chalk.green('\nAvailable Workflows:'));
     AVAILABLE_WORKFLOWS.forEach(option => {
-      console.log(`  ${chalk.cyan(option.value.padEnd(15))} - ${option.description}`);
+      Logger.item(option.value.padEnd(15), '- ' + option.description);
     });
     
-    console.log(chalk.green('\nAvailable Methodologies:'));
+    Logger.info(chalk.green('\nAvailable Methodologies:'));
     AVAILABLE_METHODOLOGIES.forEach(option => {
-      console.log(`  ${chalk.cyan(option.value.padEnd(15))} - ${option.description}`);
+      Logger.item(option.value.padEnd(15), '- ' + option.description);
     });
     
-    console.log(chalk.green('\nAvailable Languages:'));
+    Logger.info(chalk.green('\nAvailable Languages:'));
     AVAILABLE_LANGUAGES.forEach(option => {
-      console.log(`  ${chalk.cyan(option.value.padEnd(15))} - ${option.description}`);
+      Logger.item(option.value.padEnd(15), '- ' + option.description);
     });
 
-    console.log(chalk.gray('\nUsage:'));
-    console.log('  ai-instructions init                    # Interactive mode');
-    console.log('  ai-instructions init --tool claude     # Non-interactive mode');
-    console.log('  ai-instructions init --help            # Show this help\n');
+    Logger.info(chalk.gray('\nUsage:'));
+    Logger.info('  ai-instructions init                    # Interactive mode');
+    Logger.info('  ai-instructions init --tool claude     # Non-interactive mode');
+    Logger.info('  ai-instructions init --help            # Show this help');
   }
 }
 

@@ -119,19 +119,13 @@ export class ParallelFileGenerator {
     try {
       // Convert template tasks to file operation tasks
       const fileOpTasks: FileOperationTask[] = templateTasks.map((task, index) => {
-        const baseTask: FileOperationTask = {
+        return {
           id: `template-${index}-${task.templateName}`,
           operation: 'write',
           targetPath: task.outputPath,
-          content: task.content
+          content: task.content,
+          options: task.options
         };
-        
-        // Only add options if they exist
-        if (task.options) {
-          (baseTask as any).options = task.options;
-        }
-        
-        return baseTask;
       });
       
       // Execute all template file generations in parallel
@@ -235,13 +229,9 @@ export class ParallelFileGenerator {
       const result: FileOperationResult = {
         taskId: task.id,
         success: true,
-        executionTimeMs: endTime - startTime
+        executionTimeMs: endTime - startTime,
+        content: content
       };
-      
-      // Only include content if it was actually read
-      if (content !== undefined) {
-        (result as any).content = content;
-      }
       
       return result;
       
@@ -281,13 +271,9 @@ export class ParallelFileGenerator {
           const mkdirTask: FileOperationTask = {
             id: `${taskPrefix}-mkdir-${item}`,
             operation: 'mkdir',
-            targetPath: targetItemPath
+            targetPath: targetItemPath,
+            options: options
           };
-          
-          // Only add options if they exist
-          if (options) {
-            (mkdirTask as any).options = options;
-          }
           
           tasks.push(mkdirTask);
           
@@ -305,13 +291,9 @@ export class ParallelFileGenerator {
             id: `${taskPrefix}-file-${item}`,
             operation: 'copy',
             sourcePath: sourceItemPath,
-            targetPath: targetItemPath
+            targetPath: targetItemPath,
+            options: options
           };
-          
-          // Only add options if they exist
-          if (options) {
-            (copyTask as any).options = options;
-          }
           
           tasks.push(copyTask);
         }

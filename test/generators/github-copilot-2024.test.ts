@@ -91,7 +91,7 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
       // 存在しない言語ではエラーが発生することを確認
       await expect(generator.generateFiles(testOutputDir, { 
         projectName: 'error-test', 
-        lang: 'nonexistent' as any 
+        lang: 'nonexistent' as never 
       })).rejects.toThrow();
 
     });
