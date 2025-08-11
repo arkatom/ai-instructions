@@ -1,16 +1,18 @@
 import { Logger } from '../../utils/logger';
+import { ChalkInstance } from '../../types/chalk';
 
 /**
  * Lazy load chalk for optional colored output
  */
-async function loadChalk(): Promise<any> {
+async function loadChalk(): Promise<ChalkInstance> {
   try {
     const chalkModule = await import('chalk');
     return chalkModule.default || chalkModule;
   } catch {
     // Chalk not available, use plain text fallback
     return {
-      red: (text: string) => text
+      red: (text: string) => text,
+      blue: (text: string) => text
     };
   }
 }
