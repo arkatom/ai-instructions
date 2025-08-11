@@ -68,11 +68,6 @@ function validateOutputDirectory(outputPath: string): void {
     throw new Error('Invalid output directory: path contains invalid characters or is empty');
   }
   
-  // Check for clearly invalid paths that cannot exist
-  if (outputPath.startsWith('/invalid/') || outputPath.includes('/readonly/path/that/does/not/exist')) {
-    throw new Error(`Invalid output directory: ${outputPath} does not exist and cannot be created`);
-  }
-  
   // For legitimate paths, allow creation - only block clearly invalid paths
   // The generator will handle directory creation as needed
 }
