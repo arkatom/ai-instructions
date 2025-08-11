@@ -463,24 +463,37 @@ describe('CLI Multi-Tool Support', () => {
   });
 });
 
-describe.skip('CLI Multi-Language Support', () => {
+describe('CLI Multi-Language Support', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
   const testOutputDir = join(__dirname, './temp-cli-lang-test');
+  const baseCwd = join(__dirname, '..');
+  const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
+
+  // 共通のCLI実行ヘルパー
+  const runCliInit = (projectName: string, options: string = '') => {
+    return execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${projectName}" ${options}`, { 
+      encoding: 'utf-8',
+      cwd: baseCwd,
+      env: testEnv
+    });
+  };
+
+  const runCliCommand = (command: string) => {
+    return execSync(`npx ts-node "${cliPath}" ${command}`, { 
+      encoding: 'utf-8',
+      cwd: baseCwd,
+      env: testEnv
+    });
+  };
 
   afterEach(async () => {
-    // テスト後のクリーンアップ
     if (existsSync(testOutputDir)) {
       await rm(testOutputDir, { recursive: true, force: true });
     }
   });
 
   it('should accept --lang en and generate English templates (default behavior)', () => {
-    // RED PHASE: Test for English language option
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "english-project" --lang en`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('english-project', '--lang en');
     
     expect(result).toContain('Generated claude template');
     expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
@@ -491,12 +504,7 @@ describe.skip('CLI Multi-Language Support', () => {
   });
 
   it('should accept --lang ja and generate Japanese templates', () => {
-    // RED PHASE: Test for Japanese language option
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "japanese-project" --lang ja`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('japanese-project', '--lang ja');
     
     expect(result).toContain('Generated claude template');
     expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
@@ -508,12 +516,7 @@ describe.skip('CLI Multi-Language Support', () => {
   });
 
   it('should accept --lang ch and generate Chinese templates', () => {
-    // RED PHASE: Test for Chinese language option
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "chinese-project" --lang ch`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('chinese-project', '--lang ch');
     
     expect(result).toContain('Generated claude template');
     expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
@@ -525,12 +528,7 @@ describe.skip('CLI Multi-Language Support', () => {
   });
 
   it('should default to English when --lang is not specified', () => {
-    // RED PHASE: Test default language behavior
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-lang-project"`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('default-lang-project');
     
     expect(result).toContain('Generated claude template');
     expect(existsSync(join(testOutputDir, 'CLAUDE.md'))).toBe(true);
@@ -552,12 +550,7 @@ describe.skip('CLI Multi-Language Support', () => {
   });
 
   it('should work with combined --tool and --lang options', () => {
-    // RED PHASE: Test combined tool and language options
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "combined-test" --tool cursor --lang ja`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('combined-test', '--tool cursor --lang ja');
     
     expect(result).toContain('Generated cursor template');
     expect(existsSync(join(testOutputDir, '.cursor', 'rules', 'main.mdc'))).toBe(true);
@@ -568,12 +561,7 @@ describe.skip('CLI Multi-Language Support', () => {
   });
 
   it('should display lang option in help', () => {
-    // RED PHASE: Test help display for language option
-    const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliCommand('init --help');
     
     expect(result).toContain('--lang');
     expect(result).toContain('en, ja, ch');
