@@ -211,6 +211,11 @@ export class JsonValidator {
 
     // Check for function-like strings or code patterns
     for (const [key, value] of Object.entries(objectRecord)) {
+      // Check for dangerous property names
+      if (typeof key === 'string' && (key.includes('__proto__') || key.includes('constructor') || key.includes('prototype'))) {
+        throw new SecurityError('json_injection', `Dangerous property name "${key}" found in JSON`);
+      }
+      
       if (typeof value === 'string') {
         // Check for function definitions
         if (value.includes('function') || value.includes('=>')) {
