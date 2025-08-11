@@ -142,7 +142,7 @@ describe('CLI Isolated Environment Testing', () => {
   });
 });
 
-describe.skip('CLI Edge Case Project Names', () => {
+describe('CLI Edge Case Project Names', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
   const edgeCaseTestDir = join(__dirname, './temp-edge-case-test');
 
@@ -165,7 +165,7 @@ describe.skip('CLI Edge Case Project Names', () => {
     expect(result).toContain(`Project name: ${projectNameWithSpaces}`);
     
     const claudeContent = readFileSync(join(edgeCaseTestDir, 'CLAUDE.md'), 'utf-8');
-    expect(claudeContent).toContain(`#  開発指示 - ${projectNameWithSpaces}`); // ツール名は空文字列に置換される（スペースが残る）
+    expect(claudeContent).toContain(`# 開発指示 - ${projectNameWithSpaces}`);
   });
 
   it('should handle project names with hyphens and underscores', () => {
@@ -194,7 +194,7 @@ describe.skip('CLI Edge Case Project Names', () => {
     expect(result).toContain(`Project name: ${japaneseProjectName}`);
     
     const claudeContent = readFileSync(join(edgeCaseTestDir, 'CLAUDE.md'), 'utf-8');
-    expect(claudeContent).toContain(`#  開発指示 - ${japaneseProjectName}`); // ツール名は空文字列に置換される（スペースが残る）
+    expect(claudeContent).toContain(`# 開発指示 - ${japaneseProjectName}`);
   });
 
   it('should reject empty project names', () => {
