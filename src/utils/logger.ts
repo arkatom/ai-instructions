@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Logger utility for consistent output across the application
  * Provides methods for different log levels and supports chalk styling
