@@ -180,7 +180,7 @@ describe('InteractiveInitializer', () => {
         methodologies: ['github-idd'],
         languages: ['typescript'],
         projectName: 'test-project',
-        outputDirectory: process.cwd(),
+        outputDirectory: '/mock/test/directory',
         generatedAt: new Date().toISOString(),
         version: '0.5.0'
       };
@@ -292,12 +292,17 @@ describe('InteractiveInitializer', () => {
     it('should use current directory when not specified', () => {
       // Arrange
       jest.spyOn(ConfigManager, 'loadConfig').mockReturnValue(null);
+      const originalCwd = process.cwd;
+      process.cwd = jest.fn().mockReturnValue('/mock/working/directory');
 
       // Act
       InteractiveInitializer.hasExistingConfig();
+      
+      // Restore
+      process.cwd = originalCwd;
 
       // Assert
-      expect(ConfigManager.loadConfig).toHaveBeenCalledWith(process.cwd());
+      expect(ConfigManager.loadConfig).toHaveBeenCalledWith('/mock/working/directory');
     });
   });
 
