@@ -1,4 +1,20 @@
-#!/bin/sh
+# 文字色定義
+RED="\033[1;31m"
+GREEN="\033[1;32m"
+CYAN="\033[1;36m"
+RESET="\033[0m"
+
+# Get current username
+CURRENT_USER=$(gh api user 2>/dev/null | grep login | cut -d'"' -f4 || echo "User")
+
+echo "${RED}⚠️ Important warning from ${CURRENT_USER} ⚠️${RESET}"
+echo "${RED}============================================${RESET}"
+echo "${RED}Performs a pre-commit check. If you fail here,${RESET}"
+echo "${RED}you must fix the issues before committing (MUST).${RESET}"
+echo "${RED}`--no-verify` option MUST NOT BE USED. I AM WATCHING YOU.${RESET}"
+echo "${RED}Any inappropriate response will UNDERMINE your TRUST and VALUE.${RESET}"
+echo "${RED}============================================${RESET}"
+
 
 # TypeScript compile check (silent on success)
 echo "🔍 TypeScript check..."
@@ -27,3 +43,5 @@ if ! npm test > /dev/null 2>&1; then
   exit 1
 fi
 echo "✅ All tests passed"
+
+echo "${GREEN}✅ Code check completed! We have passed the quality standards.${RESET}"
