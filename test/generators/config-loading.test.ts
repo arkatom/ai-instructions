@@ -13,7 +13,7 @@ class TestGenerator extends BaseGenerator {
     });
   }
   
-  async generateFiles(outputDir: string, options?: any): Promise<void> {
+  async generateFiles(_outputDir: string, _options?: any): Promise<void> {
     // Empty implementation for testing
   }
 }
