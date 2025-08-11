@@ -41,7 +41,11 @@ module.exports = tseslint.config(
       'import/no-self-import': 'error',
       'import/no-useless-path-segments': ['error', {
         noUselessIndex: true
-      }]
+      }],
+      
+      // Enforce ES6 imports over CommonJS require
+      '@typescript-eslint/no-var-requires': 'error',
+      '@typescript-eslint/no-require-imports': 'error'
     },
     settings: {
       'import/resolver': {

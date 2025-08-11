@@ -15,10 +15,16 @@ import { OutputFormatValidator } from '../validators/OutputFormatValidator';
 import { OutputPathValidator } from '../validators/OutputPathValidator';
 import { ConflictResolutionValidator } from '../validators/ConflictResolutionValidator';
 
-import { GeneratorFactory, SupportedTool } from '../../generators/factory';
+
 import { OutputFormat } from '../../converters';
 import { InteractiveInitializer, InteractiveUtils } from '../../init/interactive';
 import { PathValidator, SecurityError } from '../../utils/security';
+import { InteractiveModeDetector } from '../services/InteractiveModeDetector';
+import { PreviewHandler } from '../services/PreviewHandler';
+import { ForceWarningHandler } from '../services/ForceWarningHandler';
+import { FileGenerationOrchestrator } from '../services/FileGenerationOrchestrator';
+import { ValidationCoordinator } from '../services/ValidationCoordinator';
+
 import { Logger } from '../../utils/logger';
 
 /**
@@ -37,8 +43,20 @@ export interface InitCommandValidators {
  */
 export class InitCommand implements Command {
   public readonly validators: InitCommandValidators;
+  private readonly interactiveModeDetector: InteractiveModeDetector;
+  private readonly previewHandler: PreviewHandler;
+  private readonly forceWarningHandler: ForceWarningHandler;
+  private readonly fileGenerationOrchestrator: FileGenerationOrchestrator;
+  private readonly validationCoordinator: ValidationCoordinator;
 
-  constructor(validators?: InitCommandValidators) {
+  constructor(
+    validators?: InitCommandValidators,
+    interactiveModeDetector?: InteractiveModeDetector,
+    previewHandler?: PreviewHandler,
+    forceWarningHandler?: ForceWarningHandler,
+    fileGenerationOrchestrator?: FileGenerationOrchestrator,
+    validationCoordinator?: ValidationCoordinator
+  ) {
     this.validators = validators || {
       projectName: new ProjectNameValidator(),
       language: new LanguageValidator(),
@@ -46,64 +64,18 @@ export class InitCommand implements Command {
       outputPath: new OutputPathValidator(),
       conflictResolution: new ConflictResolutionValidator()
     };
+    this.interactiveModeDetector = interactiveModeDetector || new InteractiveModeDetector();
+    this.previewHandler = previewHandler || new PreviewHandler();
+    this.forceWarningHandler = forceWarningHandler || new ForceWarningHandler();
+    this.fileGenerationOrchestrator = fileGenerationOrchestrator || new FileGenerationOrchestrator();
+    this.validationCoordinator = validationCoordinator || new ValidationCoordinator(this.validators);
   }
 
   /**
-   * Validate command arguments
+   * Validate command arguments using ValidationCoordinator
    */
   validate(args: CommandArgs): ValidationResult {
-    const initArgs = args as InitCommandArgs;
-    const errors: string[] = [];
-
-    // Validate project name
-    if (initArgs.projectName && typeof initArgs.projectName === 'string') {
-      const projectNameResult = this.validators.projectName.validate(initArgs.projectName);
-      if (!projectNameResult.isValid) {
-        errors.push(...projectNameResult.errors);
-      }
-    }
-
-    // Validate language
-    if (initArgs.lang && typeof initArgs.lang === 'string') {
-      const languageResult = this.validators.language.validate(initArgs.lang);
-      if (!languageResult.isValid) {
-        errors.push(...languageResult.errors);
-      }
-    }
-
-    // Validate output format
-    if (initArgs.outputFormat && typeof initArgs.outputFormat === 'string') {
-      const outputFormatResult = this.validators.outputFormat.validate(initArgs.outputFormat);
-      if (!outputFormatResult.isValid) {
-        errors.push(...outputFormatResult.errors);
-      }
-    }
-
-    // Validate output path
-    if (initArgs.output && typeof initArgs.output === 'string') {
-      const outputPathResult = this.validators.outputPath.validate(initArgs.output);
-      if (!outputPathResult.isValid) {
-        errors.push(...outputPathResult.errors);
-      }
-    }
-
-    // Validate conflict resolution
-    if (initArgs.conflictResolution && typeof initArgs.conflictResolution === 'string') {
-      const conflictResult = this.validators.conflictResolution.validate(initArgs.conflictResolution);
-      if (!conflictResult.isValid) {
-        errors.push(...conflictResult.errors);
-      }
-    }
-
-    // Validate tool
-    if (initArgs.tool && typeof initArgs.tool === 'string' && !GeneratorFactory.isValidTool(initArgs.tool)) {
-      errors.push(`Unsupported tool: ${initArgs.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
+    return this.validationCoordinator.validate(args);
   }
 
   /**
@@ -141,7 +113,7 @@ export class InitCommand implements Command {
       }
 
       // Determine if we should use interactive mode
-      const useInteractive = this.shouldUseInteractiveMode(initArgs);
+      const useInteractive = this.interactiveModeDetector.shouldUseInteractiveMode(initArgs);
 
       if (useInteractive) {
         // Interactive mode
@@ -170,7 +142,7 @@ export class InitCommand implements Command {
 
       // Handle preview mode
       if (initArgs.preview) {
-        return this.handlePreviewMode({
+        return await this.previewHandler.handlePreviewMode({
           output: validatedOutputDir,
           tool,
           projectName,
@@ -180,12 +152,13 @@ export class InitCommand implements Command {
 
       // Handle force mode warning
       if (initArgs.force) {
-        await this.showForceWarning();
+        await this.forceWarningHandler.showForceWarning();
       }
 
-      // Generate files
-      const generator = GeneratorFactory.createGenerator(tool as SupportedTool);
-      await generator.generateFiles(validatedOutputDir, { 
+      // Generate files using orchestrator
+      return await this.fileGenerationOrchestrator.generateFiles({
+        tool,
+        outputDir: validatedOutputDir,
         projectName,
         force: initArgs.force || false,
         lang: lang as 'en' | 'ja' | 'ch',
@@ -194,25 +167,6 @@ export class InitCommand implements Command {
         interactive: initArgs.interactive !== false,
         backup: initArgs.backup !== false
       });
-
-      // Success logging
-      Logger.success(`Generated ${generator.getToolName()} template files in ${validatedOutputDir}`);
-      Logger.info(`📁 Files created for ${generator.getToolName()} AI tool`);
-      Logger.item('🎯 Project name:', projectName);
-      
-      // Show format conversion message when output-format is used
-      if (outputFormat && outputFormat !== 'claude') {
-        Logger.info(`🔄 Converted from Claude format to ${outputFormat}`);
-      }
-
-      // Safety reminders
-      if (!initArgs.force) {
-        Logger.tip('Use --preview to check for conflicts before generating');
-        Logger.tip('Use --force to skip warnings (be careful!)');
-        Logger.tip('Run "ai-instructions init" without options for interactive setup');
-      }
-
-      return { success: true };
 
     } catch (error) {
       if (process.env.NODE_ENV === 'test') {
@@ -240,87 +194,5 @@ export class InitCommand implements Command {
         };
       }
     }
-  }
-
-  /**
-   * Determine if interactive mode should be used
-   */
-  shouldUseInteractiveMode(args: InitCommandArgs): boolean {
-    // Check for raw args if available (for CLI integration)
-    const rawArgs = process.argv.slice(2);
-    
-    // If any specific options are provided, use non-interactive mode
-    const nonInteractiveOptions = [
-      '--project-name', '-n',
-      '--tool', '-t', 
-      '--lang', '-l',
-      '--output-format', '-f',
-      '--force',
-      '--preview',
-      '--conflict-resolution', '-r',
-      '--no-interactive',
-      '--no-backup'
-    ];
-
-    const hasNonInteractiveOptions = rawArgs.some(arg => 
-      nonInteractiveOptions.includes(arg) || arg.startsWith('--project-name=')
-    );
-
-    // Explicitly disabled
-    if (args.interactive === false) {
-      return false;
-    }
-
-    // Non-interactive environment or specific options provided
-    if (!InteractiveUtils.canRunInteractive() || hasNonInteractiveOptions) {
-      return false;
-    }
-
-    // Default to interactive if available
-    return true;
-  }
-
-  /**
-   * Handle preview mode
-   */
-  private handlePreviewMode(options: {
-    output: string;
-    tool: string;
-    projectName: string;
-    lang: string;
-  }): CommandResult {
-    try {
-      // Try to use chalk for colors, fall back to plain text
-      const chalk = require('chalk');
-      Logger.info(chalk.blue('🔍 Preview mode: Analyzing potential file conflicts...'));
-    } catch {
-      Logger.info('🔍 Preview mode: Analyzing potential file conflicts...');
-    }
-    
-    Logger.warn('Preview functionality will be enhanced in v0.3.0');
-    Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
-    Logger.item('📍 Target directory:', options.output);
-    Logger.item('🤖 Tool:', options.tool);
-    Logger.item('📦 Project name:', options.projectName);
-    Logger.item('🌍 Language:', options.lang);
-    
-    return { success: true };
-  }
-
-  /**
-   * Show force mode warning
-   */
-  private async showForceWarning(): Promise<void> {
-    try {
-      const chalk = require('chalk');
-      Logger.raw(chalk.red('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!'));
-      Logger.raw(chalk.red('💣 Proceeding in 2 seconds...'));
-    } catch {
-      Logger.raw('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!');
-      Logger.raw('💣 Proceeding in 2 seconds...');
-    }
-    
-    // Brief delay to let user see the warning
-    await new Promise(resolve => setTimeout(resolve, 2000));
   }
 }

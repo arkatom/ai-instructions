@@ -11,6 +11,8 @@ import { CommandRegistry } from './cli/CommandRegistry';
 import { InitCommand } from './cli/commands/InitCommand';
 import { InitCommandArgs } from './cli/interfaces/CommandArgs';
 import { Logger } from './utils/logger';
+import { InteractivePrompts } from './init/prompts';
+import { InteractiveInitializer } from './init/interactive';
 
 /**
  * CLI Coordinator - Thin layer for command dispatch
@@ -127,7 +129,6 @@ class CLICoordinator {
    * Show interactive help
    */
   private showInteractiveHelp(): void {
-    const { InteractivePrompts } = require('./init/prompts');
     InteractivePrompts.showHelp();
   }
 
@@ -135,7 +136,6 @@ class CLICoordinator {
    * Show configuration status
    */
   private showStatus(directory: string): void {
-    const { InteractiveInitializer } = require('./init/interactive');
     InteractiveInitializer.showStatus(directory);
   }
 

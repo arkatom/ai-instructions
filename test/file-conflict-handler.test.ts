@@ -6,7 +6,7 @@
 import { jest } from '@jest/globals';
 import { existsSync, writeFileSync, mkdirSync, rmSync, readFileSync, readdirSync } from 'fs';
 import * as fsPromises from 'fs/promises';
-import { join } from 'path';
+import { join, relative, dirname } from 'path';
 import { FileConflictHandler, ConflictResolution } from '../src/utils/file-conflict-handler';
 
 // Mock inquirer at the module level
@@ -50,6 +50,12 @@ describe('FileConflictHandler', () => {
     const backupDir = join(mockProjectRoot, 'backups');
     if (existsSync(backupDir)) {
       rmSync(backupDir, { recursive: true, force: true });
+    }
+    
+    // Clean up the project root backups directory (where backups are actually created)
+    const projectBackupsDir = join(process.cwd(), 'backups');
+    if (existsSync(projectBackupsDir)) {
+      rmSync(projectBackupsDir, { recursive: true, force: true });
     }
     
     // Clean up any test-backups directories that might have been created
@@ -96,14 +102,22 @@ describe('FileConflictHandler', () => {
       const handler = new FileConflictHandler();
       await handler.resolveConflict(testFile, newContent, ConflictResolution.BACKUP);
 
-      // Check for timestamped backup file in test backups directory
-      const testBackupDir = join(mockProjectRoot, 'backups', 'test', '.temp-file-conflict-test');
-      const files = readdirSync(testBackupDir);
+      // The backup is created in the project root's backups directory
+      // with the relative path structure preserved
+      const projectRoot = process.cwd();
+      const relativePath = relative(projectRoot, testFile);
+      const backupDir = join(projectRoot, 'backups', dirname(relativePath));
+      
+      // Check that backup directory was created
+      expect(existsSync(backupDir)).toBe(true);
+      
+      // Check for timestamped backup file
+      const files = readdirSync(backupDir);
       const backupFiles = files.filter((f: string) => f.includes('test-file.md.backup.'));
       
       expect(backupFiles.length).toBe(1);
       expect(backupFiles[0]).toBeDefined();
-      const actualBackupFile = join(testBackupDir, backupFiles[0] as string);
+      const actualBackupFile = join(backupDir, backupFiles[0] as string);
       expect(readFileSync(actualBackupFile, 'utf-8')).toBe(existingContent);
       expect(readFileSync(testFile, 'utf-8')).toBe(newContent);
     });

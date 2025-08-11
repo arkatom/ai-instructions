@@ -219,7 +219,8 @@
       "mcp__filesystem__search_files",
       "mcp__filesystem__read_multiple_files",
       "mcp__github__get_pull_request_reviews",
-      "mcp__serena__find_symbol"
+      "mcp__serena__find_symbol",
+      "mcp__github__get_pull_request_comments"
     ],
     "deny": []
   },

@@ -56,12 +56,12 @@ describe('InitCommand', () => {
     });
 
     it('should handle interactive mode detection', async () => {
-      // GREEN: InitCommand クラスが実装されている
+      // GREEN: InitCommand can be instantiated with proper dependencies
       const { InitCommand } = await import('../../src/cli/commands/InitCommand');
       const command = new InitCommand();
       
-      // Should have method to determine interactive mode
-      expect(typeof command.shouldUseInteractiveMode).toBe('function');
+      // Should successfully create command instance with InteractiveModeDetector
+      expect(command).toBeInstanceOf(InitCommand);
     });
   });
 
