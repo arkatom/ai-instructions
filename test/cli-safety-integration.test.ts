@@ -79,9 +79,8 @@ describe('CLI Safety Integration', () => {
       const newContent = readFileSync(claudeFile, 'utf-8');
       expect(newContent).toContain('backup-test');
       
-      // Backup should exist
-      const projectRoot = process.cwd();
-      const backupDir = join(projectRoot, 'backups');
+      // Backup should exist within test directory (CLI should create backup relative to output dir)
+      const backupDir = join(testDir, 'backups');
       expect(existsSync(backupDir)).toBe(true);
     });
 
