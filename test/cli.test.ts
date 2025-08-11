@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { rm } from 'fs/promises';
+import { ExecException } from './types/exec-exception';
 
 describe('CLI Basic Functionality', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
@@ -76,7 +77,8 @@ describe('CLI Error Handling', () => {
       throw new Error('Expected command to throw an error');
     } catch (error: unknown) {
       // In test environment, execSync throws with the CLI validation error
-      expect((error as Error).message).toContain('Invalid output directory');
+      const execError = error as ExecException;
+      expect(execError.message).toContain('Invalid output directory');
     }
   });
 
@@ -92,7 +94,8 @@ describe('CLI Error Handling', () => {
       });
       throw new Error('Expected command to throw an error');
     } catch (error: unknown) {
-      expect((error as Error).message).toContain('Invalid project name');
+      const execError = error as ExecException;
+      expect(execError.message).toContain('Invalid project name');
     }
   });
 });
@@ -206,7 +209,8 @@ describe('CLI Edge Case Project Names', () => {
       });
       throw new Error('Expected command to throw an error');
     } catch (error: unknown) {
-      expect((error as Error).message).toContain('Invalid project name');
+      const execError = error as ExecException;
+      expect(execError.message).toContain('Invalid project name');
     }
   });
 
@@ -704,7 +708,8 @@ describe('CLI Output Format Support', () => {
       });
       throw new Error('Expected command to throw an error');
     } catch (error: unknown) {
-      expect((error as Error).message).toContain('Unsupported output format');
+      const execError = error as ExecException;
+      expect(execError.message).toContain('Unsupported output format');
     }
   });
 
