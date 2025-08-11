@@ -5,6 +5,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { JsonValidator, SecurityError } from '../utils/security';
 
 export interface ProjectConfig {
   /** AI tool selection */
@@ -158,9 +159,13 @@ export class ConfigManager {
 
     try {
       const configData = readFileSync(configPath, 'utf-8');
-      const config = JSON.parse(configData) as ProjectConfig;
+      const config = JsonValidator.secureJsonParse<ProjectConfig>(configData);
       return this.validateConfig(config) ? config : null;
     } catch (error) {
+      if (error instanceof SecurityError) {
+        console.warn(`Security issue in configuration file ${configPath}:`, error.message);
+        return null;
+      }
       console.warn(`Warning: Could not load configuration from ${configPath}:`, error);
       return null;
     }

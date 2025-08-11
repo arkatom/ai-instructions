@@ -13,6 +13,7 @@ import { ConverterFactory, OutputFormat } from './converters';
 import { InteractiveInitializer, InteractiveUtils } from './init/interactive';
 import { InteractivePrompts } from './init/prompts';
 import { Logger } from './utils/logger';
+import { PathValidator, SecurityError } from './utils/security';
 
 /**
  * Validates project name for filesystem safety
@@ -160,6 +161,9 @@ program
   .option('--no-backup', '🚨 Disable automatic backups (use with caution)')
   .action(async (options) => {
     try {
+      // Validate output directory for security
+      const validatedOutputDir = PathValidator.validateCliPath(options.output);
+      
       // Get raw command line arguments
       const rawArgs = process.argv.slice(2);
       
@@ -179,7 +183,7 @@ program
         // Run interactive initialization
         const initializer = new InteractiveInitializer();
         await initializer.initialize({
-          outputDirectory: options.output,
+          outputDirectory: validatedOutputDir,
           verbose: false
         });
 
@@ -248,7 +252,7 @@ program
       }
       
       const generator = GeneratorFactory.createGenerator(options.tool as SupportedTool);
-      await generator.generateFiles(options.output, { 
+      await generator.generateFiles(validatedOutputDir, { 
         projectName: options.projectName,
         force: options.force || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
         lang: options.lang as 'en' | 'ja' | 'ch',  // Issue #11: Multi-language support
@@ -259,7 +263,7 @@ program
         backup: options.backup !== false  // Default to true unless --no-backup
       });
       
-      Logger.success(`Generated ${generator.getToolName()} template files in ${options.output}`);
+      Logger.success(`Generated ${generator.getToolName()} template files in ${validatedOutputDir}`);
       Logger.info(`📁 Files created for ${generator.getToolName()} AI tool`);
       Logger.item('🎯 Project name:', options.projectName);
       
@@ -287,6 +291,13 @@ program
         // In test environment, throw the error so tests can catch it
         throw error;
       } else {
+        if (error instanceof SecurityError) {
+          Logger.error('Security violation:', error.message);
+          if (error.details) {
+            Logger.debug(`Security details: ${error.details}`);
+          }
+          process.exit(1);
+        }
         Logger.error('Failed to generate template files:', error);
         if (!InteractiveUtils.canRunInteractive()) {
           InteractiveUtils.showInteractiveWarning();
@@ -303,8 +314,17 @@ program
   .option('-d, --directory <path>', 'Directory to check (default: current directory)', process.cwd())
   .action(async (options) => {
     try {
-      InteractiveInitializer.showStatus(options.directory);
+      // Validate directory path for security
+      const validatedPath = PathValidator.validateCliPath(options.directory);
+      InteractiveInitializer.showStatus(validatedPath);
     } catch (error) {
+      if (error instanceof SecurityError) {
+        Logger.error('Security violation:', error.message);
+        if (error.details) {
+          Logger.debug(`Security details: ${error.details}`);
+        }
+        process.exit(1);
+      }
       Logger.error('Failed to show status:', error);
       process.exit(1);
     }
