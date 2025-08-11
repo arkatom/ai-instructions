@@ -9,6 +9,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CommandRegistry } from './cli/CommandRegistry';
 import { InitCommand } from './cli/commands/InitCommand';
+import { EnvironmentService } from './services/EnvironmentService';
 import { InitCommandArgs } from './cli/interfaces/CommandArgs';
 import { Logger } from './utils/logger';
 import { InteractivePrompts } from './init/prompts';
@@ -20,10 +21,12 @@ import { InteractiveInitializer } from './init/interactive';
 class CLICoordinator {
   private registry: CommandRegistry;
   private program: Command;
+  private environmentService: EnvironmentService;
 
   constructor() {
     this.registry = new CommandRegistry();
     this.program = new Command();
+    this.environmentService = new EnvironmentService();
     this.setupProgram();
     this.registerCommands();
   }
@@ -54,7 +57,7 @@ class CLICoordinator {
     this.program
       .command('init')
       .description('Initialize AI development instructions')
-      .option('-o, --output <path>', 'output directory', process.cwd())
+      .option('-o, --output <path>', 'output directory', this.environmentService.getCurrentWorkingDirectory())
       .option('-n, --project-name <name>', 'project name', 'my-project')
       .option('-t, --tool <tool>', 'AI tool (claude, github-copilot, cursor, cline)', 'claude')
       .option('-l, --lang <language>', 'Language for templates (en, ja, ch)', 'ja')
@@ -80,7 +83,7 @@ class CLICoordinator {
     this.program
       .command('status')
       .description('Show current configuration status')
-      .option('-d, --directory <path>', 'directory to check', process.cwd())
+      .option('-d, --directory <path>', 'directory to check', this.environmentService.getCurrentWorkingDirectory())
       .action((options) => {
         this.showStatus(options.directory);
       });

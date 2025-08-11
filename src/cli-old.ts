@@ -14,6 +14,7 @@ import { InteractiveInitializer, InteractiveUtils } from './init/interactive';
 import { InteractivePrompts } from './init/prompts';
 import { Logger } from './utils/logger';
 import { PathValidator, SecurityError } from './utils/security';
+import { EnvironmentService } from './services/EnvironmentService';
 
 /**
  * Validates project name for filesystem safety
@@ -125,7 +126,7 @@ function shouldUseInteractiveMode(rawArgs: string[], options: InitOptions): bool
   });
 
   // If only output directory is specified, still use interactive
-  const onlyOutputSpecified = options.output !== process.cwd() && !hasConfigOptions;
+  const onlyOutputSpecified = options.output !== environmentService.getCurrentWorkingDirectory() && !hasConfigOptions;
   
   return !hasConfigOptions || onlyOutputSpecified;
 }
@@ -134,6 +135,7 @@ function shouldUseInteractiveMode(rawArgs: string[], options: InitOptions): bool
 const packageJsonPath = join(__dirname, '../package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
 
+const environmentService = new EnvironmentService();
 const program = new Command();
 
 program
@@ -144,7 +146,7 @@ program
 program
   .command('init')
   .description('Initialize AI development instructions')
-  .option('-o, --output <path>', 'output directory', process.cwd())
+  .option('-o, --output <path>', 'output directory', environmentService.getCurrentWorkingDirectory())
   .option('-n, --project-name <name>', 'project name', 'my-project')
   .option('-t, --tool <tool>', 'AI tool (claude, github-copilot, cursor, cline)', 'claude')
   .option('-l, --lang <language>', 'Language for templates (en, ja, ch)', 'ja')
@@ -305,7 +307,7 @@ program
 program
   .command('status')
   .description('Show current AI instructions configuration')
-  .option('-d, --directory <path>', 'Directory to check (default: current directory)', process.cwd())
+  .option('-d, --directory <path>', 'Directory to check (default: current directory)', environmentService.getCurrentWorkingDirectory())
   .action(async (options) => {
     try {
       // Validate directory path for security

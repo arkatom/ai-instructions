@@ -14,6 +14,7 @@ import {
   AVAILABLE_METHODOLOGIES,
   AVAILABLE_LANGUAGES
 } from './config';
+import { EnvironmentService } from '../services/EnvironmentService';
 
 export interface InteractiveResponses {
   tool: string;
@@ -28,9 +29,11 @@ export interface InteractiveResponses {
 
 export class InteractivePrompts {
   private templatesDir: string;
+  private environmentService: EnvironmentService;
 
   constructor(templatesDir: string) {
     this.templatesDir = templatesDir;
+    this.environmentService = new EnvironmentService();
   }
 
   /**
@@ -38,7 +41,7 @@ export class InteractivePrompts {
    */
   async runInteractiveFlow(
     existingConfig?: ProjectConfig | null,
-    defaultOutputDir: string = process.cwd()
+    defaultOutputDir: string = this.environmentService.getCurrentWorkingDirectory()
   ): Promise<ProjectConfig> {
     Logger.section('🤖 AI Instructions Interactive Setup');
     Logger.info('Configure your project with AI development instructions');
@@ -74,7 +77,7 @@ export class InteractivePrompts {
    */
   private async collectUserResponses(
     existingConfig?: ProjectConfig | null,
-    defaultOutputDir: string = process.cwd()
+    defaultOutputDir: string = this.environmentService.getCurrentWorkingDirectory()
   ): Promise<InteractiveResponses> {
     const questions = [
       // Project metadata
