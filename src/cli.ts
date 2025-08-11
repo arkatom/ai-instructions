@@ -275,7 +275,6 @@ program
       // 🚨 EMERGENCY PATCH v0.2.1: Safety reminder
       if (!options.force) {
         try {
-          const chalk = (await import('chalk')).default;
           Logger.tip('Use --preview to check for conflicts before generating');
           Logger.tip('Use --force to skip warnings (be careful!)');
           Logger.tip('Run "ai-instructions init" without options for interactive setup');

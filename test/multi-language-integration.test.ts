@@ -4,7 +4,6 @@
  * Tests for Issue: 多言語実装不備の完全修正
  */
 
-import { jest } from '@jest/globals';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { mkdtemp, rm } from 'fs/promises';
@@ -269,8 +268,6 @@ describe('🌍 Multi-Language Integration Tests', () => {
     });
 
     test('should validate language parameter in CLI validation', () => {
-      const { validateLanguage } = require('../src/cli');
-      
       // This will be used internally by the CLI validation
       expect(() => {
         const supportedLanguages = ['en', 'ja', 'ch'];
