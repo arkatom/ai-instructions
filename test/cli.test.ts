@@ -97,7 +97,7 @@ describe('CLI Error Handling', () => {
   });
 });
 
-describe.skip('CLI Isolated Environment Testing', () => {
+describe('CLI Isolated Environment Testing', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
   const isolatedTestDir = join(__dirname, './temp-isolated-test');
 
@@ -121,9 +121,9 @@ describe.skip('CLI Isolated Environment Testing', () => {
     // 必須ファイル・ディレクトリ構造確認
     expect(existsSync(join(isolatedTestDir, 'CLAUDE.md'))).toBe(true);
     expect(existsSync(join(isolatedTestDir, 'instructions'))).toBe(true);
-    expect(existsSync(join(isolatedTestDir, 'instructions', 'base.md'))).toBe(true);
-    expect(existsSync(join(isolatedTestDir, 'instructions', 'deep-think.md'))).toBe(true);
-    expect(existsSync(join(isolatedTestDir, 'instructions', 'KentBeck-tdd-rules.md'))).toBe(true);
+    expect(existsSync(join(isolatedTestDir, 'instructions', 'core', 'base.md'))).toBe(true);
+    expect(existsSync(join(isolatedTestDir, 'instructions', 'core', 'deep-think.md'))).toBe(true);
+    expect(existsSync(join(isolatedTestDir, 'instructions', 'methodologies', 'tdd.md'))).toBe(true);
   });
 
   it('should properly replace template variables in generated CLAUDE.md', () => {
@@ -137,7 +137,7 @@ describe.skip('CLI Isolated Environment Testing', () => {
     });
 
     const claudeContent = readFileSync(join(isolatedTestDir, 'CLAUDE.md'), 'utf-8');
-    expect(claudeContent).toContain(`#  開発指示 - ${projectName}`); // ツール名は空文字列に置換される（スペースが残る）
+    expect(claudeContent).toContain(`# 開発指示 - ${projectName}`);
     expect(claudeContent).not.toContain('{{projectName}}');
   });
 });
