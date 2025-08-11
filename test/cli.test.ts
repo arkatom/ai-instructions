@@ -60,7 +60,7 @@ describe('CLI Basic Functionality', () => {
   });
 });
 
-describe.skip('CLI Error Handling', () => {
+describe('CLI Error Handling', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
 
   it('should display error when output directory is invalid', () => {
