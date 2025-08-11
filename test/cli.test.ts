@@ -378,24 +378,37 @@ describe('CLI Init Command Integration', () => {
   });
 });
 
-describe.skip('CLI Multi-Tool Support', () => {
+describe('CLI Multi-Tool Support', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
   const testOutputDir = join(__dirname, './temp-cli-multi-tool-test');
+  const baseCwd = join(__dirname, '..');
+  const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
+
+  // 共通のCLI実行ヘルパー
+  const runCliInit = (projectName: string, options: string = '') => {
+    return execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${projectName}" ${options}`, { 
+      encoding: 'utf-8',
+      cwd: baseCwd,
+      env: testEnv
+    });
+  };
+
+  const runCliCommand = (command: string) => {
+    return execSync(`npx ts-node "${cliPath}" ${command}`, { 
+      encoding: 'utf-8',
+      cwd: baseCwd,
+      env: testEnv
+    });
+  };
 
   afterEach(async () => {
-    // テスト後のクリーンアップ
     if (existsSync(testOutputDir)) {
       await rm(testOutputDir, { recursive: true, force: true });
     }
   });
 
   it('should generate GitHub Copilot files with --tool github-copilot', () => {
-    // Act
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "copilot-project" --tool github-copilot --lang en`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('copilot-project', '--tool github-copilot --lang en');
     
     // Assert
     expect(result).toContain('Generated github-copilot template');
@@ -408,12 +421,7 @@ describe.skip('CLI Multi-Tool Support', () => {
   });
 
   it('should generate Cursor files with --tool cursor', () => {
-    // Act
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "cursor-project" --tool cursor`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('cursor-project', '--tool cursor');
     
     // Assert
     expect(result).toContain('Generated cursor template');
@@ -427,12 +435,7 @@ describe.skip('CLI Multi-Tool Support', () => {
   });
 
   it('should default to claude when --tool is not specified', () => {
-    // Act
-    const result = execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "default-project"`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliInit('default-project');
     
     // Assert - should generate Claude files by default
     expect(result).toContain('Generated claude template');
@@ -452,12 +455,7 @@ describe.skip('CLI Multi-Tool Support', () => {
   });
 
   it('should display tool option in help', () => {
-    // Act
-    const result = execSync(`npx ts-node "${cliPath}" init --help`, { 
-      encoding: 'utf-8',
-      cwd: join(__dirname, '..'),
-      env: { ...process.env, NODE_ENV: 'cli-test' }
-    });
+    const result = runCliCommand('init --help');
     
     // Assert
     expect(result).toContain('--tool');
