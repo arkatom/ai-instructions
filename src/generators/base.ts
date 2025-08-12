@@ -95,56 +95,66 @@ export abstract class BaseGenerator {
   /**
    * Load template file content
    */
+  /**
+   * Strategy for template search paths
+   */
+  private buildTemplatePaths(templateName: string, lang: string): Array<{path: string, description: string}> {
+    const paths = [
+      { path: join(this.templateDir, lang, templateName), description: `${lang} version` },
+    ];
+    
+    if (lang !== 'en') {
+      paths.push({ path: join(this.templateDir, 'en', templateName), description: 'English fallback' });
+    }
+    
+    paths.push({ path: join(this.templateDir, templateName), description: 'legacy version' });
+    
+    return paths;
+  }
+
+  /**
+   * Attempts to read template from a single path
+   */
+  private async tryReadTemplate(templatePath: string, templateName: string): Promise<string | null> {
+    if (!await FileUtils.fileExists(templatePath)) {
+      return null;
+    }
+    
+    try {
+      return await readFile(templatePath, 'utf-8');
+    } catch (error) {
+      throw new TemplateParsingError(templateName, error as Error);
+    }
+  }
+
+  /**
+   * Shows appropriate warning for fallback usage
+   */
+  private showFallbackWarning(templateName: string, lang: string, description: string): void {
+    if (description === 'English fallback') {
+      console.warn(`⚠️  Template ${templateName} not found for ${lang}, using English version`);
+    } else if (description === 'legacy version' && lang !== 'en') {
+      console.warn(`⚠️  Using legacy template ${templateName} (no language support yet)`);
+    }
+  }
+
   async loadTemplate(templateName: string, options?: GenerateFilesOptions): Promise<string> {
-    // Enhanced type validation
     const lang = options?.lang || DEFAULT_VALUES.LANGUAGE;
     
     if (!TypeGuards.isSupportedLanguage(lang)) {
       throw new UnsupportedLanguageError(lang, [...SUPPORTED_LANGUAGES]);
     }
     
-    const searchPaths: string[] = [];
+    const templatePaths = this.buildTemplatePaths(templateName, lang);
+    const searchPaths: string[] = templatePaths.map(p => p.path);
     
     try {
-      // Try language-specific path first
-      const langPath = join(this.templateDir, lang, templateName);
-      searchPaths.push(langPath);
-      
-      if (await FileUtils.fileExists(langPath)) {
-        try {
-          return await readFile(langPath, 'utf-8');
-        } catch (error) {
-          throw new TemplateParsingError(templateName, error as Error);
-        }
-      }
-      
-      // Fallback to English if not the requested language
-      if (lang !== 'en') {
-        const enPath = join(this.templateDir, 'en', templateName);
-        searchPaths.push(enPath);
-        
-        if (await FileUtils.fileExists(enPath)) {
-          console.warn(`⚠️  Template ${templateName} not found for ${lang}, using English version`);
-          try {
-            return await readFile(enPath, 'utf-8');
-          } catch (error) {
-            throw new TemplateParsingError(templateName, error as Error);
-          }
-        }
-      }
-      
-      // Legacy fallback (for migration period)
-      const legacyPath = join(this.templateDir, templateName);
-      searchPaths.push(legacyPath);
-      
-      if (await FileUtils.fileExists(legacyPath)) {
-        if (lang !== 'en') {
-          console.warn(`⚠️  Using legacy template ${templateName} (no language support yet)`);
-        }
-        try {
-          return await readFile(legacyPath, 'utf-8');
-        } catch (error) {
-          throw new TemplateParsingError(templateName, error as Error);
+      // Try each template path in order
+      for (const {path: templatePath, description} of templatePaths) {
+        const content = await this.tryReadTemplate(templatePath, templateName);
+        if (content !== null) {
+          this.showFallbackWarning(templateName, lang, description);
+          return content;
         }
       }
       
@@ -500,52 +510,72 @@ export abstract class BaseGenerator {
   /**
    * Validate tool configuration structure and required fields
    */
-  private validateToolConfiguration(config: unknown): string[] {
+  /**
+   * Required field validators for tool configuration
+   */
+  private static readonly TOOL_CONFIG_VALIDATORS = [
+    { field: 'displayName', type: 'string', message: 'displayName must be a string' },
+    { field: 'fileExtension', type: 'string', message: 'fileExtension must be a string' },  
+    { field: 'description', type: 'string', message: 'description must be a string' }
+  ];
+
+  /**
+   * Validates required fields of tool configuration
+   */
+  private validateRequiredFields(toolConfig: Record<string, unknown>): string[] {
     const errors: string[] = [];
     
-    if (typeof config !== 'object' || config === null) {
-      errors.push('Configuration must be an object');
+    for (const validator of BaseGenerator.TOOL_CONFIG_VALIDATORS) {
+      if (typeof toolConfig[validator.field] !== validator.type) {
+        errors.push(validator.message);
+      }
+    }
+    
+    return errors;
+  }
+
+  /**
+   * Validates globs structure in tool configuration
+   */
+  private validateGlobsStructure(toolConfig: Record<string, unknown>): string[] {
+    const errors: string[] = [];
+    const globs = toolConfig.globs;
+    
+    if (globs === undefined) return errors;
+    
+    if (typeof globs !== 'object' || globs === null) {
+      errors.push('globs must be an object');
       return errors;
     }
     
-    const toolConfig = config as Record<string, unknown>;
+    const globsConfig = globs as Record<string, unknown>;
     
-    // Validate required fields
-    if (typeof toolConfig.displayName !== 'string') {
-      errors.push('displayName must be a string');
+    if (globsConfig.inherit !== undefined && typeof globsConfig.inherit !== 'string') {
+      errors.push('globs.inherit must be a string');
     }
     
-    if (typeof toolConfig.fileExtension !== 'string') {
-      errors.push('fileExtension must be a string');
-    }
-    
-    if (typeof toolConfig.description !== 'string') {
-      errors.push('description must be a string');
-    }
-    
-    // Validate globs structure
-    if (toolConfig.globs !== undefined) {
-      if (typeof toolConfig.globs !== 'object' || toolConfig.globs === null) {
-        errors.push('globs must be an object');
-      } else {
-        const globs = toolConfig.globs as Record<string, unknown>;
-        
-        if (globs.inherit !== undefined && typeof globs.inherit !== 'string') {
-          errors.push('globs.inherit must be a string');
-        }
-        
-        if (globs.additional !== undefined) {
-          if (!Array.isArray(globs.additional)) {
-            errors.push('globs.additional must be an array');
-          } else {
-            const additional = globs.additional as unknown[];
-            if (!additional.every(item => typeof item === 'string')) {
-              errors.push('globs.additional must be an array of strings');
-            }
-          }
-        }
+    if (globsConfig.additional !== undefined) {
+      if (!Array.isArray(globsConfig.additional)) {
+        errors.push('globs.additional must be an array');
+      } else if (!globsConfig.additional.every(item => typeof item === 'string')) {
+        errors.push('globs.additional must be an array of strings');
       }
     }
+    
+    return errors;
+  }
+
+  private validateToolConfiguration(config: unknown): string[] {
+    if (typeof config !== 'object' || config === null) {
+      return ['Configuration must be an object'];
+    }
+    
+    const toolConfig = config as Record<string, unknown>;
+    const errors: string[] = [];
+    
+    // Validate required fields and globs structure
+    errors.push(...this.validateRequiredFields(toolConfig));
+    errors.push(...this.validateGlobsStructure(toolConfig));
     
     return errors;
   }

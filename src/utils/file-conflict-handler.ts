@@ -16,6 +16,14 @@ import { extname, join, dirname, basename, relative } from 'path';
 import inquirer from 'inquirer';
 import { EnvironmentService } from '../services/EnvironmentService';
 
+/**
+ * Represents a markdown section with header and content
+ */
+interface MarkdownSection {
+  header: string;
+  content: string[];
+}
+
 export enum ConflictResolution {
   BACKUP = 'backup',
   MERGE = 'merge', 
@@ -200,75 +208,77 @@ export class FileConflictHandler {
   /**
    * Merge markdown content by sections
    */
-  private mergeMarkdownContent(existing: string, newContent: string): string {
-    const existingLines = existing.split('\n');
-    const newLines = newContent.split('\n');
-    
-    const result: string[] = [];
-    const processedSections = new Set<string>();
-    
-    // Process new content first (new content takes precedence)
-    let i = 0;
-    while (i < newLines.length) {
-      const line = newLines[i];
-      
+
+
+  /**
+   * Parse markdown content into sections
+   */
+  private parseMarkdownSections(content: string): Map<string, MarkdownSection> {
+    const lines = content.split('\n');
+    const sections = new Map<string, MarkdownSection>();
+    let currentSection: MarkdownSection | null = null;
+
+    for (const line of lines) {
       if (line && line.startsWith('#')) {
-        // This is a header - check if it exists in existing content
-        const sectionName = line.trim();
-        processedSections.add(sectionName);
-        
-        // Add the new section
-        result.push(line);
-        i++;
-        
-        // Add content until next header or end
-        while (i < newLines.length && (newLines[i] === undefined || !newLines[i]!.startsWith('#'))) {
-          if (newLines[i] !== undefined) {
-            result.push(newLines[i]!);
-          }
-          i++;
+        // Save previous section if exists
+        if (currentSection) {
+          sections.set(currentSection.header, currentSection);
         }
-      } else {
-        if (line !== undefined) {
-          result.push(line);
-        }
-        i++;
+        
+        // Start new section
+        currentSection = { header: line.trim(), content: [] };
+      } else if (currentSection) {
+        currentSection.content.push(line);
       }
     }
     
-    // Add sections from existing content that weren't in new content
-    i = 0;
-    while (i < existingLines.length) {
-      const line = existingLines[i];
-      
-      if (line && line.startsWith('#')) {
-        const sectionName = line.trim();
-        
-        if (!processedSections.has(sectionName)) {
-          // This section wasn't in new content, so add it
-          result.push('', line); // Add blank line before section
-          i++;
-          
-          // Add content until next header or end
-          while (i < existingLines.length && (existingLines[i] === undefined || !existingLines[i]!.startsWith('#'))) {
-            if (existingLines[i] !== undefined) {
-              result.push(existingLines[i]!);
-            }
-            i++;
-          }
-        } else {
-          // Skip this section as it was already processed
-          i++;
-          while (i < existingLines.length && (existingLines[i] === undefined || !existingLines[i]!.startsWith('#'))) {
-            i++;
-          }
-        }
-      } else {
-        i++;
+    // Save final section
+    if (currentSection) {
+      sections.set(currentSection.header, currentSection);
+    }
+    
+    return sections;
+  }
+
+  /**
+   * Merge section maps, giving precedence to new sections
+   */
+  private mergeSectionMaps(
+    existing: Map<string, MarkdownSection>, 
+    newSections: Map<string, MarkdownSection>
+  ): Map<string, MarkdownSection> {
+    const merged = new Map(newSections); // Start with new sections (they have precedence)
+    
+    // Add existing sections that aren't in new sections
+    for (const [header, section] of existing) {
+      if (!merged.has(header)) {
+        merged.set(header, section);
       }
+    }
+    
+    return merged;
+  }
+
+  /**
+   * Convert sections map back to markdown string
+   */
+  private sectionsToMarkdown(sections: Map<string, MarkdownSection>): string {
+    const result: string[] = [];
+    
+    for (const section of sections.values()) {
+      result.push(section.header);
+      result.push(...section.content);
     }
     
     return result.join('\n');
+  }
+
+  private mergeMarkdownContent(existing: string, newContent: string): string {
+    const existingSections = this.parseMarkdownSections(existing);
+    const newSections = this.parseMarkdownSections(newContent);
+    
+    const mergedSections = this.mergeSectionMaps(existingSections, newSections);
+    return this.sectionsToMarkdown(mergedSections);
   }
 
   /**
