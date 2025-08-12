@@ -192,7 +192,7 @@ relationships:
       await mkdir(join(tempDir, 'metadata'), { recursive: true });
       await writeFile(join(tempDir, 'metadata', 'README.md'), '# README');
       await writeFile(
-        join(tempDir, 'metadata', 'agent.yaml'),
+        join(tempDir, 'metadata', 'valid-agent.yaml'),
         `
 name: valid-agent
 category: test
@@ -335,6 +335,96 @@ relationships:
       // ASSERT - Should be different instances
       expect(firstLoad).not.toBe(secondLoad);
       expect(firstLoad).toEqual(secondLoad); // But same content
+    });
+
+    test('should respect cache TTL', async () => {
+      // ARRANGE - Create loader with short TTL
+      const shortTtlLoader = new AgentMetadataLoader(tempDir, { ttlMs: 100 });
+      const content = `
+name: ttl-test
+category: test
+description: TTL test agent
+tags: []
+relationships:
+  requires: []
+  enhances: []
+  collaborates_with: []
+  conflicts_with: []
+`;
+      await mkdir(join(tempDir, 'metadata'), { recursive: true });
+      await writeFile(join(tempDir, 'metadata', 'ttl-test.yaml'), content);
+
+      // ACT
+      const firstLoad = await shortTtlLoader.loadAgentMetadata('ttl-test');
+      
+      // Wait for TTL to expire
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      const secondLoad = await shortTtlLoader.loadAgentMetadata('ttl-test');
+
+      // ASSERT - Should be different instances due to TTL expiry
+      expect(firstLoad).not.toBe(secondLoad);
+      expect(firstLoad).toEqual(secondLoad); // But same content
+    });
+
+    test('should manage cache size with eviction', async () => {
+      // ARRANGE - Create loader with small cache
+      const smallCacheLoader = new AgentMetadataLoader(tempDir, { maxSize: 2 });
+      await mkdir(join(tempDir, 'metadata'), { recursive: true });
+
+      // Create multiple agents
+      for (let i = 1; i <= 4; i++) {
+        const content = `
+name: agent-${i}
+category: test
+description: Test agent ${i}
+tags: []
+relationships:
+  requires: []
+  enhances: []
+  collaborates_with: []
+  conflicts_with: []
+`;
+        await writeFile(join(tempDir, 'metadata', `agent-${i}.yaml`), content);
+      }
+
+      // ACT - Load agents to fill and exceed cache
+      await smallCacheLoader.loadAgentMetadata('agent-1');
+      await smallCacheLoader.loadAgentMetadata('agent-2');
+      await smallCacheLoader.loadAgentMetadata('agent-3'); // Should trigger eviction
+      await smallCacheLoader.loadAgentMetadata('agent-4');
+
+      // ASSERT - Cache should not exceed max size
+      const stats = smallCacheLoader.getCacheStats();
+      expect(stats.size).toBeLessThanOrEqual(stats.maxSize);
+      expect(stats.maxSize).toBe(2);
+    });
+
+    test('should provide cache statistics', async () => {
+      // ARRANGE
+      const content = `
+name: stats-test
+category: test
+description: Stats test agent
+tags: []
+relationships:
+  requires: []
+  enhances: []
+  collaborates_with: []
+  conflicts_with: []
+`;
+      await mkdir(join(tempDir, 'metadata'), { recursive: true });
+      await writeFile(join(tempDir, 'metadata', 'stats-test.yaml'), content);
+
+      // ACT
+      const initialStats = loader.getCacheStats();
+      await loader.loadAgentMetadata('stats-test');
+      const afterLoadStats = loader.getCacheStats();
+
+      // ASSERT
+      expect(initialStats.size).toBe(0);
+      expect(afterLoadStats.size).toBe(1);
+      expect(afterLoadStats.maxSize).toBe(1000); // Default max size
     });
   });
 
