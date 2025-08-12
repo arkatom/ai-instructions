@@ -1,130 +1,224 @@
 /**
- * Unified error handler tests
- * Issue #67: Standardize error handling across CLI commands
+ * Test suite for ErrorHandler utility
+ * Issue #46: Error handling improvement
  */
 
-import { describe, it, expect, jest } from '@jest/globals';
+import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { ErrorHandler } from '../../src/utils/error-handler';
-import { SecurityError } from '../../src/utils/security';
-
-// Mock the Logger to avoid console output during tests
-jest.mock('../../src/utils/logger', () => ({
-  Logger: {
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-    tip: jest.fn()
-  }
-}));
-
-// Mock InteractiveUtils
-jest.mock('../../src/init/interactive', () => ({
-  InteractiveUtils: {
-    canRunInteractive: jest.fn().mockReturnValue(false)
-  }
-}));
+import {
+  ConfigValidationError,
+  FileSystemError,
+  NetworkError,
+  SecurityError,
+  ValidationError
+} from '../../src/errors/custom-errors';
+import chalk from 'chalk';
 
 describe('ErrorHandler', () => {
+  let mockConsoleError: jest.SpiedFunction<typeof console.error>;
+  let mockConsoleWarn: jest.SpiedFunction<typeof console.warn>;
+  let mockProcessExit: jest.SpiedFunction<typeof process.exit>;
+
   beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe('handleCommandError', () => {
-    it('should re-throw error in test environment', () => {
-      const error = new Error('Test error');
-      
-      expect(() => {
-        ErrorHandler.handleCommandError(error, undefined, true);
-      }).toThrow('Test error');
-    });
-
-    it('should handle SecurityError with special formatting', () => {
-      const securityError = new SecurityError('path_traversal', 'Path traversal detected', 'details');
-      
-      const result = ErrorHandler.handleCommandError(securityError, { operation: 'file validation' }, false);
-      
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Security violation during file validation: Path traversal detected');
-    });
-
-    it('should handle validation errors', () => {
-      const validationError = new Error('Invalid project name');
-      
-      const result = ErrorHandler.handleCommandError(validationError, undefined, false);
-      
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Validation error: Invalid project name');
-    });
-
-    it('should handle file system errors', () => {
-      const fileError = new Error('ENOENT: no such file or directory');
-      
-      const result = ErrorHandler.handleCommandError(fileError, { operation: 'file creation' }, false);
-      
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('File system error during file creation: ENOENT: no such file or directory');
-    });
-
-    it('should provide suggestions when given', () => {
-      const error = new Error('Generic error');
-      const context = {
-        operation: 'initialization',
-        suggestions: ['Try using --force flag', 'Check file permissions']
-      };
-      
-      const result = ErrorHandler.handleCommandError(error, context, false);
-      
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Error during initialization: Generic error');
-    });
-
-    it('should handle unknown error types', () => {
-      const unknownError = 'String error';
-      
-      const result = ErrorHandler.handleCommandError(unknownError, undefined, false);
-      
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Error: String error');
+    // Mock console methods for each test
+    mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockConsoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    
+    // Create a custom mock for process.exit that doesn't actually exit
+    mockProcessExit = jest.spyOn(process, 'exit').mockImplementation((code?: string | number | null | undefined) => {
+      throw new Error(`process.exit(${code})`);
     });
   });
 
-  describe('handleValidationError', () => {
-    it('should format validation errors properly', () => {
-      const errors = ['Project name is invalid', 'Language not supported'];
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  describe('displayError', () => {
+    test('should handle ConfigValidationError correctly', () => {
+      const error = new ConfigValidationError('Invalid configuration', { field: 'test' });
       
-      const result = ErrorHandler.handleValidationError(errors, 'command validation');
+      const exitCode = ErrorHandler.displayError(error);
       
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Validation failed during command validation: Project name is invalid; Language not supported');
+      expect(exitCode).toBe(2);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('❌ Configuration Error:'),
+        'Invalid configuration'
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('💡 Tip: Check your .ai-instructions.json format')
+      );
     });
 
-    it('should handle single validation error', () => {
-      const errors = ['Output path is required'];
+    test('should handle FileSystemError with path', () => {
+      const error = new FileSystemError('File not found', '/path/to/file');
       
-      const result = ErrorHandler.handleValidationError(errors);
+      const exitCode = ErrorHandler.displayError(error);
       
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Validation failed: Output path is required');
+      expect(exitCode).toBe(3);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('❌ File System Error:'),
+        'File not found'
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('📁 Path: /path/to/file')
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('💡 Tip: Check file permissions and path')
+      );
+    });
+
+    test('should handle NetworkError with status code', () => {
+      const error = new NetworkError('Request failed', 404);
+      
+      const exitCode = ErrorHandler.displayError(error);
+      
+      expect(exitCode).toBe(4);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('❌ Network Error:'),
+        'Request failed'
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('🌐 Status Code: 404')
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('💡 Tip: Check your internet connection and API endpoints')
+      );
+    });
+
+    test('should handle SecurityError', () => {
+      const error = new SecurityError('path_traversal', 'Unauthorized access', '../../../etc');
+      
+      const exitCode = ErrorHandler.displayError(error);
+      
+      expect(exitCode).toBe(5);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('🔒 Security Error:'),
+        'Unauthorized access'
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('⚠️  Violation Type: path_traversal')
+      );
+    });
+
+    test('should handle ValidationError with field info', () => {
+      const error = new ValidationError('Invalid input', 'email', 'not-an-email');
+      
+      const exitCode = ErrorHandler.displayError(error);
+      
+      expect(exitCode).toBe(6);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('❌ Validation Error:'),
+        'Invalid input'
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('📝 Field: email')
+      );
+    });
+
+    test('should handle unknown errors', () => {
+      const error = new Error('Something went wrong');
+      
+      const exitCode = ErrorHandler.displayError(error);
+      
+      expect(exitCode).toBe(99);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('❌ Unexpected Error:'),
+        error
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('💡 Please report this issue: https://github.com/arkatom/ai-instructions/issues')
+      );
+    });
+
+    test('should show debug info when DEBUG env is set', () => {
+      process.env.DEBUG = 'true';
+      const error = new ConfigValidationError('Test error', { testData: 'value' });
+      
+      const exitCode = ErrorHandler.displayError(error);
+      
+      expect(exitCode).toBe(2);
+      
+      // Should include debug information - check if the debug line was called
+      const calls = mockConsoleError.mock.calls;
+      const hasDebugInfo = calls.some(call => 
+        call[0] === chalk.gray('\n📊 Debug Information:')
+      );
+      expect(hasDebugInfo).toBe(true);
+      
+      delete process.env.DEBUG;
     });
   });
 
-  describe('handleSecurityError', () => {
-    it('should handle SecurityError with details', () => {
-      const securityError = new SecurityError('unauthorized_access', 'Access denied', 'Attempted to access /etc/passwd');
+  describe('handleError', () => {
+    test('should call process.exit with correct code', () => {
+      const error = new ConfigValidationError('Test error');
       
-      const result = ErrorHandler.handleSecurityError(securityError, 'path validation');
+      expect(() => ErrorHandler.handleError(error)).toThrow('process.exit(2)');
+      expect(mockProcessExit).toHaveBeenCalledWith(2);
+    });
+  });
+
+  describe('handleWithRetry', () => {
+    test('should succeed on first try', async () => {
+      const operation = jest.fn<() => Promise<string>>().mockResolvedValue('success');
       
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Security violation during path validation: Access denied');
+      const result = await ErrorHandler.handleWithRetry(operation);
+      
+      expect(result).toBe('success');
+      expect(operation).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle SecurityError without details', () => {
-      const securityError = new SecurityError('json_injection', 'Malicious JSON detected');
+    test('should retry on failure and succeed', async () => {
+      const operation = jest.fn<() => Promise<string>>()
+        .mockRejectedValueOnce(new NetworkError('fail 1'))  // Use retryable error
+        .mockRejectedValueOnce(new NetworkError('fail 2'))  // Use retryable error
+        .mockResolvedValue('success');
       
-      const result = ErrorHandler.handleSecurityError(securityError);
+      const result = await ErrorHandler.handleWithRetry(operation, 3, 10);
       
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Security violation: Malicious JSON detected');
+      expect(result).toBe('success');
+      expect(operation).toHaveBeenCalledTimes(3);
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('⏳ Retrying... (1/3)')
+      );
+      expect(mockConsoleWarn).toHaveBeenCalledWith(
+        chalk.yellow('⏳ Retrying... (2/3)')
+      );
+    });
+
+    test('should throw after max retries', async () => {
+      const error = new NetworkError('persistent failure');  // Use retryable error
+      const operation = jest.fn<() => Promise<void>>().mockRejectedValue(error);
+      
+      await expect(ErrorHandler.handleWithRetry(operation, 3, 10))
+        .rejects.toThrow('persistent failure');
+      
+      expect(operation).toHaveBeenCalledTimes(3);
+    });
+
+    test('should not retry for non-retryable errors', async () => {
+      const error = new ValidationError('Invalid input');
+      const operation = jest.fn<() => Promise<void>>().mockRejectedValue(error);
+      
+      await expect(ErrorHandler.handleWithRetry(operation, 3, 10))
+        .rejects.toThrow('Invalid input');
+      
+      expect(operation).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('isRetryableError', () => {
+    test('should identify retryable errors', () => {
+      expect(ErrorHandler.isRetryableError(new NetworkError('timeout'))).toBe(true);
+      expect(ErrorHandler.isRetryableError(new FileSystemError('ENOENT'))).toBe(true);
+      expect(ErrorHandler.isRetryableError(new Error('ETIMEDOUT'))).toBe(true);
+    });
+
+    test('should identify non-retryable errors', () => {
+      expect(ErrorHandler.isRetryableError(new ValidationError('invalid'))).toBe(false);
+      expect(ErrorHandler.isRetryableError(new ConfigValidationError('invalid'))).toBe(false);
+      expect(ErrorHandler.isRetryableError(new SecurityError('violation', 'test'))).toBe(false);
     });
   });
 });

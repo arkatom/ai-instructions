@@ -249,8 +249,7 @@ describe('InteractiveInitializer', () => {
         if (pathStr.endsWith('templates')) return true;
         if (pathStr.endsWith('instructions')) return true;
         if (pathStr.endsWith('agents')) return false; // Missing agents
-        if (pathStr.endsWith('configs')) return true;
-        return false;
+        return pathStr.endsWith('configs');
       });
 
       // Act
