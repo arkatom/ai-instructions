@@ -12,6 +12,7 @@ import { InitCommand } from './cli/commands/InitCommand';
 import { EnvironmentService } from './services/EnvironmentService';
 import { InitCommandArgs, CommanderInitOptions } from './cli/interfaces/CommandArgs';
 import { Logger } from './utils/logger';
+import { ErrorHandler } from './utils/error-handler';
 import { InteractivePrompts } from './init/prompts';
 import { InteractiveInitializer } from './init/interactive';
 
@@ -123,8 +124,8 @@ class CLICoordinator {
       }
 
     } catch (error) {
-      Logger.error('Unexpected error:', error);
-      process.exit(1);
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      ErrorHandler.handleError(errorObj);
     }
   }
 
@@ -164,7 +165,7 @@ export { CLICoordinator };
 // Run CLI if called directly
 if (require.main === module) {
   main().catch((error) => {
-    Logger.error('CLI execution failed:', error);
-    process.exit(1);
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    ErrorHandler.handleError(errorObj);
   });
 }

@@ -289,8 +289,8 @@ program
       } else {
         if (error instanceof SecurityError) {
           Logger.error('Security violation:', error.message);
-          if (error.details) {
-            Logger.debug(`Security details: ${error.details}`);
+          if (error.context) {
+            Logger.debug(`Security details: ${error.context}`);
           }
           process.exit(1);
         }
@@ -316,8 +316,8 @@ program
     } catch (error) {
       if (error instanceof SecurityError) {
         Logger.error('Security violation:', error.message);
-        if (error.details) {
-          Logger.debug(`Security details: ${error.details}`);
+        if (error.context) {
+          Logger.debug(`Security details: ${error.context}`);
         }
         process.exit(1);
       }

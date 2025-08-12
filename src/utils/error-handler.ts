@@ -1,194 +1,296 @@
 /**
- * Unified error handling utility
- * Issue #67: Standardize error handling across CLI commands
+ * Error handler utility for consistent error handling
+ * Issue #46: Error handling improvement
  */
 
-import { SecurityError } from './security';
-import { Logger } from './logger';
-import { InteractiveUtils } from '../init/interactive';
-import { CommandResult } from '../cli/interfaces/CommandResult';
+import chalk from 'chalk';
+import {
+  ApplicationError,
+  ConfigValidationError,
+  FileSystemError,
+  NetworkError,
+  SecurityError,
+  ValidationError,
+  getExitCode
+} from '../errors/custom-errors';
 
-/**
- * Error types for categorization
- */
-export enum ErrorType {
-  SECURITY = 'security',
-  VALIDATION = 'validation',
-  FILE_SYSTEM = 'filesystem', 
-  NETWORK = 'network',
-  CONFIGURATION = 'configuration',
-  UNKNOWN = 'unknown'
-}
-
-/**
- * Error context for detailed error handling
- */
-export interface ErrorContext {
-  operation: string;
-  details?: string;
-  suggestions?: string[];
-  isRecoverable?: boolean;
-}
-
-/**
- * Unified error handler for CLI commands
- */
 export class ErrorHandler {
   /**
-   * Handle errors uniformly across CLI commands
-   * @param error - The error to handle
-   * @param context - Optional context for better error messages
-   * @param isTestEnvironment - Whether we're in test mode (throws instead of logging)
-   * @returns CommandResult for CLI commands
+   * Display main error message
+   */
+  private static displayMainError(icon: string, type: string, message: string): void {
+    console.error(chalk.red(`${icon} ${type}:`), message);
+  }
+  
+  /**
+   * Display warning or additional information
+   */
+  private static displayWarning(icon: string, content: string): void {
+    console.warn(chalk.yellow(`${icon} ${content}`));
+  }
+  
+  /**
+   * Display debug information
+   */
+  private static displayDebugInfo(data: unknown, label: string = 'Debug Information'): void {
+    if (process.env.DEBUG) {
+      console.error(chalk.gray(`\n📊 ${label}:`));
+      console.error(chalk.gray(typeof data === 'string' ? data : JSON.stringify(data, null, 2)));
+    }
+  }
+  
+  /**
+   * Display ConfigValidationError
+   */
+  private static displayConfigError(error: ConfigValidationError): void {
+    this.displayMainError('❌', 'Configuration Error', error.message);
+    this.displayWarning('💡', 'Tip: Check your .ai-instructions.json format');
+    if (error.details) {
+      this.displayDebugInfo(error.details);
+    }
+  }
+  
+  /**
+   * Display FileSystemError
+   */
+  private static displayFileSystemError(error: FileSystemError): void {
+    this.displayMainError('❌', 'File System Error', error.message);
+    if (error.path) {
+      this.displayWarning('📁', `Path: ${error.path}`);
+    }
+    this.displayWarning('💡', 'Tip: Check file permissions and path');
+  }
+  
+  /**
+   * Display NetworkError
+   */
+  private static displayNetworkError(error: NetworkError): void {
+    this.displayMainError('❌', 'Network Error', error.message);
+    if (error.statusCode) {
+      this.displayWarning('🌐', `Status Code: ${error.statusCode}`);
+    }
+    this.displayWarning('💡', 'Tip: Check your internet connection and API endpoints');
+  }
+  
+  /**
+   * Display SecurityError
+   */
+  private static displaySecurityError(error: SecurityError): void {
+    this.displayMainError('🔒', 'Security Error', error.message);
+    this.displayWarning('⚠️ ', `Violation Type: ${error.violationType}`);
+    if (error.context) {
+      this.displayDebugInfo(`Context: ${error.context}`);
+    }
+  }
+  
+  /**
+   * Display ValidationError
+   */
+  private static displayValidationError(error: ValidationError): void {
+    this.displayMainError('❌', 'Validation Error', error.message);
+    if (error.field) {
+      this.displayWarning('📝', `Field: ${error.field}`);
+    }
+    if (error.value) {
+      this.displayDebugInfo(`Value: ${JSON.stringify(error.value)}`);
+    }
+  }
+  
+  /**
+   * Display unknown error
+   */
+  private static displayUnknownError(error: Error): void {
+    console.error(chalk.red('❌ Unexpected Error:'), error);
+    this.displayWarning('💡', 'Please report this issue: https://github.com/arkatom/ai-instructions/issues');
+  }
+  
+  /**
+   * Display generic debug info for errors
+   */
+  private static displayGenericDebugInfo(error: Error): void {
+    if (!(error instanceof ApplicationError) || 
+        (!('details' in error) && !('context' in error) && !('value' in error))) {
+      this.displayDebugInfo(error.stack || error.toString());
+    }
+  }
+  
+  /**
+   * Display error message and return exit code
+   */
+  static displayError(error: Error): number {
+    const exitCode = getExitCode(error);
+    
+    if (error instanceof ConfigValidationError) {
+      this.displayConfigError(error);
+    } else if (error instanceof FileSystemError) {
+      this.displayFileSystemError(error);
+    } else if (error instanceof NetworkError) {
+      this.displayNetworkError(error);
+    } else if (error instanceof SecurityError) {
+      this.displaySecurityError(error);
+    } else if (error instanceof ValidationError) {
+      this.displayValidationError(error);
+    } else {
+      this.displayUnknownError(error);
+    }
+    
+    // Show debug info for all errors when DEBUG is set
+    this.displayGenericDebugInfo(error);
+    
+    return exitCode;
+  }
+  
+  /**
+   * Handle errors with appropriate messages and exit codes
+   */
+  static handleError(error: Error): never {
+    const exitCode = this.displayError(error);
+    process.exit(exitCode);
+  }
+  
+  /**
+   * Handle command execution errors
    */
   static handleCommandError(
-    error: unknown, 
-    context?: ErrorContext, 
-    isTestEnvironment?: boolean
-  ): CommandResult {
-    // In test environment, re-throw for proper test handling
-    // Explicit isTestEnvironment parameter takes precedence
-    if (isTestEnvironment === true || (isTestEnvironment === undefined && process.env.NODE_ENV === 'test')) {
-      throw error;
-    }
-
-    const errorType = this.categorizeError(error);
-    const errorMessage = this.formatErrorMessage(error, errorType, context);
+    error: unknown,
+    context?: Record<string, unknown>,
+    shouldExit: boolean = true
+  ): { success: false; error: string } {
+    const err = error as Error;
     
-    // Log appropriate level based on error type
-    switch (errorType) {
-      case ErrorType.SECURITY:
-        Logger.error(errorMessage);
-        if (error instanceof SecurityError && error.details) {
-          Logger.debug(`Security details: ${error.details}`);
+    // Display error
+    const exitCode = this.displayError(err);
+    
+    // Log context in debug mode
+    if (context) {
+      this.displayDebugInfo(context, 'Context');
+    }
+    
+    // Exit if required
+    if (shouldExit) {
+      process.exit(exitCode);
+    }
+    
+    // Return error result for command
+    return {
+      success: false,
+      error: this.formatUserMessage(err)
+    };
+  }
+  
+  /**
+   * Execute an operation with retry logic
+   */
+  static async handleWithRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    delay: number = 1000
+  ): Promise<T> {
+    let lastError: Error | undefined;
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Don't retry for non-retryable errors
+        if (!this.isRetryableError(lastError)) {
+          throw lastError;
         }
-        break;
-      
-      case ErrorType.VALIDATION:
-        Logger.warn(errorMessage);
-        break;
         
-      case ErrorType.FILE_SYSTEM:
-        Logger.error(errorMessage);
-        break;
-        
-      default:
-        Logger.error(errorMessage);
-        
-        // Provide interactive mode tip for general errors
-        if (!InteractiveUtils.canRunInteractive()) {
-          Logger.tip('Interactive mode unavailable. Use command-line options.');
+        if (i < maxRetries - 1) {
+          console.warn(chalk.yellow(`⏳ Retrying... (${i + 1}/${maxRetries})`));
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
-    }
-
-    // Add suggestions if provided
-    if (context?.suggestions) {
-      context.suggestions.forEach(suggestion => Logger.tip(suggestion));
-    }
-
-    return {
-      success: false,
-      error: errorMessage
-    };
-  }
-
-  /**
-   * Categorize error by type for appropriate handling
-   */
-  private static categorizeError(error: unknown): ErrorType {
-    if (error instanceof SecurityError) {
-      return ErrorType.SECURITY;
-    }
-
-    if (error instanceof Error) {
-      const message = error.message.toLowerCase();
-      
-      if (message.includes('validation') || message.includes('invalid')) {
-        return ErrorType.VALIDATION;
-      }
-      
-      if (message.includes('enoent') || message.includes('file') || message.includes('directory')) {
-        return ErrorType.FILE_SYSTEM;
-      }
-      
-      if (message.includes('network') || message.includes('timeout') || message.includes('connection')) {
-        return ErrorType.NETWORK;
-      }
-      
-      if (message.includes('config') || message.includes('setting')) {
-        return ErrorType.CONFIGURATION;
       }
     }
     
-    return ErrorType.UNKNOWN;
+    throw lastError;
   }
-
+  
   /**
-   * Format error message consistently
+   * Determine if an error is retryable
    */
-  private static formatErrorMessage(
-    error: unknown, 
-    errorType: ErrorType, 
-    context?: ErrorContext
-  ): string {
-    const baseMessage = error instanceof Error ? error.message : String(error);
-    const operation = context?.operation ? ` during ${context.operation}` : '';
-    
-    switch (errorType) {
-      case ErrorType.SECURITY:
-        return `Security violation${operation}: ${baseMessage}`;
-        
-      case ErrorType.VALIDATION:
-        return `Validation error${operation}: ${baseMessage}`;
-        
-      case ErrorType.FILE_SYSTEM:
-        return `File system error${operation}: ${baseMessage}`;
-        
-      case ErrorType.NETWORK:
-        return `Network error${operation}: ${baseMessage}`;
-        
-      case ErrorType.CONFIGURATION:
-        return `Configuration error${operation}: ${baseMessage}`;
-        
-      default:
-        return `Error${operation}: ${baseMessage}`;
-    }
-  }
-
-  /**
-   * Handle validation errors specifically
-   */
-  static handleValidationError(
-    errors: string[], 
-    operation?: string
-  ): CommandResult {
-    const errorMessage = `Validation failed${operation ? ` during ${operation}` : ''}: ${errors.join('; ')}`;
-    Logger.warn(errorMessage);
-    
-    return {
-      success: false,
-      error: errorMessage
-    };
-  }
-
-  /**
-   * Handle security errors with extra details
-   */
-  static handleSecurityError(
-    error: SecurityError, 
-    operation?: string
-  ): CommandResult {
-    const errorMessage = `Security violation${operation ? ` during ${operation}` : ''}: ${error.message}`;
-    
-    Logger.error(errorMessage);
-    
-    if (error.details) {
-      Logger.debug(`Security details: ${error.details}`);
+  static isRetryableError(error: Error): boolean {
+    // Network errors are typically retryable
+    if (error instanceof NetworkError) {
+      return true;
     }
     
-    return {
-      success: false,
-      error: errorMessage
-    };
+    // Some file system errors are retryable
+    if (error instanceof FileSystemError) {
+      const retryableMessages = ['ENOENT', 'EACCES', 'EMFILE', 'ENFILE'];
+      return retryableMessages.some(msg => error.message.includes(msg));
+    }
+    
+    // Generic network-related error messages
+    const retryablePatterns = [
+      'ETIMEDOUT',
+      'ECONNREFUSED',
+      'ENOTFOUND',
+      'ENETUNREACH',
+      'EAI_AGAIN',
+      'timeout',
+      'socket hang up'
+    ];
+    
+    return retryablePatterns.some(pattern => 
+      error.message.toLowerCase().includes(pattern.toLowerCase())
+    );
+  }
+  
+  /**
+   * Wrap an async operation with error handling
+   */
+  static async wrapAsync<T>(
+    operation: () => Promise<T>,
+    errorMessage?: string
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof ApplicationError) {
+        throw error;
+      }
+      
+      // Wrap unknown errors
+      const message = errorMessage || 'Operation failed';
+      const errorDetail = error instanceof Error 
+        ? error.message 
+        : error != null 
+          ? String(error) 
+          : 'Unknown error occurred';
+      throw new ApplicationError('OPERATION_FAILED', `${message}: ${errorDetail}`);
+    }
+  }
+  
+  /**
+   * Create a user-friendly error message
+   */
+  static formatUserMessage(error: Error): string {
+    if (error instanceof ApplicationError) {
+      return error.message;
+    }
+    
+    // Simplify technical error messages
+    const technicalPatterns = new Map([
+      [/ENOENT.*no such file or directory/i, 'File or directory not found'],
+      [/EACCES.*permission denied/i, 'Permission denied'],
+      [/EEXIST.*file already exists/i, 'File already exists'],
+      [/EISDIR.*illegal operation on a directory/i, 'Cannot perform this operation on a directory'],
+      [/ENOTDIR.*not a directory/i, 'Path is not a directory'],
+      [/EMFILE.*too many open files/i, 'Too many files open'],
+      [/ENOSPC.*no space left on device/i, 'Not enough disk space'],
+      [/EROFS.*read-only file system/i, 'File system is read-only']
+    ]);
+    
+    for (const [pattern, message] of technicalPatterns) {
+      if (pattern.test(error.message)) {
+        return message;
+      }
+    }
+    
+    return error.message;
   }
 }

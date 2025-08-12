@@ -6,17 +6,10 @@
 import { resolve, normalize, isAbsolute, sep } from 'path';
 import { realpathSync, existsSync, lstatSync } from 'fs';
 import { Logger } from './logger';
+import { SecurityError } from '../errors/custom-errors';
 
-export class SecurityError extends Error {
-  constructor(
-    public readonly type: 'path_traversal' | 'unauthorized_access' | 'invalid_characters' | 'json_injection' | 'symlink_attack',
-    message: string,
-    public readonly details?: string
-  ) {
-    super(message);
-    this.name = 'SecurityError';
-  }
-}
+// Re-export for backward compatibility
+export { SecurityError };
 
 export class PathValidator {
   private static readonly FORBIDDEN_PATTERNS = [
