@@ -1,6 +1,7 @@
 const js = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const importPlugin = require('eslint-plugin-import');
+const sonarjs = require('eslint-plugin-sonarjs');
 
 module.exports = tseslint.config(
   js.configs.recommended,
@@ -23,7 +24,8 @@ module.exports = tseslint.config(
   {
     files: ['src/**/*.ts', 'test/**/*.ts'],
     plugins: {
-      import: importPlugin
+      import: importPlugin,
+      sonarjs: sonarjs
     },
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', {
@@ -45,7 +47,17 @@ module.exports = tseslint.config(
       
       // Enforce ES6 imports over CommonJS require
       '@typescript-eslint/no-var-requires': 'error',
-      '@typescript-eslint/no-require-imports': 'error'
+      '@typescript-eslint/no-require-imports': 'error',
+      
+      // SonarJS code quality rules
+      'sonarjs/cognitive-complexity': ['error', 15],
+      'sonarjs/no-duplicate-string': ['error', { threshold: 5 }],
+      'sonarjs/no-identical-functions': 'error',
+      'sonarjs/no-redundant-boolean': 'error',
+      'sonarjs/no-unused-collection': 'error',
+      'sonarjs/prefer-immediate-return': 'error',
+      'sonarjs/prefer-object-literal': 'error',
+      'sonarjs/prefer-single-boolean-return': 'error'
     },
     settings: {
       'import/resolver': {
@@ -72,7 +84,10 @@ module.exports = tseslint.config(
           'message': 'Parent directory navigation (../..) is forbidden in tests - use isolated test directories'
         }
       ],
-      // Focus on specific contamination patterns only
+      
+      // Relax SonarJS rules for test files
+      'sonarjs/no-duplicate-string': ['error', { threshold: 15 }],
+      'sonarjs/prefer-single-boolean-return': 'warn'
     }
   }
 );

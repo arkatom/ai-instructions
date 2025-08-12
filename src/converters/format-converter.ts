@@ -67,12 +67,8 @@ export abstract class BaseFormatConverter implements FormatConverter {
    * Basic content validation - checks for non-empty content
    */
   validateContent(content: string, _format: OutputFormat): boolean {
-    if (!content || content.trim().length === 0) {
-      return false;
-    }
-    
     // Format-specific validation can be overridden in subclasses
-    return true;
+    return Boolean(content && content.trim().length > 0);
   }
 
   /**
