@@ -8,7 +8,7 @@ import { join } from 'path';
 import { mkdirSync, rmSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 
-describe.skip('Path Traversal Security Tests - TODO: Update after error handler integration', () => {
+describe.skip('Path Traversal Security Tests - Need adjustment for new error handling', () => {
   let testDir: string;
   let projectRoot: string;
 
