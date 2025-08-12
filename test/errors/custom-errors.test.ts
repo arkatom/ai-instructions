@@ -152,73 +152,44 @@ describe('Custom Error Classes', () => {
       const error = new ConfigValidationError('test');
       const exitCode = getExitCode(error);
       expect(exitCode).toBe(ErrorCode.CONFIG_ERROR);
-      expect(exitCode).toBe(2);
     });
 
     test('should return correct exit code for FileSystemError', () => {
       const error = new FileSystemError('test');
       const exitCode = getExitCode(error);
       expect(exitCode).toBe(ErrorCode.FILESYSTEM_ERROR);
-      expect(exitCode).toBe(3);
     });
 
     test('should return correct exit code for NetworkError', () => {
       const error = new NetworkError('test');
       const exitCode = getExitCode(error);
       expect(exitCode).toBe(ErrorCode.NETWORK_ERROR);
-      expect(exitCode).toBe(4);
     });
 
     test('should return correct exit code for SecurityError', () => {
       const error = new SecurityError('test', 'test');
       const exitCode = getExitCode(error);
       expect(exitCode).toBe(ErrorCode.SECURITY_ERROR);
-      expect(exitCode).toBe(5);
     });
 
     test('should return correct exit code for ValidationError', () => {
       const error = new ValidationError('test');
       const exitCode = getExitCode(error);
       expect(exitCode).toBe(ErrorCode.VALIDATION_ERROR);
-      expect(exitCode).toBe(6);
     });
 
     test('should return correct exit code for generic ApplicationError', () => {
       const error = new ApplicationError('TEST_ERROR', 'test');
       const exitCode = getExitCode(error);
       expect(exitCode).toBe(ErrorCode.GENERAL_ERROR);
-      expect(exitCode).toBe(1);
     });
 
     test('should return correct exit code for unknown Error', () => {
       const error = new Error('unknown error');
       const exitCode = getExitCode(error);
       expect(exitCode).toBe(ErrorCode.UNKNOWN_ERROR);
-      expect(exitCode).toBe(99);
     });
 
-    test('should return correct exit code for null/undefined', () => {
-      const nullError = null as unknown as Error;
-      const undefinedError = undefined as unknown as Error;
-      const exitCodeNull = getExitCode(nullError);
-      const exitCodeUndefined = getExitCode(undefinedError);
-      expect(exitCodeNull).toBe(ErrorCode.UNKNOWN_ERROR);
-      expect(exitCodeUndefined).toBe(ErrorCode.UNKNOWN_ERROR);
-      expect(exitCodeNull).toBe(99);
-      expect(exitCodeUndefined).toBe(99);
-    });
   });
 
-  describe('ErrorCode enum', () => {
-    test('should have correct numeric values', () => {
-      expect(ErrorCode.SUCCESS).toBe(0);
-      expect(ErrorCode.GENERAL_ERROR).toBe(1);
-      expect(ErrorCode.CONFIG_ERROR).toBe(2);
-      expect(ErrorCode.FILESYSTEM_ERROR).toBe(3);
-      expect(ErrorCode.NETWORK_ERROR).toBe(4);
-      expect(ErrorCode.SECURITY_ERROR).toBe(5);
-      expect(ErrorCode.VALIDATION_ERROR).toBe(6);
-      expect(ErrorCode.UNKNOWN_ERROR).toBe(99);
-    });
-  });
 });

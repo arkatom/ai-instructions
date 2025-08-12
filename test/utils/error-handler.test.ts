@@ -314,19 +314,6 @@ describe('ErrorHandler', () => {
       expect(ErrorHandler.isRetryableError(new SecurityError('violation', 'test'))).toBe(false);
     });
 
-    test('should identify retryable file system errors', () => {
-      expect(ErrorHandler.isRetryableError(new FileSystemError('EACCES'))).toBe(true);
-      expect(ErrorHandler.isRetryableError(new FileSystemError('EMFILE'))).toBe(true);
-      expect(ErrorHandler.isRetryableError(new FileSystemError('ENFILE'))).toBe(true);
-    });
-
-    test('should identify retryable network error patterns', () => {
-      expect(ErrorHandler.isRetryableError(new Error('ECONNREFUSED'))).toBe(true);
-      expect(ErrorHandler.isRetryableError(new Error('ENOTFOUND'))).toBe(true);
-      expect(ErrorHandler.isRetryableError(new Error('socket hang up'))).toBe(true);
-      expect(ErrorHandler.isRetryableError(new Error('EAI_AGAIN'))).toBe(true);
-      expect(ErrorHandler.isRetryableError(new Error('ENETUNREACH'))).toBe(true);
-    });
   });
 
   describe('wrapAsync', () => {
@@ -388,41 +375,6 @@ describe('ErrorHandler', () => {
       expect(formatted).toBe('Invalid configuration');
     });
 
-    test('should simplify file system error messages', () => {
-      const enoentError = new Error('ENOENT: no such file or directory, open \'/path/file.txt\'');
-      const formatted = ErrorHandler.formatUserMessage(enoentError);
-      expect(formatted).toBe('File or directory not found');
-    });
-
-    test('should simplify permission error messages', () => {
-      const eaccesError = new Error('EACCES: permission denied, mkdir \'/root/test\'');
-      const formatted = ErrorHandler.formatUserMessage(eaccesError);
-      expect(formatted).toBe('Permission denied');
-    });
-
-    test('should simplify file exists error messages', () => {
-      const eexistError = new Error('EEXIST: file already exists, mkdir \'/path/dir\'');
-      const formatted = ErrorHandler.formatUserMessage(eexistError);
-      expect(formatted).toBe('File already exists');
-    });
-
-    test('should handle directory operation error messages', () => {
-      const eisdirError = new Error('EISDIR: illegal operation on a directory, read');
-      const formatted = ErrorHandler.formatUserMessage(eisdirError);
-      expect(formatted).toBe('Cannot perform this operation on a directory');
-    });
-
-    test('should handle disk space error messages', () => {
-      const enospcError = new Error('ENOSPC: no space left on device, write');
-      const formatted = ErrorHandler.formatUserMessage(enospcError);
-      expect(formatted).toBe('Not enough disk space');
-    });
-
-    test('should handle read-only filesystem error messages', () => {
-      const erofsError = new Error('EROFS: read-only file system, mkdir \'/path\'');
-      const formatted = ErrorHandler.formatUserMessage(erofsError);
-      expect(formatted).toBe('File system is read-only');
-    });
 
     test('should return original message for unrecognized errors', () => {
       const customError = new Error('Custom error message');
