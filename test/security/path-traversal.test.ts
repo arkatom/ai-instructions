@@ -8,7 +8,7 @@ import { join } from 'path';
 import { mkdirSync, rmSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 
-describe.skip('Path Traversal Security Tests - Need adjustment for new error handling', () => {
+describe('Path Traversal Security Tests', () => {
   let testDir: string;
   let projectRoot: string;
 
@@ -33,7 +33,7 @@ describe.skip('Path Traversal Security Tests - Need adjustment for new error han
           cwd: testDir,
           env: { ...process.env, NODE_ENV: 'test' }
         });
-      }).toThrow(/Path traversal detected|Access denied|Security violation/);
+      }).toThrow(/Path traversal detected|Access denied|Security Error/);
     });
 
     test('should reject absolute paths to system directories', () => {
@@ -46,7 +46,7 @@ describe.skip('Path Traversal Security Tests - Need adjustment for new error han
             cwd: testDir,
             env: { ...process.env, NODE_ENV: 'test' }
           });
-        }).toThrow(/Path traversal detected|Access denied|Security violation/);
+        }).toThrow(/Path traversal detected|Access denied|Security Error/);
       }
     });
 
@@ -69,7 +69,7 @@ describe.skip('Path Traversal Security Tests - Need adjustment for new error han
             cwd: testDir,
             env: { ...process.env, NODE_ENV: 'test' }
           });
-        }).toThrow(/Path traversal detected|Access denied|Security violation/);
+        }).toThrow(/Path traversal detected|Access denied|Security Error/);
       }
     });
 
@@ -82,7 +82,7 @@ describe.skip('Path Traversal Security Tests - Need adjustment for new error han
           cwd: testDir,
           env: { ...process.env, NODE_ENV: 'test' }
         });
-      }).toThrow(/Invalid characters|null bytes|Security violation/);
+      }).toThrow(/Invalid characters|null bytes|Security Error/);
     });
 
     test('should reject URL encoded path traversal attacks', () => {
@@ -101,7 +101,7 @@ describe.skip('Path Traversal Security Tests - Need adjustment for new error han
             cwd: testDir,
             env: { ...process.env, NODE_ENV: 'test' }
           });
-        }).toThrow(/Path traversal detected|Access denied|Security violation/);
+        }).toThrow(/Path traversal detected|Access denied|Security Error/);
       }
     });
 
@@ -122,7 +122,7 @@ describe.skip('Path Traversal Security Tests - Need adjustment for new error han
             cwd: testDir,
             env: { ...process.env, NODE_ENV: 'test' }
           });
-        }).toThrow(/Path traversal detected|Access denied|Security violation/);
+        }).toThrow(/Path traversal detected|Access denied|Security Error/);
       }
     });
 
@@ -196,7 +196,7 @@ describe.skip('Path Traversal Security Tests - Need adjustment for new error han
             cwd: testDir,
             env: { ...process.env, NODE_ENV: 'test' }
           });
-        }).toThrow(/Access denied.*outside project scope|Path traversal detected|Security violation/);
+        }).toThrow(/Access denied.*outside project scope|Path traversal detected|Security Error/);
       }
     });
 

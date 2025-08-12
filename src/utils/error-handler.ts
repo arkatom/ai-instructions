@@ -16,14 +16,37 @@ import {
 
 export class ErrorHandler {
   /**
+   * Display main error message
+   */
+  private static displayMainError(icon: string, type: string, message: string): void {
+    console.error(chalk.red(`${icon} ${type}:`), message);
+  }
+  
+  /**
+   * Display warning or additional information
+   */
+  private static displayWarning(icon: string, content: string): void {
+    console.warn(chalk.yellow(`${icon} ${content}`));
+  }
+  
+  /**
+   * Display debug information
+   */
+  private static displayDebugInfo(data: unknown, label: string = 'Debug Information'): void {
+    if (process.env.DEBUG) {
+      console.error(chalk.gray(`\n📊 ${label}:`));
+      console.error(chalk.gray(typeof data === 'string' ? data : JSON.stringify(data, null, 2)));
+    }
+  }
+  
+  /**
    * Display ConfigValidationError
    */
   private static displayConfigError(error: ConfigValidationError): void {
-    console.error(chalk.red('❌ Configuration Error:'), error.message);
-    console.warn(chalk.yellow('💡 Tip: Check your .ai-instructions.json format'));
-    if (error.details && process.env.DEBUG) {
-      console.error(chalk.gray('\n📊 Debug Information:'));
-      console.error(chalk.gray(JSON.stringify(error.details, null, 2)));
+    this.displayMainError('❌', 'Configuration Error', error.message);
+    this.displayWarning('💡', 'Tip: Check your .ai-instructions.json format');
+    if (error.details) {
+      this.displayDebugInfo(error.details);
     }
   }
   
@@ -31,33 +54,32 @@ export class ErrorHandler {
    * Display FileSystemError
    */
   private static displayFileSystemError(error: FileSystemError): void {
-    console.error(chalk.red('❌ File System Error:'), error.message);
+    this.displayMainError('❌', 'File System Error', error.message);
     if (error.path) {
-      console.warn(chalk.yellow(`📁 Path: ${error.path}`));
+      this.displayWarning('📁', `Path: ${error.path}`);
     }
-    console.warn(chalk.yellow('💡 Tip: Check file permissions and path'));
+    this.displayWarning('💡', 'Tip: Check file permissions and path');
   }
   
   /**
    * Display NetworkError
    */
   private static displayNetworkError(error: NetworkError): void {
-    console.error(chalk.red('❌ Network Error:'), error.message);
+    this.displayMainError('❌', 'Network Error', error.message);
     if (error.statusCode) {
-      console.warn(chalk.yellow(`🌐 Status Code: ${error.statusCode}`));
+      this.displayWarning('🌐', `Status Code: ${error.statusCode}`);
     }
-    console.warn(chalk.yellow('💡 Tip: Check your internet connection and API endpoints'));
+    this.displayWarning('💡', 'Tip: Check your internet connection and API endpoints');
   }
   
   /**
    * Display SecurityError
    */
   private static displaySecurityError(error: SecurityError): void {
-    console.error(chalk.red('🔒 Security Error:'), error.message);
-    console.warn(chalk.yellow(`⚠️  Violation Type: ${error.violationType}`));
-    if (error.context && process.env.DEBUG) {
-      console.error(chalk.gray('\n📊 Debug Information:'));
-      console.error(chalk.gray(`Context: ${error.context}`));
+    this.displayMainError('🔒', 'Security Error', error.message);
+    this.displayWarning('⚠️ ', `Violation Type: ${error.violationType}`);
+    if (error.context) {
+      this.displayDebugInfo(`Context: ${error.context}`);
     }
   }
   
@@ -65,13 +87,12 @@ export class ErrorHandler {
    * Display ValidationError
    */
   private static displayValidationError(error: ValidationError): void {
-    console.error(chalk.red('❌ Validation Error:'), error.message);
+    this.displayMainError('❌', 'Validation Error', error.message);
     if (error.field) {
-      console.warn(chalk.yellow(`📝 Field: ${error.field}`));
+      this.displayWarning('📝', `Field: ${error.field}`);
     }
-    if (error.value && process.env.DEBUG) {
-      console.error(chalk.gray('\n📊 Debug Information:'));
-      console.error(chalk.gray(`Value: ${JSON.stringify(error.value)}`));
+    if (error.value) {
+      this.displayDebugInfo(`Value: ${JSON.stringify(error.value)}`);
     }
   }
   
@@ -80,19 +101,16 @@ export class ErrorHandler {
    */
   private static displayUnknownError(error: Error): void {
     console.error(chalk.red('❌ Unexpected Error:'), error);
-    console.warn(chalk.yellow('💡 Please report this issue: https://github.com/arkatom/ai-instructions/issues'));
+    this.displayWarning('💡', 'Please report this issue: https://github.com/arkatom/ai-instructions/issues');
   }
   
   /**
-   * Display debug info for errors
+   * Display generic debug info for errors
    */
-  private static displayDebugInfo(error: Error): void {
-    if (process.env.DEBUG) {
-      if (!(error instanceof ApplicationError) || 
-          (!('details' in error) && !('context' in error) && !('value' in error))) {
-        console.error(chalk.gray('\n📊 Debug Information:'));
-        console.error(chalk.gray(error.stack || error.toString()));
-      }
+  private static displayGenericDebugInfo(error: Error): void {
+    if (!(error instanceof ApplicationError) || 
+        (!('details' in error) && !('context' in error) && !('value' in error))) {
+      this.displayDebugInfo(error.stack || error.toString());
     }
   }
   
@@ -117,7 +135,7 @@ export class ErrorHandler {
     }
     
     // Show debug info for all errors when DEBUG is set
-    this.displayDebugInfo(error);
+    this.displayGenericDebugInfo(error);
     
     return exitCode;
   }
@@ -144,9 +162,8 @@ export class ErrorHandler {
     const exitCode = this.displayError(err);
     
     // Log context in debug mode
-    if (context && process.env.DEBUG) {
-      console.error(chalk.gray('\n📊 Context:'));
-      console.error(chalk.gray(JSON.stringify(context, null, 2)));
+    if (context) {
+      this.displayDebugInfo(context, 'Context');
     }
     
     // Exit if required
@@ -239,7 +256,12 @@ export class ErrorHandler {
       
       // Wrap unknown errors
       const message = errorMessage || 'Operation failed';
-      throw new ApplicationError('OPERATION_FAILED', `${message}: ${(error as Error).message}`);
+      const errorDetail = error instanceof Error 
+        ? error.message 
+        : error != null 
+          ? String(error) 
+          : 'Unknown error occurred';
+      throw new ApplicationError('OPERATION_FAILED', `${message}: ${errorDetail}`);
     }
   }
   

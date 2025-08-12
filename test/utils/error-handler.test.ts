@@ -10,7 +10,8 @@ import {
   FileSystemError,
   NetworkError,
   SecurityError,
-  ValidationError
+  ValidationError,
+  ApplicationError
 } from '../../src/errors/custom-errors';
 import chalk from 'chalk';
 
@@ -159,6 +160,98 @@ describe('ErrorHandler', () => {
     });
   });
 
+  describe('handleCommandError', () => {
+    test('should display error and exit when shouldExit is true', () => {
+      const error = new ConfigValidationError('Command failed');
+      const context = { command: 'test-command', args: ['--test'] };
+      
+      expect(() => ErrorHandler.handleCommandError(error, context, true)).toThrow('process.exit(2)');
+      expect(mockProcessExit).toHaveBeenCalledWith(2);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('❌ Configuration Error:'),
+        'Command failed'
+      );
+    });
+
+    test('should display error and return result when shouldExit is false', () => {
+      const error = new FileSystemError('File not found', '/test/path');
+      const context = { operation: 'read' };
+      
+      const result = ErrorHandler.handleCommandError(error, context, false);
+      
+      expect(result).toEqual({
+        success: false,
+        error: 'File not found'
+      });
+      expect(mockProcessExit).not.toHaveBeenCalled();
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('❌ File System Error:'),
+        'File not found'
+      );
+    });
+
+    test('should display context in debug mode', () => {
+      process.env.DEBUG = 'true';
+      const error = new NetworkError('Request failed', 500);
+      const context = { url: 'http://example.com', timeout: 5000 };
+      
+      const result = ErrorHandler.handleCommandError(error, context, false);
+      
+      expect(result).toEqual({
+        success: false,
+        error: 'Request failed'
+      });
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.gray('\n📊 Context:')
+      );
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.gray(JSON.stringify(context, null, 2))
+      );
+      
+      delete process.env.DEBUG;
+    });
+
+    test('should not display context when DEBUG is not set', () => {
+      delete process.env.DEBUG;
+      const error = new SecurityError('path_traversal', 'Unauthorized access');
+      const context = { path: '../../../etc/passwd' };
+      
+      const result = ErrorHandler.handleCommandError(error, context, false);
+      
+      expect(result).toEqual({
+        success: false,
+        error: 'Unauthorized access'
+      });
+      // Should not show context debug info
+      const contextCalls = mockConsoleError.mock.calls.filter(call => 
+        call[0] === chalk.gray('\n📊 Context:')
+      );
+      expect(contextCalls).toHaveLength(0);
+    });
+
+    test('should work without context parameter', () => {
+      const error = new ValidationError('Invalid input', 'email');
+      
+      const result = ErrorHandler.handleCommandError(error, undefined, false);
+      
+      expect(result).toEqual({
+        success: false,
+        error: 'Invalid input'
+      });
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        chalk.red('❌ Validation Error:'),
+        'Invalid input'
+      );
+    });
+
+    test('should use default shouldExit value of true', () => {
+      const error = new ApplicationError('TEST_ERROR', 'Test message');
+      
+      expect(() => ErrorHandler.handleCommandError(error)).toThrow('process.exit(1)');
+      expect(mockProcessExit).toHaveBeenCalledWith(1);
+    });
+  });
+
   describe('handleWithRetry', () => {
     test('should succeed on first try', async () => {
       const operation = jest.fn<() => Promise<string>>().mockResolvedValue('success');
@@ -219,6 +312,122 @@ describe('ErrorHandler', () => {
       expect(ErrorHandler.isRetryableError(new ValidationError('invalid'))).toBe(false);
       expect(ErrorHandler.isRetryableError(new ConfigValidationError('invalid'))).toBe(false);
       expect(ErrorHandler.isRetryableError(new SecurityError('violation', 'test'))).toBe(false);
+    });
+
+    test('should identify retryable file system errors', () => {
+      expect(ErrorHandler.isRetryableError(new FileSystemError('EACCES'))).toBe(true);
+      expect(ErrorHandler.isRetryableError(new FileSystemError('EMFILE'))).toBe(true);
+      expect(ErrorHandler.isRetryableError(new FileSystemError('ENFILE'))).toBe(true);
+    });
+
+    test('should identify retryable network error patterns', () => {
+      expect(ErrorHandler.isRetryableError(new Error('ECONNREFUSED'))).toBe(true);
+      expect(ErrorHandler.isRetryableError(new Error('ENOTFOUND'))).toBe(true);
+      expect(ErrorHandler.isRetryableError(new Error('socket hang up'))).toBe(true);
+      expect(ErrorHandler.isRetryableError(new Error('EAI_AGAIN'))).toBe(true);
+      expect(ErrorHandler.isRetryableError(new Error('ENETUNREACH'))).toBe(true);
+    });
+  });
+
+  describe('wrapAsync', () => {
+    test('should return result on successful operation', async () => {
+      const operation = () => Promise.resolve('success');
+      
+      const result = await ErrorHandler.wrapAsync(operation);
+      
+      expect(result).toBe('success');
+    });
+
+    test('should preserve ApplicationError when thrown', async () => {
+      const configError = new ConfigValidationError('Invalid config');
+      const operation = () => Promise.reject(configError);
+      
+      await expect(ErrorHandler.wrapAsync(operation))
+        .rejects.toThrow(ConfigValidationError);
+      
+      await expect(ErrorHandler.wrapAsync(operation))
+        .rejects.toThrow('Invalid config');
+    });
+
+    test('should wrap unknown error in ApplicationError', async () => {
+      const operation = () => Promise.reject(new Error('Unknown error'));
+      
+      await expect(ErrorHandler.wrapAsync(operation))
+        .rejects.toThrow(ApplicationError);
+      
+      await expect(ErrorHandler.wrapAsync(operation))
+        .rejects.toThrow('Operation failed: Unknown error');
+    });
+
+    test('should use custom error message when provided', async () => {
+      const operation = () => Promise.reject(new Error('Database connection failed'));
+      
+      await expect(ErrorHandler.wrapAsync(operation, 'Database operation failed'))
+        .rejects.toThrow('Database operation failed: Database connection failed');
+    });
+
+    test('should handle non-error rejections', async () => {
+      const operation = () => Promise.reject('String rejection');
+      
+      await expect(ErrorHandler.wrapAsync(operation))
+        .rejects.toThrow('Operation failed: String rejection');
+    });
+
+    test('should handle null/undefined rejections', async () => {
+      const operation = () => Promise.reject(null);
+      
+      await expect(ErrorHandler.wrapAsync(operation))
+        .rejects.toThrow(ApplicationError);
+    });
+  });
+
+  describe('formatUserMessage', () => {
+    test('should return message for ApplicationError', () => {
+      const error = new ConfigValidationError('Invalid configuration');
+      const formatted = ErrorHandler.formatUserMessage(error);
+      expect(formatted).toBe('Invalid configuration');
+    });
+
+    test('should simplify file system error messages', () => {
+      const enoentError = new Error('ENOENT: no such file or directory, open \'/path/file.txt\'');
+      const formatted = ErrorHandler.formatUserMessage(enoentError);
+      expect(formatted).toBe('File or directory not found');
+    });
+
+    test('should simplify permission error messages', () => {
+      const eaccesError = new Error('EACCES: permission denied, mkdir \'/root/test\'');
+      const formatted = ErrorHandler.formatUserMessage(eaccesError);
+      expect(formatted).toBe('Permission denied');
+    });
+
+    test('should simplify file exists error messages', () => {
+      const eexistError = new Error('EEXIST: file already exists, mkdir \'/path/dir\'');
+      const formatted = ErrorHandler.formatUserMessage(eexistError);
+      expect(formatted).toBe('File already exists');
+    });
+
+    test('should handle directory operation error messages', () => {
+      const eisdirError = new Error('EISDIR: illegal operation on a directory, read');
+      const formatted = ErrorHandler.formatUserMessage(eisdirError);
+      expect(formatted).toBe('Cannot perform this operation on a directory');
+    });
+
+    test('should handle disk space error messages', () => {
+      const enospcError = new Error('ENOSPC: no space left on device, write');
+      const formatted = ErrorHandler.formatUserMessage(enospcError);
+      expect(formatted).toBe('Not enough disk space');
+    });
+
+    test('should handle read-only filesystem error messages', () => {
+      const erofsError = new Error('EROFS: read-only file system, mkdir \'/path\'');
+      const formatted = ErrorHandler.formatUserMessage(erofsError);
+      expect(formatted).toBe('File system is read-only');
+    });
+
+    test('should return original message for unrecognized errors', () => {
+      const customError = new Error('Custom error message');
+      const formatted = ErrorHandler.formatUserMessage(customError);
+      expect(formatted).toBe('Custom error message');
     });
   });
 });

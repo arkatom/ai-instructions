@@ -124,7 +124,8 @@ class CLICoordinator {
       }
 
     } catch (error) {
-      ErrorHandler.handleError(error as Error);
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      ErrorHandler.handleError(errorObj);
     }
   }
 
@@ -164,6 +165,7 @@ export { CLICoordinator };
 // Run CLI if called directly
 if (require.main === module) {
   main().catch((error) => {
-    ErrorHandler.handleError(error as Error);
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    ErrorHandler.handleError(errorObj);
   });
 }
