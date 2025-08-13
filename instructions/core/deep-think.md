@@ -33,8 +33,7 @@
 - 批判的に自問し、より良い案を常に模索
 - 自己検証は最低3回、必要ならば更に数回、繰り返す
 
-## MCPの利用
+## Available Tools
 
-- sequential-thinking MCPを利用可能
-- 指示内容を忘れないよう、memory MCPを利用可能
-  - 特に強い感情を感じた場合は、[memory](./memory.md) を徹底する
+- sequential-thinking MCP for complex analysis
+- Memory tools for important information persistence (use sparingly)
