@@ -1,6 +1,7 @@
 /**
  * Path Security Validator
- * Pure functions for path traversal prevention and security validation
+ * Utility functions for path traversal prevention and security validation
+ * Note: These functions perform filesystem I/O operations
  */
 
 import { normalize, resolve } from 'path';
@@ -30,17 +31,24 @@ export function validatePathSecurity(
     throw new SecurityError('ABSOLUTE_PATH', 'Absolute path outside project boundary');
   }
   
-  // Check for symbolic links
+  // Check for symbolic links (atomic operation to prevent TOCTOU)
   try {
-    if (fs.existsSync(safePath) && fs.lstatSync(safePath).isSymbolicLink()) {
+    const stats = fs.lstatSync(safePath);
+    if (stats.isSymbolicLink()) {
       throw new SecurityError('SYMLINK', 'Symbolic links not allowed');
     }
   } catch (error) {
-    // If we can't check, it's safer to reject
-    if (!(error instanceof SecurityError)) {
-      throw new SecurityError('PATH_VALIDATION', 'Unable to validate path security');
+    // ENOENT is acceptable (path doesn't exist yet)
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      // Path doesn't exist, which is safe
+      return safePath;
     }
-    throw error;
+    // SecurityError should be propagated
+    if (error instanceof SecurityError) {
+      throw error;
+    }
+    // Other errors indicate potential security issues
+    throw new SecurityError('PATH_VALIDATION', `Unable to validate path security: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
   
   return safePath;

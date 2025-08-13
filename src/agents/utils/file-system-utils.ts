@@ -1,6 +1,7 @@
 /**
  * File System Utilities
- * Pure functions for file system operations with error handling
+ * Utility functions for file system operations with error handling
+ * Note: These functions perform filesystem I/O operations
  */
 
 import { readFile, stat } from 'fs/promises';
@@ -30,7 +31,12 @@ export async function fileExists(filePath: string): Promise<boolean> {
   try {
     await stat(filePath);
     return true;
-  } catch {
+  } catch (error) {
+    // ENOENT is expected when file doesn't exist
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return false;
+    }
+    // For other errors (permission issues, etc.), file is not accessible
     return false;
   }
 }
@@ -80,15 +86,25 @@ export async function readJsonFile<T = Record<string, unknown>>(
     try {
       const data = JSON.parse(content) as T;
       return { data, errors };
-    } catch {
+    } catch (parseError) {
       errors.push({
         file: fileName,
-        error: 'Invalid JSON format'
+        error: `Invalid JSON format: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`
       });
       return { data: null, errors };
     }
-  } catch {
-    // File doesn't exist or can't be read - this is ok, just return null
+  } catch (error) {
+    // File access error - report the specific issue
+    if (error instanceof Error) {
+      if ('code' in error && error.code === 'ENOENT') {
+        // File doesn't exist - this is ok, just return null
+        return { data: null, errors };
+      }
+      errors.push({
+        file: fileName,
+        error: `File read error: ${error.message}`
+      });
+    }
     return { data: null, errors };
   }
 }
@@ -101,7 +117,12 @@ export async function readJsonFile<T = Record<string, unknown>>(
 export async function readTextFile(filePath: string): Promise<string | null> {
   try {
     return await readFile(filePath, 'utf-8');
-  } catch {
+  } catch (error) {
+    // Log the actual error for debugging while returning null
+    // ENOENT is expected, other errors might indicate issues
+    if (error instanceof Error && 'code' in error && error.code !== 'ENOENT') {
+      console.warn(`Failed to read text file ${filePath}: ${error.message}`);
+    }
     return null;
   }
 }

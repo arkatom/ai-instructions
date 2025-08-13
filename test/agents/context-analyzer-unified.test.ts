@@ -77,10 +77,9 @@ describe('ContextAnalyzer - JSON Parse Error Handling (Basic)', () => {
     const context = await analyzer.analyzeProject();
     
     expect(context.projectType).toBe('nodejs');
-    expect(context.errors).toContainEqual({
-      file: 'package.json',
-      error: 'Invalid JSON format'
-    });
+    expect(context.errors?.some(e => 
+      e.file === 'package.json' && e.error.startsWith('Invalid JSON format')
+    )).toBe(true);
   });
 
   test('should handle empty JSON files', async () => {
@@ -145,10 +144,9 @@ describe('ContextAnalyzer - JSON Parse Error Handling (Advanced)', () => {
     
     expect(context.errors).toBeDefined();
     expect(context.errors?.length).toBeGreaterThan(0);
-    expect(context.errors).toContainEqual({
-      file: 'package.json',
-      error: 'Invalid JSON format'
-    });
+    expect(context.errors?.some(e => 
+      e.file === 'package.json' && e.error.startsWith('Invalid JSON format')
+    )).toBe(true);
     expect(context.projectType).toBe('nodejs');
     expect(context.developmentPhase).toBeDefined();
   });

@@ -1,6 +1,7 @@
 /**
  * Project Type Detector
- * Pure functions for detecting project type and primary language
+ * Utility functions for detecting project type and primary language
+ * Note: These functions perform filesystem I/O operations
  */
 
 import { join } from 'path';
@@ -16,7 +17,9 @@ export interface PackageJson {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
-  [key: string]: unknown;
+  // Allow additional properties with explicit types
+  // Use Record<string, unknown> to maintain flexibility while being explicit
+  [key: string]: string | Record<string, string> | undefined;
 }
 
 /**
@@ -117,9 +120,9 @@ async function handleBrokenPackageJson(
     'Invalid JSON format',
     'JSON file too large (>5MB)',
     'Null bytes detected in JSON'
-  ];
+  ] as const;
   
-  if (errorTypes.some(error => knownJsonErrors.includes(error))) {
+  if (errorTypes.some(error => knownJsonErrors.some(known => error.startsWith(known)))) {
     const packageManager = await detectPackageManager(projectPath);
     
     return {

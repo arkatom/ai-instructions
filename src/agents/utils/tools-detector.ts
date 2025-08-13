@@ -1,6 +1,7 @@
 /**
  * Tools Detector
- * Pure functions for detecting development tools (build, linting, testing)
+ * Utility functions for detecting development tools (build, linting, testing)
+ * Note: These functions perform filesystem I/O operations
  */
 
 import { join } from 'path';

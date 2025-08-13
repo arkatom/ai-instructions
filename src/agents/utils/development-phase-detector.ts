@@ -1,6 +1,7 @@
 /**
  * Development Phase Detector
- * Pure functions for detecting the current development phase
+ * Utility functions for detecting the current development phase
+ * Note: These functions perform filesystem I/O operations
  */
 
 import { join } from 'path';

@@ -1,6 +1,7 @@
 /**
  * Framework Detector
- * Pure functions for detecting frameworks and project categories
+ * Utility functions for detecting frameworks and project categories
+ * Note: These functions perform filesystem I/O operations
  */
 
 import { join } from 'path';
