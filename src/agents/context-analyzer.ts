@@ -4,8 +4,10 @@
  */
 
 import { readFile, stat } from 'fs/promises';
-import { join } from 'path';
+import { join, normalize, resolve } from 'path';
+import * as fs from 'fs';
 import { ProjectContext, ProjectType, DevelopmentPhase } from './types';
+import { SecurityError } from '../errors/custom-errors';
 
 /**
  * Development phase constants
@@ -91,7 +93,34 @@ export class ContextAnalyzer {
   private context: Partial<ProjectContext>;
 
   constructor(projectPath: string = process.cwd()) {
-    this.projectPath = projectPath;
+    // Path Traversal Prevention
+    const basePath = process.cwd();
+    const safePath = normalize(resolve(basePath, projectPath));
+    
+    // Check if path is outside project boundary
+    if (!safePath.startsWith(basePath)) {
+      throw new SecurityError('PATH_TRAVERSAL', 'Path traversal detected');
+    }
+    
+    // Check for absolute paths outside project
+    if (projectPath.startsWith('/') && !projectPath.startsWith(basePath)) {
+      throw new SecurityError('ABSOLUTE_PATH', 'Absolute path outside project boundary');
+    }
+    
+    // Check for symbolic links
+    try {
+      if (fs.existsSync(safePath) && fs.lstatSync(safePath).isSymbolicLink()) {
+        throw new SecurityError('SYMLINK', 'Symbolic links not allowed');
+      }
+    } catch (error) {
+      // If we can't check, it's safer to reject
+      if (!(error instanceof SecurityError)) {
+        throw new SecurityError('PATH_VALIDATION', 'Unable to validate path security');
+      }
+      throw error;
+    }
+    
+    this.projectPath = safePath;
     this.context = {};
   }
 
@@ -141,14 +170,16 @@ export class ContextAnalyzer {
       
       if (packageJsonExists) {
         const packageJson = await this.readJsonFile(packageJsonPath);
-        this.context.projectType = 'nodejs' as ProjectType;
+        if (packageJson) {
+          this.context.projectType = 'nodejs' as ProjectType;
+        }
         const packageManager = await this.detectPackageManager();
         if (packageManager) {
           this.context.packageManager = packageManager;
         }
         
         // Check if it's primarily TypeScript or JavaScript
-        if (packageJson.devDependencies?.typescript || packageJson.dependencies?.typescript) {
+        if (packageJson && (packageJson.devDependencies?.typescript || packageJson.dependencies?.typescript)) {
           this.context.primaryLanguage = 'typescript';
         } else {
           this.context.primaryLanguage = 'javascript';
@@ -221,6 +252,8 @@ export class ContextAnalyzer {
     
     try {
       const packageJson = await this.readJsonFile(packageJsonPath);
+      if (!packageJson) return; // No package.json, can't detect Node frameworks
+      
       const allDeps = {
         ...packageJson.dependencies,
         ...packageJson.devDependencies
@@ -413,7 +446,7 @@ export class ContextAnalyzer {
     if (this.context.projectType === 'nodejs') {
       try {
         const packageJson = await this.readJsonFile(join(this.projectPath, 'package.json'));
-        if (packageJson.scripts) {
+        if (packageJson && packageJson.scripts) {
           if (packageJson.scripts.test) {
             phaseScores[PHASE_TESTING] += 1;
           }
@@ -496,9 +529,55 @@ export class ContextAnalyzer {
   /**
    * Read and parse a JSON file
    */
-  private async readJsonFile(filePath: string): Promise<PackageJson> {
-    const content = await readFile(filePath, 'utf-8');
-    return JSON.parse(content);
+  private async readJsonFile(filePath: string): Promise<PackageJson | null> {
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      
+      // Check for empty file
+      if (!content || content.trim() === '') {
+        if (!this.context.errors) this.context.errors = [];
+        this.context.errors.push({
+          file: filePath.split('/').pop() || filePath,
+          error: 'Empty JSON file'
+        });
+        return null;
+      }
+      
+      // Check for file size (5MB limit)
+      if (content.length > 5 * 1024 * 1024) {
+        if (!this.context.errors) this.context.errors = [];
+        this.context.errors.push({
+          file: filePath.split('/').pop() || filePath,
+          error: 'JSON file too large (>5MB)'
+        });
+        return null;
+      }
+      
+      // Check for null bytes
+      if (content.includes('\u0000')) {
+        if (!this.context.errors) this.context.errors = [];
+        this.context.errors.push({
+          file: filePath.split('/').pop() || filePath,
+          error: 'Null bytes detected in JSON'
+        });
+        return null;
+      }
+      
+      // Try to parse JSON
+      try {
+        return JSON.parse(content);
+      } catch {
+        if (!this.context.errors) this.context.errors = [];
+        this.context.errors.push({
+          file: filePath.split('/').pop() || filePath,
+          error: 'Invalid JSON format'
+        });
+        return null;
+      }
+    } catch {
+      // File doesn't exist or can't be read - this is ok, just return null
+      return null;
+    }
   }
 
   /**
@@ -535,6 +614,7 @@ export class ContextAnalyzer {
     try {
       const packageJsonPath = join(this.projectPath, 'package.json');
       const packageJson = await this.readJsonFile(packageJsonPath);
+      if (!packageJson) return;
       
       const allDeps = {
         ...packageJson.dependencies,

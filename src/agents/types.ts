@@ -29,6 +29,10 @@ export interface ProjectContext {
   buildTools?: string[];
   lintingTools?: string[];
   testingTools?: string[];
+  errors?: Array<{
+    file: string;
+    error: string;
+  }>;
 }
 
 /**
