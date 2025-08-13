@@ -42,15 +42,21 @@ alwaysApply: true
 
 ## 📋 場面別必須参照ファイル
 
-### Git・コミット関連
+### Git・GitHub関連
 
-- [Github Flow](./instructions/workflows/github-flow.md) - ブランチ・コミット・PRのルール
+- [Complete Git & GitHub Guide](./instructions/workflows/git-complete.md) - 統合されたGit運用ガイド
 
 ### 開発プロセス
 
-- [Github Issue Driven Development](./instructions/methodologies/github-idd.md) - Githubに関するルール
 - [TDD開発スタイル](./instructions/methodologies/tdd.md)
+- [Github Issue Driven Development](./instructions/methodologies/github-idd.md)
 
-### 記録・管理（ノートを書く際は必ず参照する）
+### エージェントシステム（Claude Code専用）
+
+- **Agent Dependency Management**: エージェント間の依存関係と協調パターンが実装済み
+- 利用可能な場合は適切なエージェント選択と組み合わせを活用
+
+### 記録・管理
 
 - [ノート・日誌](./instructions/note.md) - 作業記録の書き方
+- [Memory管理](./instructions/core/memory.md) - 重要情報の記録（必要時のみ）
