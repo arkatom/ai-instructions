@@ -4,6 +4,34 @@
  */
 
 /**
+ * Project types for context analysis
+ */
+export type ProjectType = 'nodejs' | 'typescript' | 'python' | 'rust' | 'go' | 'unknown';
+
+/**
+ * Development phases
+ */
+export type DevelopmentPhase = 'initial-setup' | 'active-development' | 'testing-phase' | 'production-maintenance';
+
+/**
+ * Project context information for agent recommendation
+ */
+export interface ProjectContext {
+  projectType: ProjectType;
+  frameworks: string[];
+  developmentPhase: DevelopmentPhase;
+  primaryLanguage?: string;
+  teamSize?: number;
+  hasTests?: boolean;
+  hasCI?: boolean;
+  packageManager?: string;
+  projectCategory?: 'frontend' | 'backend' | 'fullstack';
+  buildTools?: string[];
+  lintingTools?: string[];
+  testingTools?: string[];
+}
+
+/**
  * Agent relationship types
  * Defines different types of dependencies between agents
  */
