@@ -146,28 +146,31 @@ export function isFileOperation(value: unknown): value is FileOperation {
 export function isStrictToolConfiguration(value: unknown): value is StrictToolConfiguration {
   if (typeof value !== 'object' || value === null) return false;
   
+  // Type-safe: we've verified value is a non-null object above
   const config = value as Record<string, unknown>;
+  const globs = config.globs as Record<string, unknown>;
   return (
-    typeof config.displayName === 'string' &&
-    typeof config.fileExtension === 'string' &&
-    config.fileExtension.startsWith('.') &&
-    typeof config.globs === 'object' &&
+    'displayName' in config && typeof config.displayName === 'string' &&
+    'fileExtension' in config && typeof config.fileExtension === 'string' &&
+    typeof config.fileExtension === 'string' && config.fileExtension.startsWith('.') &&
+    'globs' in config && typeof config.globs === 'object' &&
     config.globs !== null &&
-    typeof (config.globs as Record<string, unknown>).inherit === 'string' &&
-    typeof config.description === 'string'
+    'inherit' in globs && typeof globs.inherit === 'string' &&
+    'description' in config && typeof config.description === 'string'
   );
 }
 
 export function isStrictLanguageConfiguration(value: unknown): value is StrictLanguageConfiguration {
   if (typeof value !== 'object' || value === null) return false;
   
+  // Type-safe: we've verified value is a non-null object above
   const config = value as Record<string, unknown>;
   return (
-    Array.isArray(config.globs) &&
-    config.globs.every(item => typeof item === 'string') &&
-    typeof config.description === 'string' &&
-    Array.isArray(config.languageFeatures) &&
-    config.languageFeatures.every(item => typeof item === 'string')
+    'globs' in config && Array.isArray(config.globs) &&
+    Array.isArray(config.globs) && config.globs.every((item: unknown) => typeof item === 'string') &&
+    'description' in config && typeof config.description === 'string' &&
+    'languageFeatures' in config && Array.isArray(config.languageFeatures) &&
+    Array.isArray(config.languageFeatures) && config.languageFeatures.every((item: unknown) => typeof item === 'string')
   );
 }
 

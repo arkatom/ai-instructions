@@ -279,43 +279,53 @@ export class AgentMetadataLoader {
       throw new Error('Invalid metadata format: metadata must be an object');
     }
 
+    // Type-safe property access - we've verified it's a non-null object above
     const metadata = rawMetadata as Record<string, unknown>;
-
-    // Validate required fields
-    if (!metadata.name) {
+    if (!('name' in metadata) || typeof metadata.name !== 'string') {
       throw new Error('Missing required field: name');
     }
-    if (!metadata.category) {
+    if (!('category' in metadata) || typeof metadata.category !== 'string') {
       throw new Error('Missing required field: category');
     }
-    if (!metadata.description) {
+    if (!('description' in metadata) || typeof metadata.description !== 'string') {
       throw new Error('Missing required field: description');
     }
 
+    // Type-safe property access helper
+    const getProperty = (obj: Record<string, unknown>, prop: string): unknown => 
+      (prop in obj) ? obj[prop] : undefined;
+
     // Validate that the name in the file matches the expected agent name
-    if (String(metadata.name) !== agentName) {
-      throw new Error(`Agent name mismatch: file contains '${metadata.name}' but expected '${agentName}'`);
+    if (String(getProperty(metadata, 'name')) !== agentName) {
+      throw new Error(`Agent name mismatch: file contains '${getProperty(metadata, 'name')}' but expected '${agentName}'`);
     }
 
     // Validate relationships if present
-    const relationships = this.validateRelationships(metadata.relationships);
+    const relationships = this.validateRelationships(getProperty(metadata, 'relationships'));
 
     // Build the validated metadata object
     const validatedMetadata: AgentMetadata = {
-      name: String(metadata.name),
-      category: String(metadata.category),
-      description: String(metadata.description),
-      tags: Array.isArray(metadata.tags) 
-        ? metadata.tags.map(t => String(t))
+      name: String(getProperty(metadata, 'name')),
+      category: String(getProperty(metadata, 'category')),
+      description: String(getProperty(metadata, 'description')),
+      tags: Array.isArray(getProperty(metadata, 'tags')) 
+        ? (getProperty(metadata, 'tags') as unknown[]).map(t => String(t))
         : [],
       relationships
     };
 
     // Add optional fields if present
-    if (metadata.source) validatedMetadata.source = String(metadata.source);
-    if (metadata.version) validatedMetadata.version = String(metadata.version);
-    if (metadata.author) validatedMetadata.author = String(metadata.author);
-    if (metadata.license) validatedMetadata.license = String(metadata.license);
+    const source = getProperty(metadata, 'source');
+    if (source) validatedMetadata.source = String(source);
+    
+    const version = getProperty(metadata, 'version');
+    if (version) validatedMetadata.version = String(version);
+    
+    const author = getProperty(metadata, 'author');
+    if (author) validatedMetadata.author = String(author);
+    
+    const license = getProperty(metadata, 'license');
+    if (license) validatedMetadata.license = String(license);
 
     return validatedMetadata;
   }
@@ -339,11 +349,12 @@ export class AgentMetadataLoader {
       return defaultRelationships;
     }
 
-    const rel = relationships as Record<string, unknown>;
+    // Type-safe relationship validation - we've verified it's a non-null object above
+    const relationshipsObj = relationships as Record<string, unknown>;
     const validated: AgentRelationship = { ...defaultRelationships };
 
     // Check for invalid relationship types
-    for (const key of Object.keys(rel)) {
+    for (const key of Object.keys(relationshipsObj)) {
       if (!VALID_RELATIONSHIP_TYPES.includes(key as typeof VALID_RELATIONSHIP_TYPES[number])) {
         throw new Error(`Invalid relationship type: ${key}`);
       }
@@ -351,11 +362,14 @@ export class AgentMetadataLoader {
 
     // Validate and assign each relationship type
     for (const type of VALID_RELATIONSHIP_TYPES) {
-      if (rel[type]) {
-        if (!Array.isArray(rel[type])) {
+      const relationshipValue = relationshipsObj[type];
+      if (relationshipValue) {
+        if (!Array.isArray(relationshipValue)) {
           throw new Error(`Relationship ${type} must be an array`);
         }
-        validated[type] = (rel[type] as unknown[]).map(item => String(item));
+        if (Array.isArray(relationshipValue)) {
+          validated[type] = relationshipValue.map(item => String(item));
+        }
       }
     }
 

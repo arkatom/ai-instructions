@@ -15,6 +15,8 @@ import { InteractivePrompts } from './init/prompts';
 import { Logger } from './utils/logger';
 import { PathValidator, SecurityError } from './utils/security';
 import { EnvironmentService } from './services/EnvironmentService';
+import { validateCliOptions, hasValidatedOptions } from './utils/type-guards';
+import { RawInitOptions, ValidatedInitOptions } from './types/cli-types';
 
 /**
  * Validates project name for filesystem safety
@@ -91,20 +93,8 @@ function validateConflictResolution(strategy: string): void {
  * - No explicit tool/configuration options are provided
  * - Environment supports TTY interaction
  */
-interface InitOptions {
-  interactive?: boolean;
-  tool?: string;
-  projectName?: string;
-  lang?: string;
-  outputFormat?: string;
-  output?: string;
-  force?: boolean;
-  preview?: boolean;
-  conflictResolution?: string;
-  backup?: boolean;
-}
 
-function shouldUseInteractiveMode(rawArgs: string[], options: InitOptions): boolean {
+function shouldUseInteractiveMode(rawArgs: string[], options: ValidatedInitOptions): boolean {
   // If user explicitly disabled interactive, respect that
   if (options.interactive === false) {
     return false;
@@ -122,7 +112,7 @@ function shouldUseInteractiveMode(rawArgs: string[], options: InitOptions): bool
                           opt === 'tool' ? 'claude' :
                           opt === 'lang' ? 'ja' :
                           opt === 'outputFormat' ? 'claude' : undefined;
-    return options[opt as keyof InitOptions] && options[opt as keyof InitOptions] !== originalValue;
+    return options[opt] && options[opt] !== originalValue;
   });
 
   // If only output directory is specified, still use interactive
@@ -149,50 +139,49 @@ async function handleInteractiveMode(validatedOutputDir: string): Promise<void> 
   });
 }
 
-function validateInitOptions(options: unknown): void {
-  const opts = options as Record<string, unknown>;
+function validateInitOptionsLegacy(options: ValidatedInitOptions): void {
+  // These validations are now redundant since options are already validated
+  // Keeping for backward compatibility but using validated options
   
   // Validate project name before generating files
-  validateProjectName(opts.projectName as string);
+  validateProjectName(options.projectName);
   
-  // Validate tool option
-  if (!GeneratorFactory.isValidTool(opts.tool as string)) {
-    throw new Error(`Unsupported tool: ${opts.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
+  // Validate tool option - already validated in type guard
+  if (!GeneratorFactory.isValidTool(options.tool)) {
+    throw new Error(`Unsupported tool: ${options.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
   }
   
   // Validate language option
-  validateLanguage(opts.lang as string);
+  validateLanguage(options.lang);
   
   // Validate output format option
-  validateOutputFormat(opts.outputFormat as string);
+  validateOutputFormat(options.outputFormat);
   
   // Validate output directory path
-  validateOutputDirectory(opts.output as string);
+  validateOutputDirectory(options.output);
   
   // Validate conflict resolution strategy
-  validateConflictResolution(opts.conflictResolution as string);
+  validateConflictResolution(options.conflictResolution);
 }
 
-async function handlePreviewMode(options: unknown): Promise<void> {
-  const opts = options as Record<string, unknown>;
-  
+async function handlePreviewMode(options: ValidatedInitOptions): Promise<void> {
   try {
     const chalk = (await import('chalk')).default;
     Logger.info(chalk.blue('🔍 Preview mode: Analyzing potential file conflicts...'));
     Logger.warn('Preview functionality will be enhanced in v0.3.0');
     Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
-    Logger.item('📍 Target directory:', opts.output as string);
-    Logger.item('🤖 Tool:', opts.tool as string);
-    Logger.item('📦 Project name:', opts.projectName as string);
-    Logger.item('🌍 Language:', opts.lang as string);
+    Logger.item('📍 Target directory:', options.output);
+    Logger.item('🤖 Tool:', options.tool);
+    Logger.item('📦 Project name:', options.projectName);
+    Logger.item('🌍 Language:', options.lang);
   } catch {
     Logger.info('🔍 Preview mode: Analyzing potential file conflicts...');
     Logger.warn('Preview functionality will be enhanced in v0.3.0');
     Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
-    Logger.item('📍 Target directory:', opts.output as string);
-    Logger.item('🤖 Tool:', opts.tool as string);
-    Logger.item('📦 Project name:', opts.projectName as string);
-    Logger.item('🌍 Language:', opts.lang as string);
+    Logger.item('📍 Target directory:', options.output);
+    Logger.item('🤖 Tool:', options.tool);
+    Logger.item('📦 Project name:', options.projectName);
+    Logger.item('🌍 Language:', options.lang);
   }
 }
 
@@ -209,31 +198,30 @@ async function handleForceMode(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 2000));
 }
 
-async function generateTemplateFiles(validatedOutputDir: string, options: unknown): Promise<void> {
-  const opts = options as Record<string, unknown>;
-  const generator = GeneratorFactory.createGenerator(opts.tool as SupportedTool);
+async function generateTemplateFiles(validatedOutputDir: string, options: ValidatedInitOptions): Promise<void> {
+  const generator = GeneratorFactory.createGenerator(options.tool);
   await generator.generateFiles(validatedOutputDir, { 
-    projectName: opts.projectName as string,
-    force: (opts.force as boolean) || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
-    lang: opts.lang as 'en' | 'ja' | 'ch',  // Issue #11: Multi-language support
-    outputFormat: opts.outputFormat as OutputFormat,  // Output format support
+    projectName: options.projectName,
+    force: options.force,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
+    lang: options.lang,  // Issue #11: Multi-language support
+    outputFormat: options.outputFormat,  // Output format support
     // 🚀 v0.5.0: Advanced file conflict resolution options
-    conflictResolution: (opts.conflictResolution as string) || 'backup',
-    interactive: opts.interactive !== false,  // Default to true unless --no-interactive
-    backup: opts.backup !== false  // Default to true unless --no-backup
+    conflictResolution: options.conflictResolution,
+    interactive: options.interactive,  // Default to true unless --no-interactive
+    backup: options.backup  // Default to true unless --no-backup
   });
   
   Logger.success(`Generated ${generator.getToolName()} template files in ${validatedOutputDir}`);
   Logger.info(`📁 Files created for ${generator.getToolName()} AI tool`);
-  Logger.item('🎯 Project name:', opts.projectName as string);
+  Logger.item('🎯 Project name:', options.projectName);
   
   // Show format conversion message when output-format is used
-  if (opts.outputFormat && opts.outputFormat !== 'claude') {
-    Logger.info(`🔄 Converted from Claude format to ${opts.outputFormat}`);
+  if (options.outputFormat && options.outputFormat !== 'claude') {
+    Logger.info(`🔄 Converted from Claude format to ${options.outputFormat}`);
   }
   
   // 🚨 EMERGENCY PATCH v0.2.1: Safety reminder
-  if (!opts.force) {
+  if (!options.force) {
     try {
       Logger.tip('Use --preview to check for conflicts before generating');
       Logger.tip('Use --force to skip warnings (be careful!)');
@@ -291,8 +279,28 @@ program
   .option('-r, --conflict-resolution <strategy>', '🛡️  Default conflict resolution (backup, merge, skip, overwrite)', 'backup')
   .option('--no-interactive', '🤖 Disable interactive conflict resolution')
   .option('--no-backup', '🚨 Disable automatic backups (use with caution)')
-  .action(async (options) => {
+  .action(async (rawOptions: RawInitOptions) => {
     try {
+      // Validate and convert raw options to type-safe options
+      const currentWorkingDir = environmentService.getCurrentWorkingDirectory();
+      const validationResult = validateCliOptions(rawOptions, currentWorkingDir);
+      
+      if (!hasValidatedOptions(validationResult)) {
+        Logger.error('Invalid CLI options:');
+        for (const error of validationResult.errors) {
+          Logger.error(`  ${error.field}: ${error.message}`);
+          if (error.expected) {
+            Logger.error(`    Expected: ${error.expected.join(', ')}`);
+          }
+          if (error.received !== undefined) {
+            Logger.error(`    Received: ${error.received}`);
+          }
+        }
+        process.exit(1);
+      }
+      
+      const options = validationResult.validatedOptions;
+      
       // Validate output directory for security
       const validatedOutputDir = PathValidator.validateCliPath(options.output);
       
@@ -310,8 +318,8 @@ program
       // Non-interactive mode (existing functionality)
       Logger.info('🤖 Using non-interactive mode with provided options...\n');
       
-      // Validate all options
-      validateInitOptions(options);
+      // Legacy validation (now redundant but kept for safety)
+      validateInitOptionsLegacy(options);
       
       // Handle preview mode
       if (options.preview) {
@@ -337,10 +345,15 @@ program
   .command('status')
   .description('Show current AI instructions configuration')
   .option('-d, --directory <path>', 'Directory to check (default: current directory)', environmentService.getCurrentWorkingDirectory())
-  .action(async (options) => {
+  .action(async (rawOptions: RawInitOptions) => {
     try {
+      // Get directory path with fallback
+      const directory = typeof rawOptions.directory === 'string' 
+        ? rawOptions.directory 
+        : environmentService.getCurrentWorkingDirectory();
+      
       // Validate directory path for security
-      const validatedPath = PathValidator.validateCliPath(options.directory);
+      const validatedPath = PathValidator.validateCliPath(directory);
       InteractiveInitializer.showStatus(validatedPath);
     } catch (error) {
       if (error instanceof SecurityError) {

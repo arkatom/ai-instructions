@@ -183,12 +183,13 @@ export class InteractivePrompts {
         checked: existingConfig?.agents?.includes(option.value) || false
       })),
       when: (answers: Record<string, unknown>) => {
-        const toolConfig = AVAILABLE_TOOLS[answers.tool as string];
+        if (typeof answers.tool !== 'string') return false;
+        const toolConfig = AVAILABLE_TOOLS[answers.tool];
         return toolConfig ? toolConfig.supportsAgents : false;
       },
       // @ts-expect-error - Inquirer types don't properly support validate function with answers parameter
       validate: (choices: string[], answers: Record<string, unknown>) => {
-        const toolConfig = answers.tool ? AVAILABLE_TOOLS[answers.tool as string] : undefined;
+        const toolConfig = typeof answers.tool === 'string' ? AVAILABLE_TOOLS[answers.tool] : undefined;
         if (toolConfig && toolConfig.supportsAgents && choices.length === 0) {
           return 'Please select at least one agent for Claude';
         }
@@ -196,7 +197,9 @@ export class InteractivePrompts {
       }
     });
 
-    const responses = await inquirer.prompt(questions as unknown as Parameters<typeof inquirer.prompt>[0]);
+    // Use inquirer - type assertion necessary due to inquirer's complex typing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const responses = await inquirer.prompt(questions as any) as InteractiveResponses;
 
     // Show configuration summary
     Logger.section('📋 Configuration Summary:');
@@ -227,7 +230,7 @@ export class InteractivePrompts {
       workflow: responses.workflow,
       methodologies: responses.methodologies,
       languages: responses.languages,
-      agents: responses.agents,
+      ...(responses.agents && { agents: responses.agents }),
       projectName: responses.projectName,
       outputDirectory: responses.outputDirectory,
       confirmGeneration 

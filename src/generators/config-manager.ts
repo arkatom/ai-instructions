@@ -179,9 +179,9 @@ export class ConfigurationManager {
   static createCustomFileStructure(overrides: Partial<FileStructureConfig>): FileStructureConfig {
     const defaults = {
       outputDirectory: '',
-      mainFileName: undefined as string | undefined,
+      mainFileName: undefined,
       subdirectories: [] as ReadonlyArray<string>,
-      fileNamingPattern: undefined as string | undefined,
+      fileNamingPattern: undefined,
       includeInstructionsDirectory: true
     };
 

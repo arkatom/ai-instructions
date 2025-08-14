@@ -75,7 +75,7 @@ export class SharedTemplateProcessor {
         lang,
         fileExtension: toolConfig.fileExtension || '.md',
         dynamicGlobs: this.generateDynamicGlobs(toolConfig, languageConfig),
-        customReplacements: options as Record<string, string> // Allow custom replacements
+        customReplacements: this.extractCustomReplacements(options)
       });
       
     } catch (error) {
@@ -87,6 +87,27 @@ export class SharedTemplateProcessor {
       
       throw new DynamicTemplateError(templateName, 'loading', error as Error);
     }
+  }
+
+  /**
+   * Type-safe extraction of custom replacements from options
+   */
+  private static extractCustomReplacements(options?: GenerateFilesOptions): Record<string, string> {
+    if (!options || typeof options !== 'object') {
+      return {};
+    }
+
+    // Only extract string properties that could be custom replacements
+    const result: Record<string, string> = {};
+    const knownOptionKeys = ['projectName', 'force', 'lang', 'outputFormat', 'conflictResolution', 'interactive', 'backup', 'languageConfig'];
+    
+    for (const [key, value] of Object.entries(options)) {
+      if (!knownOptionKeys.includes(key) && typeof value === 'string') {
+        result[key] = value;
+      }
+    }
+    
+    return result;
   }
   
   /**

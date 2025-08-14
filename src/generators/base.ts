@@ -372,6 +372,7 @@ export abstract class BaseGenerator {
         throw new ConfigurationNotFoundError('tool', this.toolConfig.name, 'not a supported tool');
       }
       
+      // Type-safe: we've validated this.toolConfig.name is a SupportedTool above
       const configurableConfig = await ConfigurationManager.loadConfigurableToolConfig(this.toolConfig.name as SupportedTool);
       
       // Return the base tool configuration (without file structure for backward compatibility)
@@ -436,6 +437,7 @@ export abstract class BaseGenerator {
         throw new ConfigurationNotFoundError('tool', this.toolConfig.name, 'not a supported tool');
       }
       
+      // Type-safe: we've validated this.toolConfig.name is a SupportedTool above
       return await ConfigurationManager.getFileStructureConfig(this.toolConfig.name as SupportedTool);
     } catch {
       // Fallback to default file structure if configuration fails
@@ -466,6 +468,7 @@ export abstract class BaseGenerator {
         throw new ConfigurationNotFoundError('tool', this.toolConfig.name, 'not a supported tool');
       }
       
+      // Type-safe: we've validated this.toolConfig.name is a SupportedTool above
       return await ConfigurationManager.loadConfigurableToolConfig(this.toolConfig.name as SupportedTool);
     } catch (error) {
       // Re-throw configuration errors
@@ -522,7 +525,12 @@ export abstract class BaseGenerator {
   /**
    * Validates required fields of tool configuration
    */
-  private validateRequiredFields(toolConfig: Record<string, unknown>): string[] {
+  private validateRequiredFields(config: unknown): string[] {
+    if (!config || typeof config !== 'object') {
+      return ['Configuration must be an object'];
+    }
+    
+    const toolConfig = config as Record<string, unknown>;
     const errors: string[] = [];
     
     for (const validator of BaseGenerator.TOOL_CONFIG_VALIDATORS) {
@@ -537,7 +545,12 @@ export abstract class BaseGenerator {
   /**
    * Validates globs structure in tool configuration
    */
-  private validateGlobsStructure(toolConfig: Record<string, unknown>): string[] {
+  private validateGlobsStructure(config: unknown): string[] {
+    if (!config || typeof config !== 'object') {
+      return ['Configuration must be an object'];
+    }
+    
+    const toolConfig = config as Record<string, unknown>;
     const errors: string[] = [];
     const globs = toolConfig.globs;
     
@@ -548,16 +561,17 @@ export abstract class BaseGenerator {
       return errors;
     }
     
-    const globsConfig = globs as Record<string, unknown>;
+    // Type-safe access to globs properties
+    const globsRecord = globs as Record<string, unknown>;
     
-    if (globsConfig.inherit !== undefined && typeof globsConfig.inherit !== 'string') {
+    if (globsRecord.inherit !== undefined && typeof globsRecord.inherit !== 'string') {
       errors.push('globs.inherit must be a string');
     }
     
-    if (globsConfig.additional !== undefined) {
-      if (!Array.isArray(globsConfig.additional)) {
+    if (globsRecord.additional !== undefined) {
+      if (!Array.isArray(globsRecord.additional)) {
         errors.push('globs.additional must be an array');
-      } else if (!globsConfig.additional.every(item => typeof item === 'string')) {
+      } else if (!globsRecord.additional.every(item => typeof item === 'string')) {
         errors.push('globs.additional must be an array of strings');
       }
     }
@@ -566,16 +580,11 @@ export abstract class BaseGenerator {
   }
 
   private validateToolConfiguration(config: unknown): string[] {
-    if (typeof config !== 'object' || config === null) {
-      return ['Configuration must be an object'];
-    }
-    
-    const toolConfig = config as Record<string, unknown>;
     const errors: string[] = [];
     
     // Validate required fields and globs structure
-    errors.push(...this.validateRequiredFields(toolConfig));
-    errors.push(...this.validateGlobsStructure(toolConfig));
+    errors.push(...this.validateRequiredFields(config));
+    errors.push(...this.validateGlobsStructure(config));
     
     return errors;
   }
@@ -597,8 +606,7 @@ export abstract class BaseGenerator {
     if (!Array.isArray(langConfig.globs)) {
       errors.push('globs must be an array');
     } else {
-      const globs = langConfig.globs as unknown[];
-      if (!globs.every(item => typeof item === 'string')) {
+      if (!langConfig.globs.every(item => typeof item === 'string')) {
         errors.push('globs must be an array of strings');
       }
     }
@@ -612,8 +620,7 @@ export abstract class BaseGenerator {
       if (!Array.isArray(langConfig.languageFeatures)) {
         errors.push('languageFeatures must be an array');
       } else {
-        const features = langConfig.languageFeatures as unknown[];
-        if (!features.every(item => typeof item === 'string')) {
+        if (!langConfig.languageFeatures.every(item => typeof item === 'string')) {
           errors.push('languageFeatures must be an array of strings');
         }
       }

@@ -105,6 +105,15 @@ export class InitCommand implements Command {
       const tool = getOptionalStringValue(initArgs.tool, 'claude');
       const lang = getOptionalStringValue(initArgs.lang, 'ja');
       const outputFormat = getOptionalStringValue(initArgs.outputFormat, 'claude');
+      
+      // Validate output format
+      const outputFormatValidation = this.validators.outputFormat.validate(outputFormat);
+      if (!outputFormatValidation.isValid) {
+        return {
+          success: false,
+          error: `Invalid output format: ${outputFormatValidation.errors.join('; ')}`
+        };
+      }
       const conflictResolution = getOptionalStringValue(initArgs.conflictResolution, 'backup');
 
       // Validate output directory for security
@@ -165,7 +174,7 @@ export class InitCommand implements Command {
         projectName,
         force: initArgs.force || false,
         lang: lang as 'en' | 'ja' | 'ch',
-        outputFormat: outputFormat as OutputFormat,
+        outputFormat: outputFormat as OutputFormat, // Type-safe after validation above
         conflictResolution,
         interactive: initArgs.interactive !== false,
         backup: initArgs.backup !== false

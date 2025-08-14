@@ -6,6 +6,7 @@
 import { CommandArgs, InitCommandArgs } from '../interfaces/CommandArgs';
 import { ValidationResult } from '../interfaces/ValidationResult';
 import { Validator } from '../interfaces/Validator';
+import { isStringOrUndefined, isBoolean } from '../../utils/type-guards';
 
 import { ProjectNameValidator } from '../validators/ProjectNameValidator';
 import { LanguageValidator } from '../validators/LanguageValidator';
@@ -72,29 +73,81 @@ export class ValidationCoordinator {
   }
 
   /**
+   * Type guard to check if CommandArgs is InitCommandArgs
+   */
+  private isInitCommandArgs(args: CommandArgs): args is InitCommandArgs {
+    return 'projectName' in args || 'tool' in args || 'lang' in args;
+  }
+
+  /**
    * Validate command arguments and return comprehensive result
    */
   validate(args: CommandArgs): ValidationResult {
-    const initArgs = args as InitCommandArgs;
+    if (!this.isInitCommandArgs(args)) {
+      return {
+        isValid: false,
+        errors: ['Invalid command arguments: not an InitCommandArgs']
+      };
+    }
+    
+    const initArgs = args;
     const errors: string[] = [];
 
     // Validate project name (validate if string provided, including empty strings)
-    this.validateField(initArgs.projectName, this.validators.projectName, errors, false);
+    if (isStringOrUndefined(initArgs.projectName)) {
+      this.validateField(initArgs.projectName, this.validators.projectName, errors, false);
+    } else if (initArgs.projectName !== undefined) {
+      errors.push('Project name must be a string or undefined');
+    }
 
     // Validate language (only validate non-empty strings)
-    this.validateField(initArgs.lang, this.validators.language, errors);
+    if (isStringOrUndefined(initArgs.lang)) {
+      this.validateField(initArgs.lang, this.validators.language, errors);
+    } else if (initArgs.lang !== undefined) {
+      errors.push('Language must be a string or undefined');
+    }
 
     // Validate output format (only validate non-empty strings)
-    this.validateField(initArgs.outputFormat, this.validators.outputFormat, errors);
+    if (isStringOrUndefined(initArgs.outputFormat)) {
+      this.validateField(initArgs.outputFormat, this.validators.outputFormat, errors);
+    } else if (initArgs.outputFormat !== undefined) {
+      errors.push('Output format must be a string or undefined');
+    }
 
     // Validate output path (only validate non-empty strings)
-    this.validateField(initArgs.output, this.validators.outputPath, errors);
+    if (isStringOrUndefined(initArgs.output)) {
+      this.validateField(initArgs.output, this.validators.outputPath, errors);
+    } else if (initArgs.output !== undefined) {
+      errors.push('Output path must be a string or undefined');
+    }
 
     // Validate conflict resolution (only validate non-empty strings)
-    this.validateField(initArgs.conflictResolution, this.validators.conflictResolution, errors);
+    if (isStringOrUndefined(initArgs.conflictResolution)) {
+      this.validateField(initArgs.conflictResolution, this.validators.conflictResolution, errors);
+    } else if (initArgs.conflictResolution !== undefined) {
+      errors.push('Conflict resolution must be a string or undefined');
+    }
 
     // Validate tool (only validate non-empty strings)
-    this.validateTool(initArgs.tool, errors);
+    if (isStringOrUndefined(initArgs.tool)) {
+      this.validateTool(initArgs.tool, errors);
+    } else if (initArgs.tool !== undefined) {
+      errors.push('Tool must be a string or undefined');
+    }
+
+    // Validate boolean flags
+    if (initArgs.force !== undefined && !isBoolean(initArgs.force)) {
+      errors.push('Force flag must be a boolean');
+    }
+    if (initArgs.preview !== undefined && !isBoolean(initArgs.preview)) {
+      errors.push('Preview flag must be a boolean');
+    }
+    if (initArgs.interactive !== undefined && !isBoolean(initArgs.interactive)) {
+      errors.push('Interactive flag must be a boolean');
+    }
+    if (initArgs.backup !== undefined && !isBoolean(initArgs.backup)) {
+      errors.push('Backup flag must be a boolean');
+    }
 
     return {
       isValid: errors.length === 0,

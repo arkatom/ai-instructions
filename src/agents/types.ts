@@ -229,15 +229,20 @@ export interface AgentValidationResult {
 export function isAgentMetadata(obj: unknown): obj is AgentMetadata {
   if (!obj || typeof obj !== 'object') return false;
   
+  // Type-safe property access - we've verified obj is a non-null object above
   const metadata = obj as Record<string, unknown>;
+  const hasStringProp = (prop: string): boolean => 
+    prop in metadata && typeof metadata[prop] === 'string';
+  const hasProp = (prop: string): boolean => prop in metadata;
+  const getProp = (prop: string): unknown => metadata[prop];
   
   return (
-    typeof metadata.name === 'string' &&
-    typeof metadata.category === 'string' &&
-    typeof metadata.description === 'string' &&
-    Array.isArray(metadata.tags) &&
-    metadata.relationships !== undefined &&
-    typeof metadata.relationships === 'object'
+    hasStringProp('name') &&
+    hasStringProp('category') &&
+    hasStringProp('description') &&
+    Array.isArray(getProp('tags')) &&
+    hasProp('relationships') &&
+    typeof getProp('relationships') === 'object'
   );
 }
 
@@ -247,12 +252,15 @@ export function isAgentMetadata(obj: unknown): obj is AgentMetadata {
 export function isAgentRelationship(obj: unknown): obj is AgentRelationship {
   if (!obj || typeof obj !== 'object') return false;
   
+  // Type-safe property access - we've verified obj is a non-null object above
   const relationship = obj as Record<string, unknown>;
+  const isArrayProp = (prop: string): boolean => 
+    prop in relationship && Array.isArray(relationship[prop]);
   
   return (
-    Array.isArray(relationship.requires) &&
-    Array.isArray(relationship.enhances) &&
-    Array.isArray(relationship.collaborates_with) &&
-    Array.isArray(relationship.conflicts_with)
+    isArrayProp('requires') &&
+    isArrayProp('enhances') &&
+    isArrayProp('collaborates_with') &&
+    isArrayProp('conflicts_with')
   );
 }

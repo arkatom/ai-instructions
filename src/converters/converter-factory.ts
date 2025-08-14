@@ -55,8 +55,8 @@ export class ConverterFactory {
   /**
    * Check if a format is supported
    */
-  static isFormatSupported(format: string): boolean {
-    return Object.values(OutputFormat).includes(format as OutputFormat);
+  static isFormatSupported(format: string): format is OutputFormat {
+    return (Object.values(OutputFormat) as string[]).includes(format);
   }
 
   /**
