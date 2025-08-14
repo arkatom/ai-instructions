@@ -53,7 +53,7 @@ describe('FileConflictHandler', () => {
     }
     
     // Clean up the project root backups directory (where backups are actually created)
-    const projectBackupsDir = join(process.cwd(), 'backups');
+    const projectBackupsDir = join(__dirname, '..', 'backups');
     if (existsSync(projectBackupsDir)) {
       rmSync(projectBackupsDir, { recursive: true, force: true });
     }
@@ -104,7 +104,7 @@ describe('FileConflictHandler', () => {
 
       // The backup is created in the project root's backups directory
       // with the relative path structure preserved
-      const projectRoot = process.cwd();
+      const projectRoot = join(__dirname, '..');
       const relativePath = relative(projectRoot, testFile);
       const backupDir = join(projectRoot, 'backups', dirname(relativePath));
       

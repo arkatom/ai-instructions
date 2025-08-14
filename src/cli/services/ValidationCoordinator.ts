@@ -43,6 +43,35 @@ export class ValidationCoordinator {
   }
 
   /**
+   * Validate a single field with a validator
+   */
+  private validateField(
+    value: any,
+    validator: { validate: (value: any) => ValidationResult },
+    errors: string[],
+    requireNonEmpty = true
+  ): void {
+    if (typeof value !== 'string') return;
+    if (requireNonEmpty && value.length === 0) return;
+    
+    const result = validator.validate(value);
+    if (!result.isValid) {
+      errors.push(...result.errors);
+    }
+  }
+
+  /**
+   * Validate tool separately due to different validation logic
+   */
+  private validateTool(tool: any, errors: string[]): void {
+    if (typeof tool !== 'string' || tool.length === 0) return;
+    
+    if (!GeneratorFactory.isValidTool(tool)) {
+      errors.push(`Unsupported tool: ${tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
+    }
+  }
+
+  /**
    * Validate command arguments and return comprehensive result
    */
   validate(args: CommandArgs): ValidationResult {
@@ -50,49 +79,22 @@ export class ValidationCoordinator {
     const errors: string[] = [];
 
     // Validate project name (validate if string provided, including empty strings)
-    if (typeof initArgs.projectName === 'string') {
-      const projectNameResult = this.validators.projectName.validate(initArgs.projectName);
-      if (!projectNameResult.isValid) {
-        errors.push(...projectNameResult.errors);
-      }
-    }
+    this.validateField(initArgs.projectName, this.validators.projectName, errors, false);
 
     // Validate language (only validate non-empty strings)
-    if (typeof initArgs.lang === 'string' && initArgs.lang.length > 0) {
-      const languageResult = this.validators.language.validate(initArgs.lang);
-      if (!languageResult.isValid) {
-        errors.push(...languageResult.errors);
-      }
-    }
+    this.validateField(initArgs.lang, this.validators.language, errors);
 
     // Validate output format (only validate non-empty strings)
-    if (typeof initArgs.outputFormat === 'string' && initArgs.outputFormat.length > 0) {
-      const outputFormatResult = this.validators.outputFormat.validate(initArgs.outputFormat);
-      if (!outputFormatResult.isValid) {
-        errors.push(...outputFormatResult.errors);
-      }
-    }
+    this.validateField(initArgs.outputFormat, this.validators.outputFormat, errors);
 
     // Validate output path (only validate non-empty strings)
-    if (typeof initArgs.output === 'string' && initArgs.output.length > 0) {
-      const outputPathResult = this.validators.outputPath.validate(initArgs.output);
-      if (!outputPathResult.isValid) {
-        errors.push(...outputPathResult.errors);
-      }
-    }
+    this.validateField(initArgs.output, this.validators.outputPath, errors);
 
     // Validate conflict resolution (only validate non-empty strings)
-    if (typeof initArgs.conflictResolution === 'string' && initArgs.conflictResolution.length > 0) {
-      const conflictResult = this.validators.conflictResolution.validate(initArgs.conflictResolution);
-      if (!conflictResult.isValid) {
-        errors.push(...conflictResult.errors);
-      }
-    }
+    this.validateField(initArgs.conflictResolution, this.validators.conflictResolution, errors);
 
     // Validate tool (only validate non-empty strings)
-    if (typeof initArgs.tool === 'string' && initArgs.tool.length > 0 && !GeneratorFactory.isValidTool(initArgs.tool)) {
-      errors.push(`Unsupported tool: ${initArgs.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
-    }
+    this.validateTool(initArgs.tool, errors);
 
     return {
       isValid: errors.length === 0,

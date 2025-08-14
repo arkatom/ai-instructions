@@ -4,9 +4,31 @@ import { existsSync, readFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { ExecException } from './types/exec-exception';
 
-describe('CLI Basic Functionality', () => {
-  const cliPath = join(__dirname, '../src/cli.ts');
+// Common CLI test helpers
+const cliPath = join(__dirname, '../src/cli.ts');
+const baseCwd = join(__dirname, '..');
+const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
 
+// Shared helper functions for all test suites
+const createRunCliInit = (testOutputDir: string) => {
+  return (projectName: string, options: string = '') => {
+    return execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${projectName}" ${options}`, { 
+      encoding: 'utf-8',
+      cwd: baseCwd,
+      env: testEnv
+    });
+  };
+};
+
+const runCliCommand = (command: string) => {
+  return execSync(`npx ts-node "${cliPath}" ${command}`, { 
+    encoding: 'utf-8',
+    cwd: baseCwd,
+    env: testEnv
+  });
+};
+
+describe('CLI Basic Functionality', () => {
   it('should display version when --version flag is used', () => {
     // Arrange
     const expectedVersion = '0.5.0';
@@ -385,27 +407,8 @@ describe('CLI Init Command Integration', () => {
 });
 
 describe('CLI Multi-Tool Support', () => {
-  const cliPath = join(__dirname, '../src/cli.ts');
   const testOutputDir = join(__dirname, './temp-cli-multi-tool-test');
-  const baseCwd = join(__dirname, '..');
-  const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
-
-  // 共通のCLI実行ヘルパー
-  const runCliInit = (projectName: string, options: string = '') => {
-    return execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${projectName}" ${options}`, { 
-      encoding: 'utf-8',
-      cwd: baseCwd,
-      env: testEnv
-    });
-  };
-
-  const runCliCommand = (command: string) => {
-    return execSync(`npx ts-node "${cliPath}" ${command}`, { 
-      encoding: 'utf-8',
-      cwd: baseCwd,
-      env: testEnv
-    });
-  };
+  const runCliInit = createRunCliInit(testOutputDir);
 
   afterEach(async () => {
     if (existsSync(testOutputDir)) {
@@ -470,27 +473,8 @@ describe('CLI Multi-Tool Support', () => {
 });
 
 describe('CLI Multi-Language Support', () => {
-  const cliPath = join(__dirname, '../src/cli.ts');
   const testOutputDir = join(__dirname, './temp-cli-lang-test');
-  const baseCwd = join(__dirname, '..');
-  const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
-
-  // 共通のCLI実行ヘルパー
-  const runCliInit = (projectName: string, options: string = '') => {
-    return execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${projectName}" ${options}`, { 
-      encoding: 'utf-8',
-      cwd: baseCwd,
-      env: testEnv
-    });
-  };
-
-  const runCliCommand = (command: string) => {
-    return execSync(`npx ts-node "${cliPath}" ${command}`, { 
-      encoding: 'utf-8',
-      cwd: baseCwd,
-      env: testEnv
-    });
-  };
+  const runCliInit = createRunCliInit(testOutputDir);
 
   afterEach(async () => {
     if (existsSync(testOutputDir)) {
@@ -594,27 +578,8 @@ describe('CLI Multi-Language Support', () => {
 });
 
 describe('CLI Output Format Support', () => {
-  const cliPath = join(__dirname, '../src/cli.ts');
   const testOutputDir = join(__dirname, './temp-cli-output-format-test');
-  const baseCwd = join(__dirname, '..');
-  const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
-
-  // 共通のCLI実行ヘルパー
-  const runCliInit = (projectName: string, options: string = '') => {
-    return execSync(`npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${projectName}" ${options}`, { 
-      encoding: 'utf-8',
-      cwd: baseCwd,
-      env: testEnv
-    });
-  };
-
-  const runCliCommand = (command: string) => {
-    return execSync(`npx ts-node "${cliPath}" ${command}`, { 
-      encoding: 'utf-8',
-      cwd: baseCwd,
-      env: testEnv
-    });
-  };
+  const runCliInit = createRunCliInit(testOutputDir);
 
   afterEach(async () => {
     if (existsSync(testOutputDir)) {

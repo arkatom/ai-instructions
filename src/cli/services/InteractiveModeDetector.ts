@@ -37,11 +37,6 @@ export class InteractiveModeDetector {
     }
 
     // Non-interactive environment or specific options provided
-    if (!InteractiveUtils.canRunInteractive() || hasNonInteractiveOptions) {
-      return false;
-    }
-
-    // Default to interactive if available
-    return true;
+    return InteractiveUtils.canRunInteractive() && !hasNonInteractiveOptions;
   }
 }

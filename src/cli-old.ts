@@ -131,6 +131,136 @@ function shouldUseInteractiveMode(rawArgs: string[], options: InitOptions): bool
   return !hasConfigOptions || onlyOutputSpecified;
 }
 
+// Helper functions to reduce cognitive complexity
+async function handleInteractiveMode(validatedOutputDir: string): Promise<void> {
+  Logger.info('🤖 Starting interactive setup...\n');
+  
+  // Check prerequisites
+  if (!InteractiveInitializer.validatePrerequisites()) {
+    Logger.error('Prerequisites not met for interactive mode');
+    process.exit(1);
+  }
+
+  // Run interactive initialization
+  const initializer = new InteractiveInitializer();
+  await initializer.initialize({
+    outputDirectory: validatedOutputDir,
+    verbose: false
+  });
+}
+
+function validateInitOptions(options: any): void {
+  // Validate project name before generating files
+  validateProjectName(options.projectName);
+  
+  // Validate tool option
+  if (!GeneratorFactory.isValidTool(options.tool)) {
+    throw new Error(`Unsupported tool: ${options.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
+  }
+  
+  // Validate language option
+  validateLanguage(options.lang);
+  
+  // Validate output format option
+  validateOutputFormat(options.outputFormat);
+  
+  // Validate output directory path
+  validateOutputDirectory(options.output);
+  
+  // Validate conflict resolution strategy
+  validateConflictResolution(options.conflictResolution);
+}
+
+async function handlePreviewMode(options: any): Promise<void> {
+  try {
+    const chalk = (await import('chalk')).default;
+    Logger.info(chalk.blue('🔍 Preview mode: Analyzing potential file conflicts...'));
+    Logger.warn('Preview functionality will be enhanced in v0.3.0');
+    Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
+    Logger.item('📍 Target directory:', options.output);
+    Logger.item('🤖 Tool:', options.tool);
+    Logger.item('📦 Project name:', options.projectName);
+    Logger.item('🌍 Language:', options.lang);
+  } catch {
+    Logger.info('🔍 Preview mode: Analyzing potential file conflicts...');
+    Logger.warn('Preview functionality will be enhanced in v0.3.0');
+    Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
+    Logger.item('📍 Target directory:', options.output);
+    Logger.item('🤖 Tool:', options.tool);
+    Logger.item('📦 Project name:', options.projectName);
+    Logger.item('🌍 Language:', options.lang);
+  }
+}
+
+async function handleForceMode(): Promise<void> {
+  try {
+    const chalk = (await import('chalk')).default;
+    Logger.raw(chalk.red('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!'));
+    Logger.raw(chalk.red('💣 Proceeding in 2 seconds...'));
+  } catch {
+    Logger.raw('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!');
+    Logger.raw('💣 Proceeding in 2 seconds...');
+  }
+  // Brief delay to let user see the warning
+  await new Promise(resolve => setTimeout(resolve, 2000));
+}
+
+async function generateTemplateFiles(validatedOutputDir: string, options: any): Promise<void> {
+  const generator = GeneratorFactory.createGenerator(options.tool as SupportedTool);
+  await generator.generateFiles(validatedOutputDir, { 
+    projectName: options.projectName,
+    force: options.force || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
+    lang: options.lang as 'en' | 'ja' | 'ch',  // Issue #11: Multi-language support
+    outputFormat: options.outputFormat as OutputFormat,  // Output format support
+    // 🚀 v0.5.0: Advanced file conflict resolution options
+    conflictResolution: options.conflictResolution || 'backup',
+    interactive: options.interactive !== false,  // Default to true unless --no-interactive
+    backup: options.backup !== false  // Default to true unless --no-backup
+  });
+  
+  Logger.success(`Generated ${generator.getToolName()} template files in ${validatedOutputDir}`);
+  Logger.info(`📁 Files created for ${generator.getToolName()} AI tool`);
+  Logger.item('🎯 Project name:', options.projectName);
+  
+  // Show format conversion message when output-format is used
+  if (options.outputFormat && options.outputFormat !== 'claude') {
+    Logger.info(`🔄 Converted from Claude format to ${options.outputFormat}`);
+  }
+  
+  // 🚨 EMERGENCY PATCH v0.2.1: Safety reminder
+  if (!options.force) {
+    try {
+      Logger.tip('Use --preview to check for conflicts before generating');
+      Logger.tip('Use --force to skip warnings (be careful!)');
+      Logger.tip('Run "ai-instructions init" without options for interactive setup');
+    } catch {
+      Logger.tip('Use --preview to check for conflicts before generating');
+      Logger.tip('Use --force to skip warnings (be careful!)');
+      Logger.tip('Run "ai-instructions init" without options for interactive setup');
+    }
+  }
+}
+
+function handleInitError(error: any): void {
+  if (process.env.NODE_ENV === 'test') {
+    // In test environment, throw the error so tests can catch it
+    throw error;
+  } else {
+    if (error instanceof SecurityError) {
+      Logger.error('Security violation:', error.message);
+      if (error.context) {
+        Logger.debug(`Security details: ${error.context}`);
+      }
+      process.exit(1);
+    }
+    Logger.error('Failed to generate template files:', error);
+    if (!InteractiveUtils.canRunInteractive()) {
+      InteractiveUtils.showInteractiveWarning();
+    }
+    process.exit(1);
+  }
+}
+
 // Read package.json for version
 const packageJsonPath = join(__dirname, '../package.json');
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
@@ -168,138 +298,32 @@ program
       const useInteractive = shouldUseInteractiveMode(rawArgs, options);
       
       if (useInteractive) {
-        // 🚀 v0.5.0: Interactive mode
-        Logger.info('🤖 Starting interactive setup...\n');
-        
-        // Check prerequisites
-        if (!InteractiveInitializer.validatePrerequisites()) {
-          Logger.error('Prerequisites not met for interactive mode');
-          process.exit(1);
-        }
-
-        // Run interactive initialization
-        const initializer = new InteractiveInitializer();
-        await initializer.initialize({
-          outputDirectory: validatedOutputDir,
-          verbose: false
-        });
-
+        await handleInteractiveMode(validatedOutputDir);
         return;
       }
 
       // Non-interactive mode (existing functionality)
       Logger.info('🤖 Using non-interactive mode with provided options...\n');
       
-      // Validate project name before generating files
-      validateProjectName(options.projectName);
+      // Validate all options
+      validateInitOptions(options);
       
-      // Validate tool option
-      if (!GeneratorFactory.isValidTool(options.tool)) {
-        throw new Error(`Unsupported tool: ${options.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
-      }
-      
-      // Validate language option
-      validateLanguage(options.lang);
-      
-      // Validate output format option
-      validateOutputFormat(options.outputFormat);
-      
-      // Validate output directory path
-      validateOutputDirectory(options.output);
-      
-      // Validate conflict resolution strategy
-      validateConflictResolution(options.conflictResolution);
-      
-      // 🚨 EMERGENCY PATCH v0.2.1: Preview mode handling
+      // Handle preview mode
       if (options.preview) {
-        try {
-          const chalk = (await import('chalk')).default;
-          Logger.info(chalk.blue('🔍 Preview mode: Analyzing potential file conflicts...'));
-          Logger.warn('Preview functionality will be enhanced in v0.3.0');
-          Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
-          Logger.item('📍 Target directory:', options.output);
-          Logger.item('🤖 Tool:', options.tool);
-          Logger.item('📦 Project name:', options.projectName);
-          Logger.item('🌍 Language:', options.lang);
-          return;
-        } catch {
-          Logger.info('🔍 Preview mode: Analyzing potential file conflicts...');
-          Logger.warn('Preview functionality will be enhanced in v0.3.0');
-          Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
-          Logger.item('📍 Target directory:', options.output);
-          Logger.item('🤖 Tool:', options.tool);
-          Logger.item('📦 Project name:', options.projectName);
-          Logger.item('🌍 Language:', options.lang);
-          return;
-        }
+        await handlePreviewMode(options);
+        return;
       }
       
-      // 🚨 EMERGENCY PATCH v0.2.1: Force flag warning
+      // Handle force mode warning
       if (options.force) {
-        try {
-          const chalk = (await import('chalk')).default;
-          Logger.raw(chalk.red('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!'));
-          Logger.raw(chalk.red('💣 Proceeding in 2 seconds...'));
-        } catch {
-          Logger.raw('🚨 FORCE MODE ENABLED: Files will be overwritten without warnings!');
-          Logger.raw('💣 Proceeding in 2 seconds...');
-        }
-        // Brief delay to let user see the warning
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await handleForceMode();
       }
       
-      const generator = GeneratorFactory.createGenerator(options.tool as SupportedTool);
-      await generator.generateFiles(validatedOutputDir, { 
-        projectName: options.projectName,
-        force: options.force || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
-        lang: options.lang as 'en' | 'ja' | 'ch',  // Issue #11: Multi-language support
-        outputFormat: options.outputFormat as OutputFormat,  // Output format support
-        // 🚀 v0.5.0: Advanced file conflict resolution options
-        conflictResolution: options.conflictResolution || 'backup',
-        interactive: options.interactive !== false,  // Default to true unless --no-interactive
-        backup: options.backup !== false  // Default to true unless --no-backup
-      });
-      
-      Logger.success(`Generated ${generator.getToolName()} template files in ${validatedOutputDir}`);
-      Logger.info(`📁 Files created for ${generator.getToolName()} AI tool`);
-      Logger.item('🎯 Project name:', options.projectName);
-      
-      // Show format conversion message when output-format is used
-      if (options.outputFormat && options.outputFormat !== 'claude') {
-        Logger.info(`🔄 Converted from Claude format to ${options.outputFormat}`);
-      }
-      
-      // 🚨 EMERGENCY PATCH v0.2.1: Safety reminder
-      if (!options.force) {
-        try {
-          Logger.tip('Use --preview to check for conflicts before generating');
-          Logger.tip('Use --force to skip warnings (be careful!)');
-          Logger.tip('Run "ai-instructions init" without options for interactive setup');
-        } catch {
-          Logger.tip('Use --preview to check for conflicts before generating');
-          Logger.tip('Use --force to skip warnings (be careful!)');
-          Logger.tip('Run "ai-instructions init" without options for interactive setup');
-        }
-      }
+      // Generate files
+      await generateTemplateFiles(validatedOutputDir, options);
       
     } catch (error) {
-      if (process.env.NODE_ENV === 'test') {
-        // In test environment, throw the error so tests can catch it
-        throw error;
-      } else {
-        if (error instanceof SecurityError) {
-          Logger.error('Security violation:', error.message);
-          if (error.context) {
-            Logger.debug(`Security details: ${error.context}`);
-          }
-          process.exit(1);
-        }
-        Logger.error('Failed to generate template files:', error);
-        if (!InteractiveUtils.canRunInteractive()) {
-          InteractiveUtils.showInteractiveWarning();
-        }
-        process.exit(1);
-      }
+      handleInitError(error);
     }
   });
 

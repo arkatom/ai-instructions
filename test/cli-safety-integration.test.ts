@@ -80,8 +80,8 @@ describe('CLI Safety Integration', () => {
       expect(newContent).toContain('backup-test');
       
       // Backup should exist in the project root's backups directory
-      // The FileConflictHandler creates backups at process.cwd()/backups
-      const projectRoot = process.cwd();
+      // The FileConflictHandler creates backups at join(__dirname, '..') /backups
+      const projectRoot = join(__dirname, '..');
       const backupDir = join(projectRoot, 'backups');
       
       // Check that backup was created
