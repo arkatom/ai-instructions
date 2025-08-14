@@ -149,46 +149,50 @@ async function handleInteractiveMode(validatedOutputDir: string): Promise<void> 
   });
 }
 
-function validateInitOptions(options: any): void {
+function validateInitOptions(options: unknown): void {
+  const opts = options as Record<string, unknown>;
+  
   // Validate project name before generating files
-  validateProjectName(options.projectName);
+  validateProjectName(opts.projectName as string);
   
   // Validate tool option
-  if (!GeneratorFactory.isValidTool(options.tool)) {
-    throw new Error(`Unsupported tool: ${options.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
+  if (!GeneratorFactory.isValidTool(opts.tool as string)) {
+    throw new Error(`Unsupported tool: ${opts.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
   }
   
   // Validate language option
-  validateLanguage(options.lang);
+  validateLanguage(opts.lang as string);
   
   // Validate output format option
-  validateOutputFormat(options.outputFormat);
+  validateOutputFormat(opts.outputFormat as string);
   
   // Validate output directory path
-  validateOutputDirectory(options.output);
+  validateOutputDirectory(opts.output as string);
   
   // Validate conflict resolution strategy
-  validateConflictResolution(options.conflictResolution);
+  validateConflictResolution(opts.conflictResolution as string);
 }
 
-async function handlePreviewMode(options: any): Promise<void> {
+async function handlePreviewMode(options: unknown): Promise<void> {
+  const opts = options as Record<string, unknown>;
+  
   try {
     const chalk = (await import('chalk')).default;
     Logger.info(chalk.blue('🔍 Preview mode: Analyzing potential file conflicts...'));
     Logger.warn('Preview functionality will be enhanced in v0.3.0');
     Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
-    Logger.item('📍 Target directory:', options.output);
-    Logger.item('🤖 Tool:', options.tool);
-    Logger.item('📦 Project name:', options.projectName);
-    Logger.item('🌍 Language:', options.lang);
+    Logger.item('📍 Target directory:', opts.output as string);
+    Logger.item('🤖 Tool:', opts.tool as string);
+    Logger.item('📦 Project name:', opts.projectName as string);
+    Logger.item('🌍 Language:', opts.lang as string);
   } catch {
     Logger.info('🔍 Preview mode: Analyzing potential file conflicts...');
     Logger.warn('Preview functionality will be enhanced in v0.3.0');
     Logger.warn('For now, manually check if CLAUDE.md and instructions/ exist in target directory');
-    Logger.item('📍 Target directory:', options.output);
-    Logger.item('🤖 Tool:', options.tool);
-    Logger.item('📦 Project name:', options.projectName);
-    Logger.item('🌍 Language:', options.lang);
+    Logger.item('📍 Target directory:', opts.output as string);
+    Logger.item('🤖 Tool:', opts.tool as string);
+    Logger.item('📦 Project name:', opts.projectName as string);
+    Logger.item('🌍 Language:', opts.lang as string);
   }
 }
 
@@ -205,30 +209,31 @@ async function handleForceMode(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 2000));
 }
 
-async function generateTemplateFiles(validatedOutputDir: string, options: any): Promise<void> {
-  const generator = GeneratorFactory.createGenerator(options.tool as SupportedTool);
+async function generateTemplateFiles(validatedOutputDir: string, options: unknown): Promise<void> {
+  const opts = options as Record<string, unknown>;
+  const generator = GeneratorFactory.createGenerator(opts.tool as SupportedTool);
   await generator.generateFiles(validatedOutputDir, { 
-    projectName: options.projectName,
-    force: options.force || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
-    lang: options.lang as 'en' | 'ja' | 'ch',  // Issue #11: Multi-language support
-    outputFormat: options.outputFormat as OutputFormat,  // Output format support
+    projectName: opts.projectName as string,
+    force: (opts.force as boolean) || false,  // 🚨 EMERGENCY PATCH v0.2.1: Pass force flag
+    lang: opts.lang as 'en' | 'ja' | 'ch',  // Issue #11: Multi-language support
+    outputFormat: opts.outputFormat as OutputFormat,  // Output format support
     // 🚀 v0.5.0: Advanced file conflict resolution options
-    conflictResolution: options.conflictResolution || 'backup',
-    interactive: options.interactive !== false,  // Default to true unless --no-interactive
-    backup: options.backup !== false  // Default to true unless --no-backup
+    conflictResolution: (opts.conflictResolution as string) || 'backup',
+    interactive: opts.interactive !== false,  // Default to true unless --no-interactive
+    backup: opts.backup !== false  // Default to true unless --no-backup
   });
   
   Logger.success(`Generated ${generator.getToolName()} template files in ${validatedOutputDir}`);
   Logger.info(`📁 Files created for ${generator.getToolName()} AI tool`);
-  Logger.item('🎯 Project name:', options.projectName);
+  Logger.item('🎯 Project name:', opts.projectName as string);
   
   // Show format conversion message when output-format is used
-  if (options.outputFormat && options.outputFormat !== 'claude') {
-    Logger.info(`🔄 Converted from Claude format to ${options.outputFormat}`);
+  if (opts.outputFormat && opts.outputFormat !== 'claude') {
+    Logger.info(`🔄 Converted from Claude format to ${opts.outputFormat}`);
   }
   
   // 🚨 EMERGENCY PATCH v0.2.1: Safety reminder
-  if (!options.force) {
+  if (!opts.force) {
     try {
       Logger.tip('Use --preview to check for conflicts before generating');
       Logger.tip('Use --force to skip warnings (be careful!)');
@@ -241,7 +246,7 @@ async function generateTemplateFiles(validatedOutputDir: string, options: any): 
   }
 }
 
-function handleInitError(error: any): void {
+function handleInitError(error: unknown): void {
   if (process.env.NODE_ENV === 'test') {
     // In test environment, throw the error so tests can catch it
     throw error;

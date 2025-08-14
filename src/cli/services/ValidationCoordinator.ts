@@ -46,8 +46,8 @@ export class ValidationCoordinator {
    * Validate a single field with a validator
    */
   private validateField(
-    value: any,
-    validator: { validate: (value: any) => ValidationResult },
+    value: unknown,
+    validator: { validate: (value: string) => ValidationResult },
     errors: string[],
     requireNonEmpty = true
   ): void {
@@ -63,7 +63,7 @@ export class ValidationCoordinator {
   /**
    * Validate tool separately due to different validation logic
    */
-  private validateTool(tool: any, errors: string[]): void {
+  private validateTool(tool: unknown, errors: string[]): void {
     if (typeof tool !== 'string' || tool.length === 0) return;
     
     if (!GeneratorFactory.isValidTool(tool)) {

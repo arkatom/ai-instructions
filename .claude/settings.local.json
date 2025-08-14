@@ -222,7 +222,8 @@
       "mcp__serena__find_symbol",
       "mcp__github__get_pull_request_comments"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
