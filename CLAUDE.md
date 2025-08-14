@@ -48,6 +48,7 @@ alwaysApply: true
 
 ### 開発プロセス
 
+- [実装前分析プロトコル](./instructions/methodologies/implementation-analysis.md) - **必須実行**
 - [TDD開発スタイル](./instructions/methodologies/tdd.md)
 - [Github Issue Driven Development](./instructions/methodologies/github-idd.md)
 
