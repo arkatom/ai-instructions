@@ -89,7 +89,7 @@ export function getOptionalStringValue(value: unknown, fallback: string): string
  * Type guard to check if a value is a supported language
  */
 export function isSupportedLanguage(value: unknown): value is SupportedLanguage {
-  return typeof value === 'string' && SUPPORTED_LANGUAGES.includes(value as SupportedLanguage);
+  return typeof value === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(value);
 }
 
 /**
@@ -110,7 +110,7 @@ export function isSupportedOutputFormat(value: unknown): value is string {
  * Type guard to check if a value is a supported conflict resolution strategy
  */
 export function isSupportedConflictResolution(value: unknown): value is ConflictResolutionStrategy {
-  return typeof value === 'string' && CONFLICT_RESOLUTION_STRATEGIES.includes(value as ConflictResolutionStrategy);
+  return typeof value === 'string' && (CONFLICT_RESOLUTION_STRATEGIES as readonly string[]).includes(value);
 }
 
 /**
