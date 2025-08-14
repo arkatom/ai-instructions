@@ -51,6 +51,10 @@ alwaysApply: true
 - [TDD開発スタイル](./instructions/methodologies/tdd.md)
 - [Github Issue Driven Development](./instructions/methodologies/github-idd.md)
 
+### 実装・コード変更
+
+- [実装前分析プロトコル](./instructions/methodologies/implementation-analysis.md) - **必須実行**
+
 ### エージェントシステム（Claude Code専用）
 
 - **Agent Dependency Management**: エージェント間の依存関係と協調パターンが実装済み
