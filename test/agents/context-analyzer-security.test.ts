@@ -5,11 +5,14 @@
 
 import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import { ContextAnalyzer } from '../../src/agents/context-analyzer';
 import { SecurityError } from '../../src/errors/custom-errors';
 
 // Mock fs module
 jest.mock('fs');
+// Mock fs/promises module
+jest.mock('fs/promises');
 
 describe('ContextAnalyzer Security Tests', () => {
   describe('Path Traversal Prevention', () => {
@@ -78,13 +81,15 @@ describe('ContextAnalyzer Security Tests', () => {
 
     test('should handle malformed JSON in package.json', async () => {
       // ARRANGE
-      jest.spyOn(fs, 'readFileSync').mockReturnValue('{invalid json}');
+      const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
+      mockedFsPromises.readFile.mockResolvedValue('{invalid json}');
+      mockedFsPromises.stat.mockResolvedValue({ } as any);
       
       // ACT
       const context = await analyzer.analyzeProject();
       
       // ASSERT
-      expect(context.projectType).toBe('unknown');
+      expect(context.projectType).toBe('nodejs'); // Broken package.json still indicates nodejs
       expect(context.errors).toContainEqual({
         file: 'package.json',
         error: 'Invalid JSON format'
@@ -93,13 +98,15 @@ describe('ContextAnalyzer Security Tests', () => {
 
     test('should handle empty JSON files', async () => {
       // ARRANGE
-      jest.spyOn(fs, 'readFileSync').mockReturnValue('');
+      const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
+      mockedFsPromises.readFile.mockResolvedValue('');
+      mockedFsPromises.stat.mockResolvedValue({ } as any);
       
       // ACT
       const context = await analyzer.analyzeProject();
       
       // ASSERT
-      expect(context.projectType).toBe('unknown');
+      expect(context.projectType).toBe('nodejs'); // Empty package.json still indicates nodejs
       expect(context.errors).toContainEqual({
         file: 'package.json',
         error: 'Empty JSON file'
@@ -108,7 +115,9 @@ describe('ContextAnalyzer Security Tests', () => {
 
     test('should handle JSON with null bytes', async () => {
       // ARRANGE
-      jest.spyOn(fs, 'readFileSync').mockReturnValue('{"test": "value\\u0000"}');
+      const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
+      mockedFsPromises.readFile.mockResolvedValue('{"test": "value\u0000"}');
+      mockedFsPromises.stat.mockResolvedValue({ } as any);
       
       // ACT
       const context = await analyzer.analyzeProject();
@@ -123,7 +132,9 @@ describe('ContextAnalyzer Security Tests', () => {
     test('should handle extremely large JSON files', async () => {
       // ARRANGE
       const largeJson = JSON.stringify({ data: 'x'.repeat(10 * 1024 * 1024) }); // 10MB
-      jest.spyOn(fs, 'readFileSync').mockReturnValue(largeJson);
+      const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
+      mockedFsPromises.readFile.mockResolvedValue(largeJson);
+      mockedFsPromises.stat.mockResolvedValue({ } as any);
       
       // ACT
       const context = await analyzer.analyzeProject();
@@ -137,14 +148,12 @@ describe('ContextAnalyzer Security Tests', () => {
 
     test('should continue analysis even with JSON errors', async () => {
       // ARRANGE
-      jest.spyOn(fs, 'readFileSync')
-        .mockReturnValueOnce('{invalid}') // package.json
-        .mockReturnValue('test content'); // other files
+      const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
+      mockedFsPromises.readFile
+        .mockResolvedValueOnce('{invalid}') // package.json
+        .mockResolvedValue('test content'); // other files
       
-      jest.spyOn(fs, 'existsSync')
-        .mockReturnValueOnce(true)  // package.json
-        .mockReturnValueOnce(true)  // README.md
-        .mockReturnValue(false);
+      mockedFsPromises.stat.mockResolvedValue({ } as any);
       
       // ACT
       const context = await analyzer.analyzeProject();

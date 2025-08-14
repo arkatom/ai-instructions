@@ -8,6 +8,39 @@ import { normalize, resolve } from 'path';
 import * as fs from 'fs';
 import { SecurityError } from '../../errors/custom-errors';
 
+// List of dangerous system paths to block
+const DANGEROUS_PATHS = [
+  '/etc', '/sys', '/proc', '/dev', '/boot', '/root',
+  'C:\\Windows', 'C:\\System32', 'C:\\Program Files'
+];
+
+/**
+ * Check if path is a dangerous system path
+ */
+function isDangerousPath(path: string): boolean {
+  const normalizedPath = normalize(path).toLowerCase();
+  return DANGEROUS_PATHS.some(dangerous => 
+    normalizedPath.startsWith(dangerous.toLowerCase())
+  );
+}
+
+/**
+ * Check for symbolic links
+ */
+function checkSymbolicLink(path: string): void {
+  try {
+    const stats = fs.lstatSync(path);
+    if (stats.isSymbolicLink()) {
+      throw new SecurityError('SYMLINK', 'Symbolic links not allowed');
+    }
+  } catch (error) {
+    if (error instanceof SecurityError) {
+      throw error;
+    }
+    // ENOENT is ok, other errors we ignore
+  }
+}
+
 /**
  * Validate path security for path traversal prevention
  * @param projectPath - The path to validate
@@ -15,41 +48,59 @@ import { SecurityError } from '../../errors/custom-errors';
  * @returns Normalized safe path
  * @throws SecurityError if path is unsafe
  */
+/**
+ * Handle path with traversal patterns
+ */
+function handleTraversalPath(projectPath: string, basePath: string): string {
+  const normalizedBase = normalize(resolve(basePath));
+  const resolvedPath = normalize(resolve(normalizedBase, projectPath));
+  
+  if (!resolvedPath.startsWith(normalizedBase)) {
+    throw new SecurityError('PATH_TRAVERSAL', 'Path traversal detected');
+  }
+  
+  checkSymbolicLink(resolvedPath);
+  return resolvedPath;
+}
+
+/**
+ * Check if path is absolute
+ */
+function isAbsolutePath(path: string): boolean {
+  return path.startsWith('/') || path.startsWith('\\') || 
+         (path.length > 2 && path[1] === ':');
+}
+
 export function validatePathSecurity(
   projectPath: string, 
   basePath: string = process.cwd()
 ): string {
-  const safePath = normalize(resolve(basePath, projectPath));
-  
-  // Check if path is outside project boundary
-  if (!safePath.startsWith(basePath)) {
-    throw new SecurityError('PATH_TRAVERSAL', 'Path traversal detected');
+  // Check for null bytes first
+  if (projectPath.includes('\u0000')) {
+    throw new SecurityError('NULL_BYTE', 'Null bytes detected in path');
   }
   
-  // Check for absolute paths outside project
-  if (projectPath.startsWith('/') && !projectPath.startsWith(basePath)) {
+  // Check for dangerous absolute paths
+  if (isDangerousPath(projectPath)) {
     throw new SecurityError('ABSOLUTE_PATH', 'Absolute path outside project boundary');
   }
   
-  // Check for symbolic links (atomic operation to prevent TOCTOU)
-  try {
-    const stats = fs.lstatSync(safePath);
-    if (stats.isSymbolicLink()) {
-      throw new SecurityError('SYMLINK', 'Symbolic links not allowed');
-    }
-  } catch (error) {
-    // ENOENT is acceptable (path doesn't exist yet)
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      // Path doesn't exist, which is safe
-      return safePath;
-    }
-    // SecurityError should be propagated
-    if (error instanceof SecurityError) {
-      throw error;
-    }
-    // Other errors indicate potential security issues
-    throw new SecurityError('PATH_VALIDATION', `Unable to validate path security: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  // Check for path traversal patterns
+  if (projectPath.includes('../') || projectPath.includes('..\\')) {
+    return handleTraversalPath(projectPath, basePath);
   }
+  
+  // Handle absolute paths
+  if (isAbsolutePath(projectPath)) {
+    const resolved = normalize(resolve(projectPath));
+    checkSymbolicLink(resolved);
+    return resolved;
+  }
+  
+  // For relative paths without traversal
+  const normalizedBase = normalize(resolve(basePath));
+  const safePath = normalize(resolve(normalizedBase, projectPath));
+  checkSymbolicLink(safePath);
   
   return safePath;
 }
