@@ -1,17 +1,23 @@
 /**
  * Agent Dependency Resolver
- * Resolves agent dependencies, detects conflicts, and identifies circular dependencies
  */
 
 import { AgentMetadata, DependencyResolution } from './types';
+import { 
+  CollectionContext, 
+  ExclusionContext, 
+  ConflictProcessingContext,
+  DependencyResolverHelpers,
+  ResolveOptions 
+} from './dependency-resolver-helpers';
 
-/**
- * Options for dependency resolution
- */
-export interface ResolveOptions {
-  /** Whether to prioritize explicitly selected agents over conflicts */
-  prioritizeSelected?: boolean;
-}
+export type { ResolveOptions };
+
+
+
+
+
+
 
 /**
  * Dependency Resolver class
@@ -41,14 +47,17 @@ export class DependencyResolver {
     };
 
     // Track visited agents for circular dependency detection
-    const visitStack: string[] = [];
-    const visited = new Set<string>();
-    const required = new Set<string>();
+    const context: CollectionContext = {
+      required: new Set<string>(),
+      visited: new Set<string>(),
+      visitStack: [],
+      resolution
+    };
 
     // Collect all required agents (including dependencies)
     for (const agent of selectedAgents) {
       try {
-        this.collectDependencies(agent, required, visited, visitStack, resolution);
+        this.collectDependencies(agent, context);
       } catch (error) {
         // If circular dependency was detected, it's already recorded
         if (!resolution.hasCircularDependency) {
@@ -57,7 +66,7 @@ export class DependencyResolver {
       }
     }
 
-    resolution.requiredAgents = Array.from(required);
+    resolution.requiredAgents = Array.from(context.required);
 
     // Check for conflicts
     const conflictMap = this.detectConflicts(resolution.requiredAgents);
@@ -83,21 +92,13 @@ export class DependencyResolver {
     return resolution;
   }
 
-  /**
-   * Recursively collect dependencies for an agent
-   * @param agentName - Agent to process
-   * @param required - Set of required agents (accumulator)
-   * @param visited - Set of fully processed agents
-   * @param visitStack - Current visit stack for circular detection
-   * @param resolution - Resolution object to update if circular dependency found
-   */
+
   private collectDependencies(
     agentName: string,
-    required: Set<string>,
-    visited: Set<string>,
-    visitStack: string[],
-    resolution: DependencyResolution
+    context: CollectionContext
   ): void {
+    const { required, visited, visitStack, resolution } = context;
+    
     // Check for circular dependency
     if (visitStack.includes(agentName)) {
       resolution.hasCircularDependency = true;
@@ -124,7 +125,7 @@ export class DependencyResolver {
 
     // Process dependencies
     for (const dep of metadata.relationships.requires) {
-      this.collectDependencies(dep, required, visited, visitStack, resolution);
+      this.collectDependencies(dep, context);
     }
 
     // Remove from visit stack and mark as visited
@@ -168,35 +169,57 @@ export class DependencyResolver {
    * @param options - Resolution options
    * @returns The agent to exclude, or null if neither should be excluded
    */
-  private determineAgentToExclude(
-    agent1: string,
-    agent2: string,
-    selectedAgents: string[],
-    requiredAgents: string[],
-    options: ResolveOptions
+  /**
+   * Check if an agent should be kept based on dependency status
+   */
+  private checkDependencyPriority(
+    agent1IsDependency: boolean,
+    agent2IsDependency: boolean
   ): string | null {
+    return DependencyResolverHelpers.checkDependencyPriority(
+      agent1IsDependency, 
+      agent2IsDependency
+    );
+  }
+
+  /**
+   * Check selection priority when option is set
+   */
+  private checkSelectionPriority(
+    agent1IsSelected: boolean,
+    agent2IsSelected: boolean,
+    prioritizeSelected: boolean
+  ): string | null {
+    return DependencyResolverHelpers.checkSelectionPriority(
+      agent1IsSelected,
+      agent2IsSelected,
+      prioritizeSelected
+    );
+  }
+
+  private determineAgentToExclude(
+    context: ExclusionContext
+  ): string | null {
+    const { agent1, agent2, selectedAgents, requiredAgents, options } = context;
+    
     const agent1IsSelected = selectedAgents.includes(agent1);
     const agent2IsSelected = selectedAgents.includes(agent2);
     const agent1IsDependency = !agent1IsSelected && requiredAgents.includes(agent1);
     const agent2IsDependency = !agent2IsSelected && requiredAgents.includes(agent2);
 
-    // If one is a dependency and the other is selected, keep the dependency
-    if (agent1IsDependency && !agent2IsDependency) {
-      return agent2;
-    }
-    if (agent2IsDependency && !agent1IsDependency) {
-      return agent1;
-    }
+    // Check dependency priority
+    const depPriority = this.checkDependencyPriority(agent1IsDependency, agent2IsDependency);
+    if (depPriority === 'agent1') return agent1;
+    if (depPriority === 'agent2') return agent2;
 
-    // Prioritize explicitly selected agents if option is set
-    if (options.prioritizeSelected) {
-      if (agent1IsSelected && !agent2IsSelected) {
-        return agent2;
-      }
-      if (agent2IsSelected && !agent1IsSelected) {
-        return agent1;
-      }
-    }
+    // Check selection priority
+    const selPriority = this.checkSelectionPriority(
+      agent1IsSelected, 
+      agent2IsSelected, 
+      options.prioritizeSelected || false
+    );
+    if (selPriority === 'agent1') return agent1;
+    if (selPriority === 'agent2') return agent2;
 
     // Default: keep the first alphabetically
     return agent1 < agent2 ? agent2 : agent1;
@@ -210,6 +233,46 @@ export class DependencyResolver {
    * @param options - Resolution options
    * @returns Resolved agents, excluded agents, and conflict details
    */
+  /**
+   * Process a single conflict pair
+   */
+  private processConflictPair(context: ConflictProcessingContext): boolean {
+    const { 
+      agent1, agent2, resolved, excluded, conflictPairs, 
+      selectedAgents, requiredAgents, options 
+    } = context;
+    
+    // Create a unique key for this conflict pair for resolution
+    const pairKey = [agent1, agent2].sort().join(':');
+    
+    // Skip resolution if we've already processed this pair
+    if (conflictPairs.has(pairKey)) {
+      return false;
+    }
+    conflictPairs.add(pairKey);
+
+    // Skip resolution if one is already excluded
+    if (excluded.has(agent1) || excluded.has(agent2)) {
+      return false;
+    }
+
+    // Determine which agent to exclude
+    const agentToExclude = this.determineAgentToExclude({
+      agent1, 
+      agent2, 
+      selectedAgents, 
+      requiredAgents, 
+      options
+    });
+
+    if (agentToExclude) {
+      resolved.delete(agentToExclude);
+      excluded.add(agentToExclude);
+    }
+    
+    return true;
+  }
+
   private resolveConflicts(
     requiredAgents: string[],
     conflictMap: Map<string, string[]>,
@@ -235,33 +298,17 @@ export class DependencyResolver {
           reason: 'Direct conflict'
         });
 
-        // Create a unique key for this conflict pair for resolution
-        const pairKey = [agent1, agent2].sort().join(':');
-        
-        // Skip resolution if we've already processed this pair
-        if (conflictPairs.has(pairKey)) {
-          continue;
-        }
-        conflictPairs.add(pairKey);
-
-        // Skip resolution if one is already excluded
-        if (excluded.has(agent1) || excluded.has(agent2)) {
-          continue;
-        }
-
-        // Determine which agent to exclude
-        const agentToExclude = this.determineAgentToExclude(
-          agent1, 
-          agent2, 
-          selectedAgents, 
-          requiredAgents, 
+        // Process the conflict pair
+        this.processConflictPair({
+          agent1,
+          agent2,
+          resolved,
+          excluded,
+          conflictPairs,
+          selectedAgents,
+          requiredAgents,
           options
-        );
-
-        if (agentToExclude) {
-          resolved.delete(agentToExclude);
-          excluded.add(agentToExclude);
-        }
+        });
       }
     }
 
@@ -336,6 +383,42 @@ export class DependencyResolver {
    * @param excludedAgents - List of excluded agents
    * @returns List of recommended agent names
    */
+  /**
+   * Add collaborator recommendations from resolved agents
+   */
+  private addCollaboratorRecommendations(
+    resolvedAgents: string[],
+    excludedAgents: string[],
+    recommendations: Set<string>
+  ): void {
+    for (const agentName of resolvedAgents) {
+      const metadata = this.metadata.get(agentName);
+      if (!metadata) continue;
+
+      for (const collaborator of metadata.relationships.collaborates_with) {
+        if (this.isValidRecommendation(collaborator, resolvedAgents, excludedAgents)) {
+          recommendations.add(collaborator);
+        }
+      }
+    }
+  }
+
+  /**
+   * Check if an agent is a valid recommendation
+   */
+  private isValidRecommendation(
+    agentName: string,
+    resolvedAgents: string[],
+    excludedAgents: string[]
+  ): boolean {
+    return DependencyResolverHelpers.isValidRecommendation(
+      agentName,
+      resolvedAgents,
+      excludedAgents,
+      this.metadata.has(agentName)
+    );
+  }
+
   private findRecommendations(
     resolvedAgents: string[],
     excludedAgents: string[]
@@ -354,19 +437,8 @@ export class DependencyResolver {
       }
     }
 
-    // Also check if resolved agents mention collaborators
-    for (const agentName of resolvedAgents) {
-      const metadata = this.metadata.get(agentName);
-      if (!metadata) continue;
-
-      for (const collaborator of metadata.relationships.collaborates_with) {
-        if (!resolvedAgents.includes(collaborator) && 
-            !excludedAgents.includes(collaborator) &&
-            this.metadata.has(collaborator)) {
-          recommendations.add(collaborator);
-        }
-      }
-    }
+    // Add collaborator recommendations
+    this.addCollaboratorRecommendations(resolvedAgents, excludedAgents, recommendations);
 
     // Filter out any recommendations that conflict with resolved agents
     return Array.from(recommendations).filter(rec => 
