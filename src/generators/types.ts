@@ -149,32 +149,29 @@ export function isFileOperation(value: unknown): value is FileOperation {
 export function isStrictToolConfiguration(value: unknown): value is StrictToolConfiguration {
   if (typeof value !== 'object' || value === null) return false;
   
-  // Type-safe: we've verified value is a non-null object above
-  const config = value as Record<string, unknown>;
-  const globs = config.globs as Record<string, unknown>;
-  return (
-    'displayName' in config && typeof config.displayName === 'string' &&
-    'fileExtension' in config && typeof config.fileExtension === 'string' &&
-    typeof config.fileExtension === 'string' && config.fileExtension.startsWith('.') &&
-    'globs' in config && typeof config.globs === 'object' &&
-    config.globs !== null &&
-    'inherit' in globs && typeof globs.inherit === 'string' &&
-    'description' in config && typeof config.description === 'string'
-  );
+  // Type narrowing without assertions - check each property directly
+  if (!('displayName' in value) || typeof value.displayName !== 'string') return false;
+  if (!('fileExtension' in value) || typeof value.fileExtension !== 'string') return false;
+  if (!value.fileExtension.startsWith('.')) return false;
+  if (!('globs' in value) || typeof value.globs !== 'object' || value.globs === null) return false;
+  
+  // Further check globs object properties
+  const { globs } = value;
+  return ('inherit' in globs) && typeof globs.inherit === 'string' &&
+         ('description' in value) && typeof value.description === 'string';
 }
 
 export function isStrictLanguageConfiguration(value: unknown): value is StrictLanguageConfiguration {
   if (typeof value !== 'object' || value === null) return false;
   
-  // Type-safe: we've verified value is a non-null object above
-  const config = value as Record<string, unknown>;
-  return (
-    'globs' in config && Array.isArray(config.globs) &&
-    Array.isArray(config.globs) && config.globs.every((item: unknown) => typeof item === 'string') &&
-    'description' in config && typeof config.description === 'string' &&
-    'languageFeatures' in config && Array.isArray(config.languageFeatures) &&
-    Array.isArray(config.languageFeatures) && config.languageFeatures.every((item: unknown) => typeof item === 'string')
-  );
+  // Type narrowing without assertions - check each property directly
+  if (!('globs' in value) || !Array.isArray(value.globs)) return false;
+  if (!value.globs.every((item: unknown) => typeof item === 'string')) return false;
+  
+  if (!('description' in value) || typeof value.description !== 'string') return false;
+  
+  if (!('languageFeatures' in value) || !Array.isArray(value.languageFeatures)) return false;
+  return value.languageFeatures.every((item: unknown) => typeof item === 'string');
 }
 
 /**
