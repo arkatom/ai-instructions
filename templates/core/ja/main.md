@@ -18,6 +18,7 @@ alwaysApply: true
 
 - [基本ルール](./instructions/core/base.md) - 絶対厳守事項
 - [深層思考](./instructions/core/deep-think.md)
+- [実装前分析プロトコル](./instructions/methodologies/implementation-analysis.md) - **必須実行**
 
 ## 📋 場面別必須参照ファイル
 
@@ -27,7 +28,6 @@ alwaysApply: true
 
 ### 開発プロセス
 
-- [実装前分析プロトコル](./instructions/methodologies/implementation-analysis.md) - **必須実行**
 - [TDD開発スタイル](./instructions/methodologies/tdd.md)
 - [Github Issue Driven Development](./instructions/methodologies/github-idd.md)
 
