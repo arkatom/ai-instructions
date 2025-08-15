@@ -131,7 +131,7 @@ describe('ClaudeGenerator OutputFormat Support', () => {
       expect(content).toContain('Development Instructions'); // ツール名は空文字列に置換される
       expect(content).toContain('copilot-test-project');
       expect(content).toContain('Development Process');
-      expect(content).toContain('TDD Rules');
+      expect(content).toContain('TDD Development Style');
 
       // Check instructions directory is copied (part of Claude generation base)
       const instructionsPath = join(tempDir, 'instructions');

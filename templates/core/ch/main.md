@@ -1,22 +1,6 @@
 ---
 description: 开发指导 - {{projectName}}
-globs: [
-  "**/*.css",
-  "**/*.html",
-  "**/*.json",
-  "**/*.md",
-  "**/*.txt",
-  "**/*.xml",
-  "**/*.yaml",
-  "**/*.yml",
-  "**/.env",
-  "**/.gitignore",
-  "**/CHANGELOG*",
-  "**/Dockerfile",
-  "**/LICENSE*",
-  "**/README*",
-  "**/docker-compose.yml"
-]
+globs: {{dynamicGlobs}}
 alwaysApply: true
 ---
 
