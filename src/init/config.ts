@@ -213,6 +213,29 @@ export class ConfigManager {
   }
 
   /**
+   * Type-safe property checker for unknown objects
+   */
+  private static hasStringProperty(obj: unknown, prop: string): boolean {
+    if (obj === null || typeof obj !== 'object') return false;
+    const objectRecord = obj as Record<string, unknown>;
+    return prop in objectRecord && typeof objectRecord[prop] === 'string';
+  }
+
+  private static hasArrayProperty(obj: unknown, prop: string): boolean {
+    if (obj === null || typeof obj !== 'object') return false;
+    const objectRecord = obj as Record<string, unknown>;
+    return prop in objectRecord && Array.isArray(objectRecord[prop]);
+  }
+
+  private static getProperty(obj: unknown, prop: string): unknown {
+    if (obj === null || typeof obj !== 'object' || !(prop in obj)) {
+      return undefined;
+    }
+    const objectRecord = obj as Record<string, unknown>;
+    return objectRecord[prop];
+  }
+
+  /**
    * Validate configuration object
    */
   static validateConfig(config: unknown): config is ProjectConfig {
@@ -225,23 +248,24 @@ export class ConfigManager {
       'generatedAt', 'version', 'projectName', 'outputDirectory'
     ];
 
-    const configObj = config as Record<string, unknown>;
-
+    // Type-safe validation without type assertion
     for (const field of requiredFields) {
-      if (!(field in configObj)) {
+      if (!(field in config)) {
         console.warn(`Configuration missing required field: ${field}`);
         return false;
       }
     }
 
-    // Validate tool
-    if (!Object.keys(AVAILABLE_TOOLS).includes(configObj.tool as string)) {
-      console.warn(`Invalid tool: ${configObj.tool}`);
+    // Type-safe property validation using 'in' operator and type guards
+    if (!this.hasStringProperty(config, 'tool') || 
+        !Object.keys(AVAILABLE_TOOLS).includes(this.getProperty(config, 'tool') as string)) {
+      console.warn(`Invalid tool: ${this.getProperty(config, 'tool')}`);
       return false;
     }
 
     // Validate arrays
-    if (!Array.isArray(configObj.methodologies) || !Array.isArray(configObj.languages)) {
+    if (!this.hasArrayProperty(config, 'methodologies') ||
+        !this.hasArrayProperty(config, 'languages')) {
       console.warn('Methodologies and languages must be arrays');
       return false;
     }

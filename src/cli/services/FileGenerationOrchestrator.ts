@@ -27,7 +27,10 @@ export class FileGenerationOrchestrator {
   async generateFiles(options: FileGenerationOptions): Promise<CommandResult> {
     try {
       // Create generator and generate files
-      const generator = GeneratorFactory.createGenerator(options.tool as SupportedTool);
+      if (!GeneratorFactory.isValidTool(options.tool)) {
+        throw new Error(`Invalid tool: ${options.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
+      }
+      const generator = GeneratorFactory.createGenerator(options.tool);
       await generator.generateFiles(options.outputDir, {
         projectName: options.projectName,
         force: options.force,

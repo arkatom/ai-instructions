@@ -229,15 +229,21 @@ export interface AgentValidationResult {
 export function isAgentMetadata(obj: unknown): obj is AgentMetadata {
   if (!obj || typeof obj !== 'object') return false;
   
-  const metadata = obj as Record<string, unknown>;
+  // Type-safe property access helper functions - we've verified obj is a non-null object above
+  const hasStringProp = (prop: string): boolean => {
+    const objRecord = obj as Record<string, unknown>;
+    return prop in objRecord && typeof objRecord[prop] === 'string';
+  };
+  const hasProp = (prop: string): boolean => prop in (obj as Record<string, unknown>);
+  const getProp = (prop: string): unknown => (obj as Record<string, unknown>)[prop];
   
   return (
-    typeof metadata.name === 'string' &&
-    typeof metadata.category === 'string' &&
-    typeof metadata.description === 'string' &&
-    Array.isArray(metadata.tags) &&
-    metadata.relationships !== undefined &&
-    typeof metadata.relationships === 'object'
+    hasStringProp('name') &&
+    hasStringProp('category') &&
+    hasStringProp('description') &&
+    Array.isArray(getProp('tags')) &&
+    hasProp('relationships') &&
+    typeof getProp('relationships') === 'object'
   );
 }
 
@@ -247,12 +253,16 @@ export function isAgentMetadata(obj: unknown): obj is AgentMetadata {
 export function isAgentRelationship(obj: unknown): obj is AgentRelationship {
   if (!obj || typeof obj !== 'object') return false;
   
-  const relationship = obj as Record<string, unknown>;
+  // Type-safe property access helper - we've verified obj is a non-null object above
+  const isArrayProp = (prop: string): boolean => {
+    const objRecord = obj as Record<string, unknown>;
+    return prop in objRecord && Array.isArray(objRecord[prop]);
+  };
   
   return (
-    Array.isArray(relationship.requires) &&
-    Array.isArray(relationship.enhances) &&
-    Array.isArray(relationship.collaborates_with) &&
-    Array.isArray(relationship.conflicts_with)
+    isArrayProp('requires') &&
+    isArrayProp('enhances') &&
+    isArrayProp('collaborates_with') &&
+    isArrayProp('conflicts_with')
   );
 }

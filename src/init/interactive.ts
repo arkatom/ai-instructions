@@ -8,7 +8,7 @@ import { existsSync } from 'fs';
 
 import { ProjectConfig, ConfigManager, AVAILABLE_TOOLS } from './config';
 import { InteractivePrompts } from './prompts';
-import { GeneratorFactory, SupportedTool } from '../generators/factory';
+import { GeneratorFactory } from '../generators/factory';
 import { OutputFormat } from '../converters';
 import { Logger } from '../utils/logger';
 import { EnvironmentService } from '../services/EnvironmentService';
@@ -76,7 +76,10 @@ export class InteractiveInitializer {
     
     try {
       // Use existing generator system with enhanced options
-      const generator = GeneratorFactory.createGenerator(config.tool as SupportedTool);
+      if (!GeneratorFactory.isValidTool(config.tool)) {
+        throw new Error(`Invalid tool configuration: ${config.tool}. Supported tools: ${GeneratorFactory.getSupportedTools().join(', ')}`);
+      }
+      const generator = GeneratorFactory.createGenerator(config.tool);
       
       // Prepare generation options
       const generatorOptions = {

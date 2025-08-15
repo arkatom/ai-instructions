@@ -3,6 +3,8 @@
  * Issue #35: Code Review - Enhance type safety with proper enums/const assertions
  */
 
+import { includesStringLiteral } from '../utils/array-helpers';
+
 /**
  * Supported language codes with proper const assertion
  */
@@ -122,53 +124,54 @@ export interface ValidationResult {
 
 /**
  * Type guards for runtime type checking
+ * Uses type-safe array helpers to avoid type assertions
  */
 export function isSupportedLanguage(value: unknown): value is SupportedLanguage {
-  return typeof value === 'string' && SUPPORTED_LANGUAGES.includes(value as SupportedLanguage);
+  return includesStringLiteral(SUPPORTED_LANGUAGES, value);
 }
 
 export function isSupportedTool(value: unknown): value is SupportedTool {
-  return typeof value === 'string' && SUPPORTED_TOOLS.includes(value as SupportedTool);
+  return includesStringLiteral(SUPPORTED_TOOLS, value);
 }
 
 export function isTemplatePhase(value: unknown): value is TemplatePhase {
-  return typeof value === 'string' && TEMPLATE_PHASES.includes(value as TemplatePhase);
+  return includesStringLiteral(TEMPLATE_PHASES, value);
 }
 
 export function isConfigurationType(value: unknown): value is ConfigurationType {
-  return typeof value === 'string' && CONFIG_TYPES.includes(value as ConfigurationType);
+  return includesStringLiteral(CONFIG_TYPES, value);
 }
 
 export function isFileOperation(value: unknown): value is FileOperation {
-  return typeof value === 'string' && FILE_OPERATIONS.includes(value as FileOperation);
+  return includesStringLiteral(FILE_OPERATIONS, value);
 }
 
 export function isStrictToolConfiguration(value: unknown): value is StrictToolConfiguration {
   if (typeof value !== 'object' || value === null) return false;
   
-  const config = value as Record<string, unknown>;
-  return (
-    typeof config.displayName === 'string' &&
-    typeof config.fileExtension === 'string' &&
-    config.fileExtension.startsWith('.') &&
-    typeof config.globs === 'object' &&
-    config.globs !== null &&
-    typeof (config.globs as Record<string, unknown>).inherit === 'string' &&
-    typeof config.description === 'string'
-  );
+  // Type narrowing without assertions - check each property directly
+  if (!('displayName' in value) || typeof value.displayName !== 'string') return false;
+  if (!('fileExtension' in value) || typeof value.fileExtension !== 'string') return false;
+  if (!value.fileExtension.startsWith('.')) return false;
+  if (!('globs' in value) || typeof value.globs !== 'object' || value.globs === null) return false;
+  
+  // Further check globs object properties
+  const { globs } = value;
+  return ('inherit' in globs) && typeof globs.inherit === 'string' &&
+         ('description' in value) && typeof value.description === 'string';
 }
 
 export function isStrictLanguageConfiguration(value: unknown): value is StrictLanguageConfiguration {
   if (typeof value !== 'object' || value === null) return false;
   
-  const config = value as Record<string, unknown>;
-  return (
-    Array.isArray(config.globs) &&
-    config.globs.every(item => typeof item === 'string') &&
-    typeof config.description === 'string' &&
-    Array.isArray(config.languageFeatures) &&
-    config.languageFeatures.every(item => typeof item === 'string')
-  );
+  // Type narrowing without assertions - check each property directly
+  if (!('globs' in value) || !Array.isArray(value.globs)) return false;
+  if (!value.globs.every((item: unknown) => typeof item === 'string')) return false;
+  
+  if (!('description' in value) || typeof value.description !== 'string') return false;
+  
+  if (!('languageFeatures' in value) || !Array.isArray(value.languageFeatures)) return false;
+  return value.languageFeatures.every((item: unknown) => typeof item === 'string');
 }
 
 /**

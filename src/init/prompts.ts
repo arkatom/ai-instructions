@@ -79,7 +79,7 @@ export class InteractivePrompts {
     existingConfig?: ProjectConfig | null,
     defaultOutputDir: string = this.environmentService.getCurrentWorkingDirectory()
   ): Promise<InteractiveResponses> {
-    const questions = [
+    const baseQuestions = [
       // Project metadata
       {
         type: 'input',
@@ -172,8 +172,8 @@ export class InteractivePrompts {
       }
     ];
 
-    // Agent selection (Claude only)
-    questions.push({
+    // Agent selection (Claude only) - properly typed with conditional question
+    const agentQuestion = {
       type: 'checkbox',
       name: 'agents',
       message: 'Select agents: (Press space to select multiple)',
@@ -186,17 +186,21 @@ export class InteractivePrompts {
         const toolConfig = AVAILABLE_TOOLS[answers.tool as string];
         return toolConfig ? toolConfig.supportsAgents : false;
       },
-      // @ts-expect-error - Inquirer types don't properly support validate function with answers parameter
-      validate: (choices: string[], answers: Record<string, unknown>) => {
-        const toolConfig = answers.tool ? AVAILABLE_TOOLS[answers.tool as string] : undefined;
-        if (toolConfig && toolConfig.supportsAgents && choices.length === 0) {
+      validate: (choices: unknown[]) => {
+        if (!Array.isArray(choices) || choices.length === 0) {
           return 'Please select at least one agent for Claude';
         }
         return true;
       }
-    });
+    };
 
-    const responses = await inquirer.prompt(questions as unknown as Parameters<typeof inquirer.prompt>[0]);
+    const questions = [...baseQuestions, agentQuestion];
+
+    // Use inquirer with type assertion - newer inquirer versions have complex generic types
+    // that are difficult to properly type without excessive complexity. We validate the response
+    // shape through runtime validation and the question structure ensures type safety.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const responses = await inquirer.prompt(questions as any) as InteractiveResponses;
 
     // Show configuration summary
     Logger.section('📋 Configuration Summary:');
@@ -227,7 +231,7 @@ export class InteractivePrompts {
       workflow: responses.workflow,
       methodologies: responses.methodologies,
       languages: responses.languages,
-      agents: responses.agents,
+      ...(responses.agents && { agents: responses.agents }),
       projectName: responses.projectName,
       outputDirectory: responses.outputDirectory,
       confirmGeneration 

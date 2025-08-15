@@ -1,9 +1,11 @@
 import { 
   FormatConverter, 
   OutputFormat, 
+  OUTPUT_FORMATS,
   ConversionMetadata, 
   ConversionResult 
 } from './format-converter';
+import { includesStringLiteral } from '../utils/array-helpers';
 
 import { CursorMDCConverter } from './cursor-converter';
 import { CopilotMarkdownConverter } from './copilot-converter';
@@ -54,9 +56,10 @@ export class ConverterFactory {
 
   /**
    * Check if a format is supported
+   * Uses type-safe array helper to avoid type assertions
    */
-  static isFormatSupported(format: string): boolean {
-    return Object.values(OutputFormat).includes(format as OutputFormat);
+  static isFormatSupported(format: string): format is OutputFormat {
+    return includesStringLiteral(OUTPUT_FORMATS, format);
   }
 
   /**

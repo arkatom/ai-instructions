@@ -27,12 +27,18 @@ describe('InteractiveInitializer', () => {
   let initializer: InteractiveInitializer;
   const testDir = join(__dirname, '../.test-interactive');
   const mockTemplatesDir = join(__dirname, '../../templates');
+  let _processExitSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.restoreAllMocks();
     jest.spyOn(console, 'log').mockImplementation();
     jest.spyOn(console, 'error').mockImplementation();
+    
+    // Mock process.exit to prevent test from actually exiting
+    _processExitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit called');
+    });
     
     // Create test directory
     if (!existsSync(testDir)) {
@@ -83,6 +89,9 @@ describe('InteractiveInitializer', () => {
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
         .mockReturnValue(mockGenerator as unknown as BaseGenerator);
+      
+      jest.spyOn(GeneratorFactory, 'isValidTool')
+        .mockReturnValue(true);
 
       // Act
       await initializer.initialize({ outputDirectory: testDir });
@@ -141,6 +150,9 @@ describe('InteractiveInitializer', () => {
       
       jest.spyOn(GeneratorFactory, 'createGenerator')
         .mockReturnValue(mockGenerator as unknown as BaseGenerator);
+      
+      jest.spyOn(GeneratorFactory, 'isValidTool')
+        .mockReturnValue(true);
 
       // Act
       await initializer.initialize({ outputDirectory: testDir });

@@ -5,7 +5,6 @@
 
 import { jest } from '@jest/globals';
 import { existsSync, writeFileSync, mkdirSync, rmSync, readFileSync, readdirSync } from 'fs';
-import * as fsPromises from 'fs/promises';
 import { join, relative, dirname } from 'path';
 import { FileConflictHandler, ConflictResolution } from '../src/utils/file-conflict-handler';
 
@@ -232,18 +231,6 @@ describe('FileConflictHandler', () => {
     });
   });
 
-  describe('promptForResolution()', () => {
-    test.skip('should return user selected resolution (TODO: fix inquirer mocking)', async () => {
-      // This test is temporarily skipped due to inquirer mocking complexity
-      // Will be fixed after core functionality is working
-      writeFileSync(testFile, 'existing content');
-      const _handler = new FileConflictHandler();
-      
-      // TODO: Fix inquirer mocking for newer versions
-      // For now, we'll test this functionality manually
-      expect(true).toBe(true);
-    });
-  });
 
   describe('Error handling', () => {
     test('should handle file system errors gracefully', async () => {
@@ -253,18 +240,6 @@ describe('FileConflictHandler', () => {
       await expect(handler.detectConflict(invalidPath)).resolves.toBe(false);
     });
 
-    test.skip('should handle backup creation errors', async () => {
-      writeFileSync(testFile, 'content');
-      const handler = new FileConflictHandler();
-      
-      // Mock fs operations to throw error
-      const copyFileSpy = jest.spyOn(fsPromises, 'copyFile').mockRejectedValue(new Error('Permission denied'));
-      
-      await expect(handler.createTimestampedBackup(testFile)).rejects.toThrow('Permission denied');
-      
-      // Restore original function
-      copyFileSpy.mockRestore();
-    });
   });
 
   describe('Integration with existing FileUtils', () => {

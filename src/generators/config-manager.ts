@@ -19,6 +19,7 @@ import {
   TemplateParsingError,
   FileSystemError
 } from './errors';
+import { ErrorHandler } from '../utils/error-handler';
 
 /**
  * Configuration structure for customizable file generation
@@ -68,14 +69,15 @@ export class ConfigurationManager {
       try {
         configContent = await readFile(toolConfigPath, 'utf-8');
       } catch (error) {
-        throw new FileSystemError('read', toolConfigPath, error as Error);
+        throw new FileSystemError('read', toolConfigPath, ErrorHandler.normalizeToError(error));
       }
       
       let parsedConfig: unknown;
       try {
         parsedConfig = JSON.parse(configContent);
       } catch (error) {
-        throw new Error(`Failed to parse tool configuration for ${toolName}: ${(error as Error).message}`);
+        const normalizedError = ErrorHandler.normalizeToError(error);
+        throw new Error(`Failed to parse tool configuration for ${toolName}: ${normalizedError.message}`);
       }
       
       // Enhance basic tool config with configurable file structure
@@ -99,7 +101,8 @@ export class ConfigurationManager {
         throw error;
       }
       
-      throw new FileSystemError('load_configurable_tool_config', toolConfigPath, error as Error);
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new FileSystemError('load_configurable_tool_config', toolConfigPath, normalizedError);
     }
   }
 
@@ -128,14 +131,14 @@ export class ConfigurationManager {
       try {
         configContent = await readFile(langConfigPath, 'utf-8');
       } catch (error) {
-        throw new FileSystemError('read', langConfigPath, error as Error);
+        throw new FileSystemError('read', langConfigPath, ErrorHandler.normalizeToError(error));
       }
       
       let parsedConfig: unknown;
       try {
         parsedConfig = JSON.parse(configContent);
       } catch (error) {
-        throw new TemplateParsingError(`language config ${languageName}.json`, error as Error);
+        throw new TemplateParsingError(`language config ${languageName}.json`, ErrorHandler.normalizeToError(error));
       }
       
       // Validate the configuration
@@ -161,7 +164,8 @@ export class ConfigurationManager {
         throw error;
       }
       
-      throw new FileSystemError('load_language_config', langConfigPath, error as Error);
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new FileSystemError('load_language_config', langConfigPath, normalizedError);
     }
   }
 
@@ -179,9 +183,9 @@ export class ConfigurationManager {
   static createCustomFileStructure(overrides: Partial<FileStructureConfig>): FileStructureConfig {
     const defaults = {
       outputDirectory: '',
-      mainFileName: undefined as string | undefined,
+      mainFileName: undefined,
       subdirectories: [] as ReadonlyArray<string>,
-      fileNamingPattern: undefined as string | undefined,
+      fileNamingPattern: undefined,
       includeInstructionsDirectory: true
     };
 

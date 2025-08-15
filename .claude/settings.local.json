@@ -220,9 +220,12 @@
       "mcp__filesystem__read_multiple_files",
       "mcp__github__get_pull_request_reviews",
       "mcp__serena__find_symbol",
-      "mcp__github__get_pull_request_comments"
+      "mcp__github__get_pull_request_comments",
+      "Bash(gh issue comment:*)",
+      "Bash(cd:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [

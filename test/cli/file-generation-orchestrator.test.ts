@@ -17,6 +17,10 @@ describe('FileGenerationOrchestrator', () => {
   beforeEach(() => {
     orchestrator = new FileGenerationOrchestrator();
     jest.clearAllMocks();
+    
+    // Mock GeneratorFactory methods
+    mockGeneratorFactory.isValidTool.mockReturnValue(true);
+    mockGeneratorFactory.getSupportedTools.mockReturnValue(['claude', 'cursor', 'github-copilot', 'cline', 'windsurf']);
   });
 
   describe('RED Phase: generateFiles', () => {
