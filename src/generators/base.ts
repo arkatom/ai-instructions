@@ -124,7 +124,7 @@ export abstract class BaseGenerator {
     try {
       return await readFile(templatePath, 'utf-8');
     } catch (error) {
-      throw new TemplateParsingError(templateName, error as Error);
+      throw new TemplateParsingError(templateName, ErrorHandler.normalizeToError(error));
     }
   }
 
