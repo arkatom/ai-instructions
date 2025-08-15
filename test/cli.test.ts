@@ -281,15 +281,18 @@ describe('CLI Deep Content Verification', () => {
     // 必須instructionsファイル群確認（現在の実装構造に合わせ修正）
     const requiredFiles = [
       'instructions/core/base.md',
-      'instructions/core/deep-think.md', 
-      'instructions/core/memory.md',
+      'instructions/core/deep-think.md',
       'instructions/methodologies/tdd.md',
       'instructions/methodologies/scrum.md',
       'instructions/methodologies/github-idd.md',
+      'instructions/methodologies/implementation-analysis.md',
       'instructions/workflows/github-flow.md',
+      'instructions/workflows/git-complete.md',
       'instructions/patterns/general/README.md',
       'instructions/patterns/typescript/README.md',
-      'instructions/patterns/python/README.md'
+      'instructions/patterns/python/README.md',
+      'instructions/note.md',
+      'instructions/anytime.md'
     ];
 
     requiredFiles.forEach(file => {
@@ -312,14 +315,14 @@ describe('CLI Deep Content Verification', () => {
     const claudeContent = readFileSync(join(contentTestDir, 'CLAUDE.md'), 'utf-8');
     expect(claudeContent).toContain('# 開発指示'); // 実際の生成では単一スペース
     expect(claudeContent).toContain('## 🚨 核心原則（必須）');
-    expect(claudeContent).toContain('[基本ルール](./instructions/base.md)'); // テンプレートの実際のリンク
-    expect(claudeContent).toContain('[深層思考](./instructions/deep-think.md)'); // テンプレートの実際のリンク
+    expect(claudeContent).toContain('[基本ルール](./instructions/core/base.md)'); // テンプレートの実際のリンク
+    expect(claudeContent).toContain('[深層思考](./instructions/core/deep-think.md)'); // テンプレートの実際のリンク
 
-    // base.md構造確認（実際のパスに修正）
+    // base.md構造確認（英語に統一されたテンプレート）
     const baseContent = readFileSync(join(contentTestDir, 'instructions/core/base.md'), 'utf-8');
-    expect(baseContent).toContain('# 超基本ルール(MUST)');
-    expect(baseContent).toContain('## 絶対厳守事項');
-    expect(baseContent).toContain('適当度');
+    expect(baseContent).toContain('# Fundamental Rules (MUST)');
+    expect(baseContent).toContain('## Absolute Requirements');
+    expect(baseContent).toContain('Deep Investigation');
 
     // tdd.md確認（実際のファイル名・パスと内容に修正）
     const tddContent = readFileSync(join(contentTestDir, 'instructions/methodologies/tdd.md'), 'utf-8');
@@ -336,15 +339,15 @@ describe('CLI Deep Content Verification', () => {
     
     // リンク先ファイル存在確認（テンプレートが実際に生成するリンクを検証）
     const templateLinks = [
-      './instructions/base.md',
-      './instructions/deep-think.md',
-      './instructions/memory.md'
+      './instructions/core/base.md',
+      './instructions/core/deep-think.md',
+      './instructions/workflows/git-complete.md'
     ];
 
     const actualFilePaths = [
       'instructions/core/base.md',
       'instructions/core/deep-think.md',
-      'instructions/core/memory.md'
+      'instructions/workflows/git-complete.md'
     ];
 
     templateLinks.forEach((link, index) => {
@@ -368,11 +371,11 @@ describe('CLI Deep Content Verification', () => {
     const claudeContent = readFileSync(join(contentTestDir, 'CLAUDE.md'), 'utf-8');
     expect(claudeContent).toContain(`# 開発指示 - ${projectName}`); // 実際の生成では単一スペース
     
-    // 日本語文字が正しく保持されていることを確認（実際のパスに修正）
+    // base.mdは英語に統一されたので英語内容を確認
     const baseContent = readFileSync(join(contentTestDir, 'instructions/core/base.md'), 'utf-8');
-    expect(baseContent).toContain('超基本ルール');
-    expect(baseContent).toContain('絶対厳守事項');
-    expect(baseContent).toContain('適当度');
+    expect(baseContent).toContain('Fundamental Rules');
+    expect(baseContent).toContain('Absolute Requirements');
+    expect(baseContent).toContain('Deep Investigation');
   });
 });
 
@@ -711,14 +714,17 @@ describe('CLI Output Format Support', () => {
         'CLAUDE.md', 
         'instructions/core/base.md',
         'instructions/core/deep-think.md',
-        'instructions/core/memory.md',
         'instructions/methodologies/github-idd.md',
         'instructions/methodologies/scrum.md',
         'instructions/methodologies/tdd.md',
+        'instructions/methodologies/implementation-analysis.md',
         'instructions/patterns/general/README.md',
         'instructions/patterns/python/README.md',
         'instructions/patterns/typescript/README.md',
-        'instructions/workflows/github-flow.md'
+        'instructions/workflows/github-flow.md',
+        'instructions/workflows/git-complete.md',
+        'instructions/note.md',
+        'instructions/anytime.md'
       ] },
       { format: 'cursor', expectedFiles: ['.cursor/rules/main.mdc'] },
       { format: 'copilot', expectedFiles: ['.github/copilot-instructions.md'] }

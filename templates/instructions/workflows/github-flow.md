@@ -72,6 +72,8 @@ refactor(user): #789 extract user profile service [domain:user] [tags:service,ex
 
 ### PR Creation
 
+After creating a PR, open the PR in your browser with `gh pr view --web <PR number>`.
+
 #### Title Format
 ```
 #Issue-number: Brief description

@@ -159,7 +159,7 @@ describe('ClineGenerator (Issue #23)', () => {
       
       // 必要なセクションが含まれることを確認
       expect(codingContent).toContain('Development Instructions');
-      expect(codingContent).toContain('TDD Rules');
+      expect(codingContent).toContain('TDD Development Style');
       expect(docContent).toContain('Documentation');
       
       // ファイルが空でないことを確認

@@ -50,12 +50,12 @@ describe('Template Restructure (Issue #19)', () => {
         lang: 'ja' 
       });
       
-      // 統一構造のbase.mdの内容を確認
+      // 統一構造のbase.mdの内容を確認（英語に統一）
       const baseContent = await readFile(join(testOutputDir, 'instructions', 'core', 'base.md'), 'utf-8');
       
-      // 日本語のファイルであることを確認
-      expect(baseContent).toContain('超基本ルール');
-      expect(baseContent).toContain('絶対厳守');
+      // 英語のファイルであることを確認
+      expect(baseContent).toContain('Fundamental Rules');
+      expect(baseContent).toContain('Absolute Requirements');
     });
 
     it('should work with any language using unified instructions', async () => {
@@ -66,12 +66,12 @@ describe('Template Restructure (Issue #19)', () => {
         lang: 'en' 
       });
       
-      // 統一構造では言語に関係なく同じ内容
+      // 統一構造では言語に関係なく同じ内容（英語に統一）
       const baseContent = await readFile(join(testOutputDir, 'instructions', 'core', 'base.md'), 'utf-8');
       
-      // 統一された日本語のファイルであることを確認
-      expect(baseContent).toContain('超基本ルール');
-      expect(baseContent).toContain('絶対厳守');
+      // 統一された英語のファイルであることを確認
+      expect(baseContent).toContain('Fundamental Rules');
+      expect(baseContent).toContain('Absolute Requirements');
     });
 
     it('should support all configured languages with unified instructions', async () => {
@@ -112,7 +112,7 @@ describe('Template Restructure (Issue #19)', () => {
       const coreFiles = await readdir(join(testOutputDir, 'instructions', 'core'));
       expect(coreFiles).toContain('base.md');
       expect(coreFiles).toContain('deep-think.md');
-      expect(coreFiles).toContain('memory.md');
+      // memory.md has been removed as it's not actually used
     });
   });
 
