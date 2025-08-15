@@ -3,6 +3,8 @@
  * Issue #35: Code Review - Enhance type safety with proper enums/const assertions
  */
 
+import { includesStringLiteral } from '../utils/array-helpers';
+
 /**
  * Supported language codes with proper const assertion
  */
@@ -122,25 +124,26 @@ export interface ValidationResult {
 
 /**
  * Type guards for runtime type checking
+ * Uses type-safe array helpers to avoid type assertions
  */
 export function isSupportedLanguage(value: unknown): value is SupportedLanguage {
-  return typeof value === 'string' && SUPPORTED_LANGUAGES.includes(value as SupportedLanguage);
+  return includesStringLiteral(SUPPORTED_LANGUAGES, value);
 }
 
 export function isSupportedTool(value: unknown): value is SupportedTool {
-  return typeof value === 'string' && SUPPORTED_TOOLS.includes(value as SupportedTool);
+  return includesStringLiteral(SUPPORTED_TOOLS, value);
 }
 
 export function isTemplatePhase(value: unknown): value is TemplatePhase {
-  return typeof value === 'string' && TEMPLATE_PHASES.includes(value as TemplatePhase);
+  return includesStringLiteral(TEMPLATE_PHASES, value);
 }
 
 export function isConfigurationType(value: unknown): value is ConfigurationType {
-  return typeof value === 'string' && CONFIG_TYPES.includes(value as ConfigurationType);
+  return includesStringLiteral(CONFIG_TYPES, value);
 }
 
 export function isFileOperation(value: unknown): value is FileOperation {
-  return typeof value === 'string' && FILE_OPERATIONS.includes(value as FileOperation);
+  return includesStringLiteral(FILE_OPERATIONS, value);
 }
 
 export function isStrictToolConfiguration(value: unknown): value is StrictToolConfiguration {

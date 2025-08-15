@@ -221,7 +221,8 @@
       "mcp__github__get_pull_request_reviews",
       "mcp__serena__find_symbol",
       "mcp__github__get_pull_request_comments",
-      "Bash(gh issue comment:*)"
+      "Bash(gh issue comment:*)",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

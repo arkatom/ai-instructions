@@ -4,19 +4,20 @@
  * Enhanced for CLI type safety
  */
 
-import { GeneratorFactory, SupportedTool } from '../generators/factory';
 import { ConverterFactory, OutputFormat } from '../converters';
+import { GeneratorFactory, SupportedTool } from '../generators/factory';
 import {
-  SupportedLanguage,
+  CLI_DEFAULTS,
+  CliValidationResult,
+  CONFLICT_RESOLUTION_STRATEGIES,
   ConflictResolutionStrategy,
   RawInitOptions,
-  ValidatedInitOptions,
-  CliValidationResult,
-  ValidationError,
-  CLI_DEFAULTS,
   SUPPORTED_LANGUAGES,
-  CONFLICT_RESOLUTION_STRATEGIES
+  SupportedLanguage,
+  ValidatedInitOptions,
+  ValidationError
 } from '../types/cli-types';
+import { includesStringLiteral } from './array-helpers';
 
 /**
  * Type guard to check if a value is a non-empty string
@@ -81,15 +82,17 @@ export function getOptionalStringValue(value: unknown, fallback: string): string
   return typeof value === 'string' ? value : fallback;
 }
 
+
 // =============================================================================
 // CLI-Specific Type Guards
 // =============================================================================
 
 /**
  * Type guard to check if a value is a supported language
+ * Uses type-safe array helper to avoid type assertions
  */
 export function isSupportedLanguage(value: unknown): value is SupportedLanguage {
-  return typeof value === 'string' && (SUPPORTED_LANGUAGES as readonly string[]).includes(value);
+  return includesStringLiteral(SUPPORTED_LANGUAGES, value);
 }
 
 /**
@@ -108,9 +111,10 @@ export function isSupportedOutputFormat(value: unknown): value is string {
 
 /**
  * Type guard to check if a value is a supported conflict resolution strategy
+ * Uses type-safe array helper to avoid type assertions
  */
 export function isSupportedConflictResolution(value: unknown): value is ConflictResolutionStrategy {
-  return typeof value === 'string' && (CONFLICT_RESOLUTION_STRATEGIES as readonly string[]).includes(value);
+  return includesStringLiteral(CONFLICT_RESOLUTION_STRATEGIES, value);
 }
 
 /**
@@ -119,7 +123,7 @@ export function isSupportedConflictResolution(value: unknown): value is Conflict
 export function isValidProjectName(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   if (value.trim() === '') return false;
-  
+
   // Check for forbidden characters
   const invalidChars = /[<>|]/;
   return !invalidChars.test(value);
@@ -134,10 +138,38 @@ export function isValidOutputPath(value: unknown): value is string {
 
 /**
  * Validates and converts raw CLI options to type-safe options
+ * Uses a pattern where validation and construction are combined for type safety
  */
 export function validateCliOptions(rawOptions: RawInitOptions, currentWorkingDirectory: string): CliValidationResult {
   const errors: ValidationError[] = [];
   
+  // Type-safe validation and extraction
+  const result = validateAndExtractOptions(rawOptions, currentWorkingDirectory, errors);
+  
+  if (errors.length > 0) {
+    return {
+      isValid: false,
+      errors
+    };
+  }
+  
+  return {
+    isValid: true,
+    errors: [],
+    validatedOptions: result
+  };
+}
+
+/**
+ * Internal function that validates and extracts options with proper type narrowing
+ * Uses explicit typing approach to avoid any type assertions
+ */
+// eslint-disable-next-line sonarjs/cognitive-complexity
+function validateAndExtractOptions(
+  rawOptions: RawInitOptions, 
+  currentWorkingDirectory: string,
+  errors: ValidationError[]
+): ValidatedInitOptions {
   // Validate output path
   const output = getOptionalStringValue(rawOptions.output, currentWorkingDirectory);
   if (!isValidOutputPath(output)) {
@@ -148,7 +180,7 @@ export function validateCliOptions(rawOptions: RawInitOptions, currentWorkingDir
       expected: ['valid directory path']
     });
   }
-  
+
   // Validate project name
   const projectName = getOptionalStringValue(rawOptions.projectName, CLI_DEFAULTS.projectName);
   if (!isValidProjectName(projectName)) {
@@ -159,82 +191,117 @@ export function validateCliOptions(rawOptions: RawInitOptions, currentWorkingDir
       expected: ['non-empty string without forbidden characters']
     });
   }
-  
-  // Validate tool
-  const tool = getOptionalStringValue(rawOptions.tool, CLI_DEFAULTS.tool);
-  if (!isSupportedTool(tool)) {
-    errors.push({
-      field: 'tool',
-      message: `Unsupported tool: ${tool}`,
-      received: rawOptions.tool,
-      expected: GeneratorFactory.getSupportedTools()
-    });
+
+  // Validate tool - using explicit switch/case for type safety
+  let tool: SupportedTool;
+  const toolString = typeof rawOptions.tool === 'string' ? rawOptions.tool : CLI_DEFAULTS.tool;
+  switch (toolString) {
+    case 'claude':
+    case 'cursor':
+    case 'windsurf':
+    case 'github-copilot':
+    case 'cline':
+      tool = toolString;
+      break;
+    default:
+      tool = CLI_DEFAULTS.tool;
+      if (typeof rawOptions.tool === 'string') {
+        errors.push({
+          field: 'tool',
+          message: `Unsupported tool: ${rawOptions.tool}`,
+          received: rawOptions.tool,
+          expected: [...GeneratorFactory.getSupportedTools()]
+        });
+      }
+      break;
   }
-  
-  // Validate language
-  const lang = getOptionalStringValue(rawOptions.lang, CLI_DEFAULTS.lang);
-  if (!isSupportedLanguage(lang)) {
-    errors.push({
-      field: 'lang',
-      message: `Unsupported language: ${lang}`,
-      received: rawOptions.lang,
-      expected: [...SUPPORTED_LANGUAGES]
-    });
+
+  // Validate language - using explicit switch/case for type safety
+  let lang: SupportedLanguage;
+  const langString = typeof rawOptions.lang === 'string' ? rawOptions.lang : CLI_DEFAULTS.lang;
+  switch (langString) {
+    case 'en':
+    case 'ja':
+    case 'ch':
+      lang = langString;
+      break;
+    default:
+      lang = CLI_DEFAULTS.lang;
+      if (typeof rawOptions.lang === 'string') {
+        errors.push({
+          field: 'lang',
+          message: `Unsupported language: ${rawOptions.lang}`,
+          received: rawOptions.lang,
+          expected: [...SUPPORTED_LANGUAGES]
+        });
+      }
+      break;
   }
-  
-  // Validate output format
-  const outputFormat = getOptionalStringValue(rawOptions.outputFormat, CLI_DEFAULTS.outputFormat);
-  if (!isSupportedOutputFormat(outputFormat)) {
-    errors.push({
-      field: 'outputFormat',
-      message: `Unsupported output format: ${outputFormat}`,
-      received: rawOptions.outputFormat,
-      expected: ConverterFactory.getAvailableFormats()
-    });
+
+  // Validate output format - using explicit switch/case for type safety
+  let outputFormat: OutputFormat;
+  const outputFormatString = typeof rawOptions.outputFormat === 'string' ? rawOptions.outputFormat : CLI_DEFAULTS.outputFormat;
+  switch (outputFormatString) {
+    case 'claude':
+    case 'cursor':
+    case 'copilot':
+    case 'windsurf':
+      outputFormat = outputFormatString;
+      break;
+    default:
+      outputFormat = CLI_DEFAULTS.outputFormat;
+      if (typeof rawOptions.outputFormat === 'string') {
+        errors.push({
+          field: 'outputFormat',
+          message: `Unsupported output format: ${rawOptions.outputFormat}`,
+          received: rawOptions.outputFormat,
+          expected: ConverterFactory.getAvailableFormats()
+        });
+      }
+      break;
   }
-  
-  // Validate conflict resolution
-  const conflictResolution = getOptionalStringValue(rawOptions.conflictResolution, CLI_DEFAULTS.conflictResolution);
-  if (!isSupportedConflictResolution(conflictResolution)) {
-    errors.push({
-      field: 'conflictResolution',
-      message: `Unsupported conflict resolution strategy: ${conflictResolution}`,
-      received: rawOptions.conflictResolution,
-      expected: [...CONFLICT_RESOLUTION_STRATEGIES]
-    });
+
+  // Validate conflict resolution - using explicit switch/case for type safety
+  let conflictResolution: ConflictResolutionStrategy;
+  const conflictResolutionString = typeof rawOptions.conflictResolution === 'string' ? rawOptions.conflictResolution : CLI_DEFAULTS.conflictResolution;
+  switch (conflictResolutionString) {
+    case 'backup':
+    case 'merge':
+    case 'skip':
+    case 'overwrite':
+      conflictResolution = conflictResolutionString;
+      break;
+    default:
+      conflictResolution = CLI_DEFAULTS.conflictResolution;
+      if (typeof rawOptions.conflictResolution === 'string') {
+        errors.push({
+          field: 'conflictResolution',
+          message: `Unsupported conflict resolution strategy: ${rawOptions.conflictResolution}`,
+          received: rawOptions.conflictResolution,
+          expected: [...CONFLICT_RESOLUTION_STRATEGIES]
+        });
+      }
+      break;
   }
-  
+
   // Validate boolean flags
   const force = typeof rawOptions.force === 'boolean' ? rawOptions.force : CLI_DEFAULTS.force;
   const preview = typeof rawOptions.preview === 'boolean' ? rawOptions.preview : CLI_DEFAULTS.preview;
   const interactive = typeof rawOptions.interactive === 'boolean' ? rawOptions.interactive : CLI_DEFAULTS.interactive;
   const backup = typeof rawOptions.backup === 'boolean' ? rawOptions.backup : CLI_DEFAULTS.backup;
-  
-  if (errors.length > 0) {
-    return {
-      isValid: false,
-      errors
-    };
-  }
-  
-  // All fields have been validated by type guards above
-  const validatedOptions: ValidatedInitOptions = {
+
+  // Return validated options with proper types
+  return {
     output,
     projectName,
-    tool: tool as SupportedTool, // Type-safe after isSupportedTool validation
-    lang: lang as SupportedLanguage, // Type-safe after isSupportedLanguage validation  
-    outputFormat: outputFormat as OutputFormat, // Type-safe after isSupportedOutputFormat validation
+    tool,
+    lang,
+    outputFormat,
     force,
     preview,
-    conflictResolution: conflictResolution as ConflictResolutionStrategy, // Type-safe after validation
+    conflictResolution,
     interactive,
     backup
-  };
-  
-  return {
-    isValid: true,
-    errors: [],
-    validatedOptions
   };
 }
 

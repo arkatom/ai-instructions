@@ -1,12 +1,19 @@
 /**
  * Output format types for different AI tools
+ * Using const assertion pattern for better type safety
  */
-export enum OutputFormat {
-  CLAUDE = 'claude',      // CLAUDE.md (existing)
-  CURSOR = 'cursor',      // .cursor/rules/main.mdc with YAML frontmatter
-  COPILOT = 'copilot',    // .github/copilot-instructions.md (2024 standard)  
-  WINDSURF = 'windsurf'   // .windsurfrules
-}
+export const OUTPUT_FORMATS = ['claude', 'cursor', 'copilot', 'windsurf'] as const;
+export type OutputFormat = typeof OUTPUT_FORMATS[number];
+
+/**
+ * Output format constants for compatibility
+ */
+export const OutputFormat = {
+  CLAUDE: 'claude' as const,
+  CURSOR: 'cursor' as const,
+  COPILOT: 'copilot' as const,
+  WINDSURF: 'windsurf' as const
+} as const;
 
 /**
  * Metadata for template processing and conversion

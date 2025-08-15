@@ -3,7 +3,8 @@ import { ClaudeGenerator } from './claude';
 import { GitHubCopilotGenerator } from './github-copilot';
 import { CursorGenerator } from './cursor';
 import { ClineGenerator } from './cline';
-import { SupportedTool } from './types';
+import { SupportedTool, SUPPORTED_TOOLS } from './types';
+import { includesStringLiteral } from '../utils/array-helpers';
 
 // Re-export for backward compatibility
 export { SupportedTool };
@@ -36,14 +37,15 @@ export class GeneratorFactory {
   /**
    * Get list of supported tools
    */
-  static getSupportedTools(): SupportedTool[] {
-    return ['claude', 'github-copilot', 'cursor', 'cline', 'windsurf'];
+  static getSupportedTools(): readonly SupportedTool[] {
+    return SUPPORTED_TOOLS;
   }
 
   /**
    * Validate if a tool is supported
+   * Uses type-safe array helper to avoid type assertions
    */
   static isValidTool(tool: string): tool is SupportedTool {
-    return this.getSupportedTools().includes(tool as SupportedTool);
+    return includesStringLiteral(SUPPORTED_TOOLS, tool);
   }
 }

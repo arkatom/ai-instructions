@@ -4,8 +4,8 @@
  * Replaces unsafe type assertions with proper type safety
  */
 
-import { SupportedTool } from '../generators/factory';
 import { OutputFormat } from '../converters';
+import { SupportedTool } from '../generators/factory';
 
 /**
  * Supported languages for templates
@@ -53,18 +53,29 @@ export interface RawInitOptions {
 
 /**
  * Default values for CLI options
+ * Using explicit literal types to avoid type assertions
  */
 export const CLI_DEFAULTS = {
   projectName: 'my-project',
-  tool: 'claude' as SupportedTool,
-  lang: 'ja' as SupportedLanguage,
-  outputFormat: 'claude' as OutputFormat,
+  tool: 'claude',
+  lang: 'ja', 
+  outputFormat: 'claude',
   force: false,
   preview: false,
-  conflictResolution: 'backup' as ConflictResolutionStrategy,
+  conflictResolution: 'backup',
   interactive: true,
   backup: true,
-} as const;
+} as const satisfies {
+  projectName: string;
+  tool: SupportedTool;
+  lang: SupportedLanguage;
+  outputFormat: OutputFormat;
+  force: boolean;
+  preview: boolean;
+  conflictResolution: ConflictResolutionStrategy;
+  interactive: boolean;
+  backup: boolean;
+};
 
 /**
  * Supported CLI languages
