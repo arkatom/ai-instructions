@@ -3,6 +3,7 @@ import { join } from 'path';
 import { FileUtils } from '../utils/file-utils';
 import { ConflictResolution } from '../utils/file-conflict-handler';
 import { OutputFormat } from '../converters';
+import { ErrorHandler } from '../utils/error-handler';
 import { 
   TemplateNotFoundError, 
   TemplateParsingError, 
@@ -169,13 +170,9 @@ export abstract class BaseGenerator {
         throw error;
       }
       
-      // Handle unexpected filesystem errors
-      if (error instanceof Error) {
-        throw new FileSystemError('read_template', this.templateDir, error);
-      }
-      
-      // Fallback for unknown errors
-      throw new Error(`Unexpected error loading template ${templateName}: ${error}`);
+      // Handle unexpected filesystem errors using type-safe error handling
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new FileSystemError('read_template', this.templateDir, normalizedError);
     }
   }
 
@@ -209,7 +206,7 @@ export abstract class BaseGenerator {
       try {
         coreTemplate = await readFile(coreTemplatePath, 'utf-8');
       } catch (error) {
-        throw new DynamicTemplateError(templateName, 'loading', error as Error);
+        throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
       }
       
       // Phase 2: Load tool-specific configuration with validation
@@ -227,7 +224,7 @@ export abstract class BaseGenerator {
         
         toolConfig = rawToolConfig;
       } catch (error) {
-        throw new DynamicTemplateError(templateName, 'loading', error as Error);
+        throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
       }
       
       // Phase 3: Load language configuration with validation
@@ -246,14 +243,14 @@ export abstract class BaseGenerator {
         
         languageConfig = rawLanguageConfig;
       } catch (error) {
-        throw new DynamicTemplateError(templateName, 'loading', error as Error);
+        throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
       }
       
       // Phase 4: Apply dynamic replacements with enhanced type safety
       try {
         return this.applyDynamicReplacements(coreTemplate, toolConfig, languageConfig, options);
       } catch (error) {
-        throw new DynamicTemplateError(templateName, 'processing', error as Error);
+        throw new DynamicTemplateError(templateName, 'processing', ErrorHandler.normalizeToError(error));
       }
       
     } catch (error) {
@@ -266,13 +263,9 @@ export abstract class BaseGenerator {
         throw error;
       }
       
-      // Handle unexpected errors
-      if (error instanceof Error) {
-        throw new DynamicTemplateError(templateName, 'loading', error);
-      }
-      
-      // Fallback for unknown errors
-      throw new Error(`Unexpected error in dynamic template processing for ${templateName}: ${error}`);
+      // Handle unexpected errors using type-safe error handling
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new DynamicTemplateError(templateName, 'loading', normalizedError);
     }
   }
 
@@ -392,12 +385,9 @@ export abstract class BaseGenerator {
         throw error;
       }
       
-      // Handle unexpected errors
-      if (error instanceof Error) {
-        throw new FileSystemError('load_tool_config', `tool:${this.toolConfig.name}`, error);
-      }
-      
-      throw new Error(`Unexpected error loading tool configuration for ${this.toolConfig.name}: ${error}`);
+      // Handle unexpected errors using type-safe error handling
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new FileSystemError('load_tool_config', `tool:${this.toolConfig.name}`, normalizedError);
     }
   }
 
@@ -419,12 +409,9 @@ export abstract class BaseGenerator {
         throw error;
       }
       
-      // Handle unexpected errors
-      if (error instanceof Error) {
-        throw new FileSystemError('load_language_config', languageName, error);
-      }
-      
-      throw new Error(`Unexpected error loading language configuration for ${languageName}: ${error}`);
+      // Handle unexpected errors using type-safe error handling
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new FileSystemError('load_language_config', languageName, normalizedError);
     }
   }
 
@@ -444,7 +431,12 @@ export abstract class BaseGenerator {
       console.warn(`⚠️  Failed to load file structure config for ${this.toolConfig.name}, using defaults`);
       
       // Build fallback configuration with proper readonly handling
-      const fallbackOverrides: Partial<FileStructureConfig> = {
+      const fallbackOverrides: {
+        outputDirectory: string;
+        subdirectories: string[];
+        includeInstructionsDirectory: boolean;
+        mainFileName?: string;
+      } = {
         outputDirectory: this.toolConfig.outputStructure.directory || '',
         subdirectories: [],
         includeInstructionsDirectory: true
@@ -452,10 +444,10 @@ export abstract class BaseGenerator {
       
       // Only include mainFileName if it's defined (proper handling of optional property)
       if (this.toolConfig.outputStructure.mainFile) {
-        (fallbackOverrides as Partial<FileStructureConfig> & { mainFileName: string }).mainFileName = this.toolConfig.outputStructure.mainFile;
+        fallbackOverrides.mainFileName = this.toolConfig.outputStructure.mainFile;
       }
       
-      return ConfigurationManager.createCustomFileStructure(fallbackOverrides);
+      return ConfigurationManager.createCustomFileStructure(fallbackOverrides as Partial<FileStructureConfig>);
     }
   }
 
@@ -477,8 +469,9 @@ export abstract class BaseGenerator {
         throw error;
       }
       
-      // Handle other errors
-      throw new FileSystemError('load_configurable_tool_config', this.toolConfig.name, error as Error);
+      // Handle other errors using type-safe error handling
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new FileSystemError('load_configurable_tool_config', this.toolConfig.name, normalizedError);
     }
   }
 
@@ -506,7 +499,8 @@ export abstract class BaseGenerator {
       
       return createdPaths;
     } catch (error) {
-      throw new FileSystemError('create_directory_structure', baseOutputDir, error as Error);
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new FileSystemError('create_directory_structure', baseOutputDir, normalizedError);
     }
   }
 

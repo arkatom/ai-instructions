@@ -16,6 +16,7 @@ import {
 import { type GenerateFilesOptions } from './base';
 import { ConfigurationManager } from './config-manager';
 import { ParallelGeneratorOperations, ParallelFileGenerator } from './parallel-generator';
+import { ErrorHandler } from '../utils/error-handler';
 import {
   TemplateNotFoundError,
   TemplateParsingError,
@@ -85,7 +86,7 @@ export class SharedTemplateProcessor {
         throw error;
       }
       
-      throw new DynamicTemplateError(templateName, 'loading', error as Error);
+      throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
     }
   }
 
@@ -164,7 +165,7 @@ export class SharedTemplateProcessor {
       }
       
     } catch (error) {
-      throw new FileSystemError('copy_instructions', targetDir, error as Error);
+      throw new FileSystemError('copy_instructions', targetDir, ErrorHandler.normalizeToError(error));
     }
   }
   
@@ -230,7 +231,7 @@ This file contains specialized development instructions.
       }
       
     } catch (error) {
-      throw new DynamicTemplateError('multiple_files', 'processing', error as Error);
+      throw new DynamicTemplateError('multiple_files', 'processing', ErrorHandler.normalizeToError(error));
     }
   }
   
@@ -254,7 +255,7 @@ This file contains specialized development instructions.
       if (error instanceof TemplateNotFoundError) {
         throw error;
       }
-      throw new TemplateParsingError(templateName, error as Error);
+      throw new TemplateParsingError(templateName, ErrorHandler.normalizeToError(error));
     }
   }
   

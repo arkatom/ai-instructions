@@ -15,6 +15,7 @@ import {
   FileSystemError,
   DynamicTemplateError
 } from './errors';
+import { ErrorHandler } from '../utils/error-handler';
 
 /**
  * File operation task for parallel execution
@@ -101,7 +102,7 @@ export class ParallelFileGenerator {
       return await this.executeParallel(copyTasks);
       
     } catch (error) {
-      throw new FileSystemError('parallel_copy', sourcePath, error as Error);
+      throw new FileSystemError('parallel_copy', sourcePath, ErrorHandler.normalizeToError(error));
     }
   }
 
@@ -132,7 +133,7 @@ export class ParallelFileGenerator {
       return await this.executeParallel(fileOpTasks);
       
     } catch (error) {
-      throw new DynamicTemplateError('parallel_template_generation', 'processing', error as Error);
+      throw new DynamicTemplateError('parallel_template_generation', 'processing', ErrorHandler.normalizeToError(error));
     }
   }
 
@@ -241,7 +242,7 @@ export class ParallelFileGenerator {
       return {
         taskId: task.id,
         success: false,
-        error: error as Error,
+        error: ErrorHandler.normalizeToError(error),
         executionTimeMs: endTime - startTime
       };
     }
@@ -302,7 +303,7 @@ export class ParallelFileGenerator {
       return tasks;
       
     } catch (error) {
-      throw new FileSystemError('build_copy_tasks', sourcePath, error as Error);
+      throw new FileSystemError('build_copy_tasks', sourcePath, ErrorHandler.normalizeToError(error));
     }
   }
 

@@ -149,14 +149,14 @@ export class ErrorHandler {
   }
   
   /**
-   * Handle command execution errors
+   * Handle command execution errors with type-safe error processing
    */
   static handleCommandError(
     error: unknown,
     context?: Record<string, unknown>,
     shouldExit: boolean = true
   ): { success: false; error: string } {
-    const err = error as Error;
+    const err = this.normalizeToError(error);
     
     // Display error
     const exitCode = this.displayError(err);
@@ -179,7 +179,7 @@ export class ErrorHandler {
   }
   
   /**
-   * Execute an operation with retry logic
+   * Execute an operation with retry logic using type-safe error handling
    */
   static async handleWithRetry<T>(
     operation: () => Promise<T>,
@@ -192,7 +192,7 @@ export class ErrorHandler {
       try {
         return await operation();
       } catch (error) {
-        lastError = error as Error;
+        lastError = this.normalizeToError(error);
         
         // Don't retry for non-retryable errors
         if (!this.isRetryableError(lastError)) {
@@ -254,17 +254,44 @@ export class ErrorHandler {
         throw error;
       }
       
-      // Wrap unknown errors
+      // Wrap unknown errors using type-safe normalization
       const message = errorMessage || 'Operation failed';
-      const errorDetail = error instanceof Error 
-        ? error.message 
-        : error != null 
-          ? String(error) 
-          : 'Unknown error occurred';
-      throw new ApplicationError('OPERATION_FAILED', `${message}: ${errorDetail}`);
+      const normalizedError = this.normalizeToError(error);
+      throw new ApplicationError('OPERATION_FAILED', `${message}: ${normalizedError.message}`);
     }
   }
   
+  /**
+   * Type-safe conversion of unknown value to Error object
+   */
+  static normalizeToError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+    
+    if (typeof error === 'string') {
+      return new Error(error);
+    }
+    
+    if (error && typeof error === 'object') {
+      // Handle error-like objects
+      const errorObj = error as Record<string, unknown>;
+      const message = typeof errorObj.message === 'string' 
+        ? errorObj.message 
+        : 'Unknown error occurred';
+      const stack = typeof errorObj.stack === 'string' ? errorObj.stack : undefined;
+      
+      const newError = new Error(message);
+      if (stack) {
+        newError.stack = stack;
+      }
+      return newError;
+    }
+    
+    // Fallback for any other type
+    return new Error(error != null ? String(error) : 'Unknown error occurred');
+  }
+
   /**
    * Create a user-friendly error message
    */
