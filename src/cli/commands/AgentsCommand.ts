@@ -8,6 +8,7 @@ import { CommandArgs, AgentCommandArgs } from '../interfaces/CommandArgs';
 import { CommandResult } from '../interfaces/CommandResult';
 import { ValidationResult } from '../interfaces/ValidationResult';
 import { AgentValidator } from '../validators/AgentValidator';
+import { SecurityValidator } from '../validators/SecurityValidator';
 import { AgentMetadataLoader } from '../../agents/metadata-loader';
 import { 
   RecommendationEngine, 
@@ -50,6 +51,7 @@ interface ProfileResult {
  */
 export class AgentsCommand implements Command {
   private agentValidator: AgentValidator;
+  private securityValidator: SecurityValidator;
   private metadataLoader: AgentMetadataLoader;
   private recommendationEngine: RecommendationEngine | null = null;
   private dependencyResolver: DependencyResolver | null = null;
@@ -63,6 +65,7 @@ export class AgentsCommand implements Command {
 
   constructor() {
     this.agentValidator = new AgentValidator();
+    this.securityValidator = new SecurityValidator();
     
     // Initialize metadata loader
     const agentsBasePath = join(__dirname, '../../../agents');
@@ -111,10 +114,17 @@ export class AgentsCommand implements Command {
       }
     }
 
-    // Validate agent names if provided (basic validation only)
+    // Validate agent names if provided (with security checks)
     if (agentArgs.agents && Array.isArray(agentArgs.agents)) {
       for (const agentName of agentArgs.agents) {
         if (typeof agentName === 'string') {
+          // Security validation first
+          const securityValidation = this.securityValidator.validateAgentName(agentName);
+          if (!securityValidation.isValid) {
+            errors.push(...securityValidation.errors);
+          }
+          
+          // Then business logic validation
           const agentValidation = this.agentValidator.validate(agentName);
           if (!agentValidation.isValid) {
             errors.push(...agentValidation.errors);
@@ -123,8 +133,15 @@ export class AgentsCommand implements Command {
       }
     }
 
-    // Validate single agent name if provided
+    // Validate single agent name if provided (with security checks)
     if (agentArgs.name) {
+      // Security validation first
+      const securityValidation = this.securityValidator.validateAgentName(agentArgs.name);
+      if (!securityValidation.isValid) {
+        errors.push(...securityValidation.errors);
+      }
+      
+      // Then business logic validation
       const agentValidation = this.agentValidator.validate(agentArgs.name);
       if (!agentValidation.isValid) {
         errors.push(...agentValidation.errors);
@@ -156,11 +173,9 @@ export class AgentsCommand implements Command {
 
     // Validate output path security if provided
     if (agentArgs.output) {
-      if (agentArgs.output.includes('/etc/') || 
-          agentArgs.output.includes('\\etc\\') ||
-          agentArgs.output.startsWith('/etc') ||
-          agentArgs.output === '/etc/passwd') {
-        errors.push('Output path security violation: system directories are not allowed');
+      const pathValidation = this.securityValidator.validatePath(agentArgs.output);
+      if (!pathValidation.isValid) {
+        errors.push(...pathValidation.errors);
       }
     }
 
@@ -365,33 +380,55 @@ export class AgentsCommand implements Command {
       const outputPath = args.output || './agents';
 
       // Validate output path (additional security check)
-      if (args.output && this.isSystemPath(args.output)) {
-        return {
-          success: false,
-          error: 'Output path security violation: system directories are not allowed'
-        };
+      if (args.output) {
+        const pathValidation = this.securityValidator.validatePath(args.output);
+        if (!pathValidation.isValid) {
+          Logger.error(`Output path validation failed: ${pathValidation.errors.join('; ')}`);
+          return {
+            success: false,
+            error: `Output path security violation: ${pathValidation.errors.join('; ')}`
+          };
+        }
       }
 
-      // Create output directory if it doesn't exist
-      const { mkdirSync, copyFileSync, writeFileSync, existsSync } = require('fs');
+      // Create output directory atomically if it doesn't exist
+      const { promises: fs } = require('fs');
       const { join } = require('path');
       
-      if (!existsSync(outputPath)) {
-        mkdirSync(outputPath, { recursive: true });
+      try {
+        await fs.mkdir(outputPath, { recursive: true });
+      } catch (error) {
+        if (error instanceof Error && 'code' in error && error.code !== 'EEXIST') {
+          Logger.error(`Failed to create output directory: ${error.message}`);
+          return {
+            success: false,
+            error: `Failed to create output directory: ${error.message}`
+          };
+        }
+        // EEXIST is okay - directory already exists
       }
 
       // Deploy agent files
       const deployedFiles: string[] = [];
       for (const agentName of deployedAgents) {
-        const metadata = agentMetadataList.find(m => m.name === agentName);
-        if (metadata) {
-          const outputFile = join(outputPath, `${agentName}.yaml`);
-          
-          // Write agent metadata to file
-          const yaml = require('js-yaml');
-          const content = yaml.dump(metadata);
-          writeFileSync(outputFile, content, 'utf-8');
-          deployedFiles.push(outputFile);
+        try {
+          const metadata = agentMetadataList.find(m => m.name === agentName);
+          if (metadata) {
+            const outputFile = join(outputPath, `${agentName}.yaml`);
+            
+            // Write agent metadata to file atomically
+            const yaml = require('js-yaml');
+            const content = yaml.dump(metadata);
+            await fs.writeFile(outputFile, content, 'utf-8');
+            deployedFiles.push(outputFile);
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          Logger.error(`Failed to deploy agent ${agentName}: ${errorMessage}`);
+          return {
+            success: false,
+            error: `Failed to deploy agent ${agentName}: ${errorMessage}`
+          };
         }
       }
 
@@ -428,17 +465,6 @@ export class AgentsCommand implements Command {
     }
   }
 
-  /**
-   * Check if path is a system directory
-   */
-  private isSystemPath(path: string): boolean {
-    const systemPaths = ['/etc', '/usr', '/bin', '/sbin', '/var', '/sys', '/proc'];
-    const normalizedPath = path.toLowerCase().replace(/\\/g, '/');
-    return systemPaths.some(sysPath => 
-      normalizedPath.startsWith(sysPath) || 
-      normalizedPath.includes(sysPath + '/')
-    );
-  }
 
   /**
    * Execute 'agents info' subcommand
@@ -607,7 +633,9 @@ export class AgentsCommand implements Command {
           if (deps.typescript) context.buildTools.push('typescript');
         }
       } catch (error) {
-        // Silent fail, use defaults
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        Logger.error(`Failed to parse package.json at ${packageJsonPath}: ${errorMessage}`);
+        // Continue with defaults but log the error
       }
     }
 
@@ -625,7 +653,9 @@ export class AgentsCommand implements Command {
           context.testingTools.push('pytest');
         }
       } catch (error) {
-        // Silent fail
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        Logger.error(`Failed to parse requirements.txt at ${requirementsPath}: ${errorMessage}`);
+        // Continue with defaults but log the error
       }
     }
 
@@ -678,7 +708,9 @@ export class AgentsCommand implements Command {
           dependencies.push(...Object.keys(packageJson.dependencies));
         }
       } catch (error) {
-        // Silent fail
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        Logger.error(`Failed to read dependencies from ${packageJsonPath}: ${errorMessage}`);
+        // Continue with empty array but log the error
       }
     }
     
