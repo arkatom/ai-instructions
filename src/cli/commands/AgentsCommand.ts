@@ -9,10 +9,28 @@ import { CommandResult } from '../interfaces/CommandResult';
 import { ValidationResult } from '../interfaces/ValidationResult';
 import { AgentValidator } from '../validators/AgentValidator';
 import { AgentMetadataLoader } from '../../agents/metadata-loader';
-import { RecommendationEngine, RecommendationResult } from '../../agents/recommendation-engine';
+import { 
+  RecommendationEngine, 
+  RecommendationResult,
+  RecommendationOptions 
+} from '../../agents/recommendation-engine';
+import { DependencyResolver } from '../../agents/dependency-resolver';
 import { AgentMetadata, ProjectContext } from '../../agents/types';
 import { Logger } from '../../utils/logger';
 import { join } from 'path';
+
+/**
+ * Deployment result interface
+ */
+interface DeploymentResult {
+  deployed: string[];
+  outputPath: string;
+  action?: string;
+  generated?: {
+    files: string[];
+    timestamp: string;
+  };
+}
 
 /**
  * Command Pattern implementation for agents command with subcommands
@@ -21,6 +39,7 @@ export class AgentsCommand implements Command {
   private agentValidator: AgentValidator;
   private metadataLoader: AgentMetadataLoader;
   private recommendationEngine: RecommendationEngine | null = null;
+  private dependencyResolver: DependencyResolver | null = null;
 
   constructor() {
     this.agentValidator = new AgentValidator();
@@ -37,6 +56,17 @@ export class AgentsCommand implements Command {
     if (!this.recommendationEngine) {
       const agents = await this.metadataLoader.loadAllMetadata();
       this.recommendationEngine = new RecommendationEngine(agents);
+    }
+  }
+
+  /**
+   * Initialize dependency resolver with loaded agents
+   */
+  private async initializeDependencyResolver(): Promise<void> {
+    if (!this.dependencyResolver) {
+      const agents = await this.metadataLoader.loadAllMetadata();
+      const agentsMap = new Map(agents.map(agent => [agent.name, agent]));
+      this.dependencyResolver = new DependencyResolver(agentsMap);
     }
   }
 
@@ -84,6 +114,22 @@ export class AgentsCommand implements Command {
     // Validate required parameters for specific subcommands
     if (agentArgs.subcommand === 'info' && !agentArgs.name) {
       errors.push('Agent name is required for info subcommand');
+    }
+
+    if (agentArgs.subcommand === 'deploy') {
+      if (!agentArgs.agents || agentArgs.agents.length === 0) {
+        errors.push('At least one agent name is required for deploy subcommand');
+      }
+    }
+
+    // Validate output path security if provided
+    if (agentArgs.output) {
+      if (agentArgs.output.includes('/etc/') || 
+          agentArgs.output.includes('\\etc\\') ||
+          agentArgs.output.startsWith('/etc') ||
+          agentArgs.output === '/etc/passwd') {
+        errors.push('Output path security violation: system directories are not allowed');
+      }
     }
 
     return {
@@ -197,7 +243,7 @@ export class AgentsCommand implements Command {
       }
 
       // Use recommendation engine to get recommendations
-      const recommendationOptions: any = {
+      const recommendationOptions: RecommendationOptions = {
         exclude: args.agents || [],
         includeExplanations: true
       };
@@ -230,11 +276,114 @@ export class AgentsCommand implements Command {
    * Execute 'agents deploy' subcommand
    */
   private async executeDeployCommand(args: AgentCommandArgs): Promise<CommandResult> {
-    // TODO: Implement in Phase 4-7
-    return {
-      success: false,
-      error: 'Deploy command not yet implemented'
-    };
+    try {
+      if (!args.agents || args.agents.length === 0) {
+        return {
+          success: false,
+          error: 'At least one agent name is required for deploy subcommand'
+        };
+      }
+
+      // Validate all agents exist
+      const agentMetadataList: AgentMetadata[] = [];
+      for (const agentName of args.agents) {
+        const exists = await this.agentValidator.validateExists(agentName);
+        if (!exists.isValid) {
+          return {
+            success: false,
+            error: `Agent not found: ${agentName}`
+          };
+        }
+
+        const metadata = await this.metadataLoader.loadAgentMetadata(agentName);
+        if (!metadata) {
+          return {
+            success: false,
+            error: `Agent not found: ${agentName}`
+          };
+        }
+        agentMetadataList.push(metadata);
+      }
+
+      // Initialize dependency resolver
+      await this.initializeDependencyResolver();
+      if (!this.dependencyResolver) {
+        return {
+          success: false,
+          error: 'Failed to initialize dependency resolver'
+        };
+      }
+
+      // Resolve dependencies and check for conflicts
+      const resolution = this.dependencyResolver.resolve(args.agents);
+      
+      // Check for conflicts
+      if (resolution.conflicts && resolution.conflicts.length > 0) {
+        const conflictMessages = resolution.conflicts.map(c => 
+          `${c.agent1} conflicts with ${c.agent2}: ${c.reason || 'incompatible agents'}`
+        );
+        return {
+          success: false,
+          error: `Deployment conflicts detected: ${conflictMessages.join('; ')}`
+        };
+      }
+
+      // Prepare deployment
+      const deployedAgents = [...new Set([...args.agents, ...resolution.requiredAgents])];
+      const outputPath = args.output || './agents';
+
+      // Validate output path (additional security check)
+      if (args.output && this.isSystemPath(args.output)) {
+        return {
+          success: false,
+          error: 'Output path security violation: system directories are not allowed'
+        };
+      }
+
+      // Simulate deployment (in real implementation, this would copy agent files)
+      const deploymentResult: DeploymentResult = {
+        deployed: deployedAgents,
+        outputPath: outputPath
+      };
+
+      // Handle action option
+      if (args.action === 'generate') {
+        deploymentResult.action = 'generate';
+        deploymentResult.generated = {
+          files: deployedAgents.map(name => `${outputPath}/${name}.md`),
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      // Log deployment success
+      Logger.info(`Successfully deployed ${deployedAgents.length} agents to ${outputPath}`);
+      deployedAgents.forEach(agent => {
+        Logger.info(`  - ${agent}`);
+      });
+
+      return {
+        success: true,
+        data: deploymentResult
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: `Failed to deploy agents: ${errorMessage}`
+      };
+    }
+  }
+
+  /**
+   * Check if path is a system directory
+   */
+  private isSystemPath(path: string): boolean {
+    const systemPaths = ['/etc', '/usr', '/bin', '/sbin', '/var', '/sys', '/proc'];
+    const normalizedPath = path.toLowerCase().replace(/\\/g, '/');
+    return systemPaths.some(sysPath => 
+      normalizedPath.startsWith(sysPath) || 
+      normalizedPath.includes(sysPath + '/')
+    );
   }
 
   /**

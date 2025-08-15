@@ -10,10 +10,29 @@ import { AgentCommandArgs } from '../../src/cli/interfaces/CommandArgs';
 import { AgentMetadata } from '../../src/agents/types';
 import { AgentMetadataLoader } from '../../src/agents/metadata-loader';
 import { AgentValidator } from '../../src/cli/validators/AgentValidator';
+import { DependencyResolver } from '../../src/agents/dependency-resolver';
 
 // Mock the modules
 jest.mock('../../src/agents/metadata-loader');
 jest.mock('../../src/cli/validators/AgentValidator');
+jest.mock('../../src/agents/dependency-resolver');
+
+// Test constants
+const AGENT_NAMES = {
+  TEST_WRITER: 'test-writer-fixer',
+  CODE_REVIEWER: 'code-reviewer', 
+  REACT_PRO: 'react-pro',
+  ANGULAR_EXPERT: 'angular-expert',
+  RAPID_PROTOTYPER: 'rapid-prototyper'
+} as const;
+
+// Type for deploy result
+interface DeployResult {
+  deployed: string[];
+  outputPath?: string;
+  action?: string;
+  generated?: unknown;
+}
 
 describe('AgentsCommand', () => {
   let command: AgentsCommand;
@@ -24,15 +43,54 @@ describe('AgentsCommand', () => {
     
     // Create mock agent metadata
     const mockAgentMetadata: AgentMetadata = {
-      name: 'test-writer-fixer',
+      name: AGENT_NAMES.TEST_WRITER,
       category: 'quality',
       description: 'Test writing and fixing agent',
       tags: ['testing', 'quality', 'jest', 'tdd'],
       relationships: {
         requires: [],
-        enhances: ['code-reviewer'],
-        collaborates_with: ['rapid-prototyper'],
+        enhances: [AGENT_NAMES.CODE_REVIEWER],
+        collaborates_with: [AGENT_NAMES.RAPID_PROTOTYPER],
         conflicts_with: []
+      }
+    };
+    
+    const mockCodeReviewer: AgentMetadata = {
+      name: AGENT_NAMES.CODE_REVIEWER,
+      category: 'quality',
+      description: 'Code review agent',
+      tags: ['quality', 'review'],
+      relationships: {
+        requires: [],
+        enhances: [],
+        collaborates_with: [AGENT_NAMES.TEST_WRITER],
+        conflicts_with: []
+      }
+    };
+    
+    const mockReactPro: AgentMetadata = {
+      name: AGENT_NAMES.REACT_PRO,
+      category: 'development',
+      description: 'React development expert',
+      tags: ['react', 'frontend'],
+      relationships: {
+        requires: [],
+        enhances: [],
+        collaborates_with: [],
+        conflicts_with: [AGENT_NAMES.ANGULAR_EXPERT]
+      }
+    };
+    
+    const mockAngularExpert: AgentMetadata = {
+      name: AGENT_NAMES.ANGULAR_EXPERT,
+      category: 'development',
+      description: 'Angular development expert',
+      tags: ['angular', 'frontend'],
+      relationships: {
+        requires: [],
+        enhances: [],
+        collaborates_with: [],
+        conflicts_with: [AGENT_NAMES.REACT_PRO]
       }
     };
     
@@ -40,12 +98,25 @@ describe('AgentsCommand', () => {
     (AgentMetadataLoader as jest.MockedClass<typeof AgentMetadataLoader>).mockImplementation(() => {
       return {
         loadAgentMetadata: jest.fn().mockImplementation((name: string) => {
-          if (name === 'test-writer-fixer') {
-            return Promise.resolve(mockAgentMetadata);
+          switch (name) {
+            case AGENT_NAMES.TEST_WRITER:
+              return Promise.resolve(mockAgentMetadata);
+            case AGENT_NAMES.CODE_REVIEWER:
+              return Promise.resolve(mockCodeReviewer);
+            case AGENT_NAMES.REACT_PRO:
+              return Promise.resolve(mockReactPro);
+            case AGENT_NAMES.ANGULAR_EXPERT:
+              return Promise.resolve(mockAngularExpert);
+            default:
+              return Promise.resolve(null);
           }
-          return Promise.resolve(null);
         }),
-        loadAllMetadata: jest.fn().mockResolvedValue([]),
+        loadAllMetadata: jest.fn().mockResolvedValue([
+          mockAgentMetadata, 
+          mockCodeReviewer,
+          mockReactPro,
+          mockAngularExpert
+        ]),
         getAgentsByCategory: jest.fn().mockResolvedValue([])
       } as unknown as AgentMetadataLoader;
     });
@@ -60,15 +131,55 @@ describe('AgentsCommand', () => {
               errors: ['Agent name contains invalid characters: ' + name] 
             };
           }
+          if (name === '/etc/passwd') {
+            return {
+              isValid: false,
+              errors: ['Path security violation: ' + name]
+            };
+          }
           return { isValid: true, errors: [] };
         }),
         validateExists: jest.fn().mockImplementation((name: string) => {
-          if (name === 'test-writer-fixer') {
+          const validAgents: string[] = [
+            AGENT_NAMES.TEST_WRITER, 
+            AGENT_NAMES.CODE_REVIEWER, 
+            AGENT_NAMES.REACT_PRO, 
+            AGENT_NAMES.ANGULAR_EXPERT
+          ];
+          if (validAgents.includes(name)) {
             return Promise.resolve({ isValid: true, errors: [] });
           }
           return Promise.resolve({ isValid: false, errors: ['Agent not found'] });
         })
       } as unknown as AgentValidator;
+    });
+
+    // Setup mock dependency resolver
+    (DependencyResolver as jest.MockedClass<typeof DependencyResolver>).mockImplementation(() => {
+      return {
+        resolve: jest.fn().mockImplementation((agents: string[]) => {
+          // Check for conflicts
+          const hasReactPro = agents.includes(AGENT_NAMES.REACT_PRO);
+          const hasAngularExpert = agents.includes(AGENT_NAMES.ANGULAR_EXPERT);
+          
+          if (hasReactPro && hasAngularExpert) {
+            return {
+              requiredAgents: [],
+              conflicts: [{
+                agent1: AGENT_NAMES.REACT_PRO,
+                agent2: AGENT_NAMES.ANGULAR_EXPERT,
+                reason: 'Conflicting frontend frameworks'
+              }]
+            };
+          }
+          
+          // No conflicts, return required agents (could add dependency logic here)
+          return {
+            requiredAgents: [],
+            conflicts: []
+          };
+        })
+      } as unknown as DependencyResolver;
     });
     
     command = new AgentsCommand();
@@ -111,7 +222,7 @@ describe('AgentsCommand', () => {
         const args: AgentCommandArgs = {
           command: 'agents',
           subcommand: 'info',
-          name: 'test-writer-fixer'
+          name: AGENT_NAMES.TEST_WRITER
         };
         
         const result = command.validate(args);
@@ -125,7 +236,7 @@ describe('AgentsCommand', () => {
         const args: AgentCommandArgs = {
           command: 'agents',
           subcommand: 'info',
-          name: 'test-writer-fixer'
+          name: AGENT_NAMES.TEST_WRITER
         };
         
         const result = await command.execute(args);
@@ -133,7 +244,7 @@ describe('AgentsCommand', () => {
         expect(result.data).toBeDefined();
         
         const data = result.data as AgentMetadata;
-        expect(data).toHaveProperty('name', 'test-writer-fixer');
+        expect(data).toHaveProperty('name', AGENT_NAMES.TEST_WRITER);
         expect(data).toHaveProperty('category');
         expect(data).toHaveProperty('description');
         expect(data).toHaveProperty('relationships');
@@ -155,7 +266,7 @@ describe('AgentsCommand', () => {
         const args: AgentCommandArgs = {
           command: 'agents',
           subcommand: 'info',
-          name: 'test-writer-fixer',
+          name: AGENT_NAMES.TEST_WRITER,
           format: 'json'
         };
         
@@ -169,7 +280,7 @@ describe('AgentsCommand', () => {
         const args: AgentCommandArgs = {
           command: 'agents',
           subcommand: 'info',
-          name: 'test-writer-fixer'
+          name: AGENT_NAMES.TEST_WRITER
         };
         
         const result = await command.execute(args);
@@ -187,7 +298,7 @@ describe('AgentsCommand', () => {
         const args: AgentCommandArgs = {
           command: 'agents',
           subcommand: 'info',
-          name: 'test-writer-fixer'
+          name: AGENT_NAMES.TEST_WRITER
         };
         
         const result = await command.execute(args);
@@ -207,6 +318,140 @@ describe('AgentsCommand', () => {
         if (data.author) {
           expect(typeof data.author).toBe('string');
         }
+      });
+    });
+  });
+
+  describe('deploy subcommand', () => {
+    describe('validation', () => {
+      it('should require at least one agent name for deploy subcommand', () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy'
+          // agents array is missing
+        };
+        
+        const result = command.validate(args);
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain('At least one agent name is required for deploy subcommand');
+      });
+
+      it('should validate each agent name in the array', () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: ['valid-agent', '../invalid-agent']
+        };
+        
+        const result = command.validate(args);
+        expect(result.isValid).toBe(false);
+        expect(result.errors.some(e => e.includes('invalid characters'))).toBe(true);
+      });
+
+      it('should pass validation with valid agent names', () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: [AGENT_NAMES.TEST_WRITER, AGENT_NAMES.CODE_REVIEWER]
+        };
+        
+        const result = command.validate(args);
+        expect(result.isValid).toBe(true);
+        expect(result.errors.length).toBe(0);
+      });
+
+      it('should validate output path if provided', () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: [AGENT_NAMES.TEST_WRITER],
+          output: '/etc/passwd'  // Security violation
+        };
+        
+        const result = command.validate(args);
+        expect(result.isValid).toBe(false);
+        expect(result.errors.some(e => e.includes('security') || e.includes('permission'))).toBe(true);
+      });
+    });
+
+    describe('execution', () => {
+      it('should deploy single agent successfully', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: [AGENT_NAMES.TEST_WRITER]
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        expect(result.data).toBeDefined();
+        expect(result.data).toHaveProperty('deployed');
+        expect((result.data as DeployResult).deployed).toContain(AGENT_NAMES.TEST_WRITER);
+      });
+
+      it('should deploy multiple agents with dependency resolution', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: [AGENT_NAMES.TEST_WRITER, AGENT_NAMES.CODE_REVIEWER]
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        expect(result.data).toBeDefined();
+        expect((result.data as DeployResult).deployed.length).toBeGreaterThanOrEqual(2);
+      });
+
+      it('should handle deployment conflicts', async () => {
+        // Mock conflicting agents
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: [AGENT_NAMES.REACT_PRO, AGENT_NAMES.ANGULAR_EXPERT]  // Conflicting frameworks
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('conflict');
+      });
+
+      it('should deploy to specified output directory', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: [AGENT_NAMES.TEST_WRITER],
+          output: './test-output'
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        expect(result.data).toHaveProperty('outputPath', './test-output');
+      });
+
+      it('should return error for non-existent agents', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: ['non-existent-agent']
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('Agent not found');
+      });
+
+      it('should generate deployment action if specified', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'deploy',
+          agents: [AGENT_NAMES.TEST_WRITER],
+          action: 'generate'
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        expect(result.data).toHaveProperty('action', 'generate');
+        expect(result.data).toHaveProperty('generated');
       });
     });
   });
