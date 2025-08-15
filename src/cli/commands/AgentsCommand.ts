@@ -81,6 +81,11 @@ export class AgentsCommand implements Command {
       }
     }
 
+    // Validate required parameters for specific subcommands
+    if (agentArgs.subcommand === 'info' && !agentArgs.name) {
+      errors.push('Agent name is required for info subcommand');
+    }
+
     return {
       isValid: errors.length === 0,
       errors
@@ -236,11 +241,49 @@ export class AgentsCommand implements Command {
    * Execute 'agents info' subcommand
    */
   private async executeInfoCommand(args: AgentCommandArgs): Promise<CommandResult> {
-    // TODO: Implement in Phase 4-6
-    return {
-      success: false,
-      error: 'Info command not yet implemented'
-    };
+    try {
+      // Validate agent name exists (already validated format in validate())
+      if (!args.name) {
+        return {
+          success: false,
+          error: 'Agent name is required for info subcommand'
+        };
+      }
+
+      // Check if agent exists
+      const agentExists = await this.agentValidator.validateExists(args.name);
+      if (!agentExists.isValid) {
+        return {
+          success: false,
+          error: 'Agent metadata not found: ' + args.name
+        };
+      }
+
+      // Load agent metadata
+      const agent = await this.metadataLoader.loadAgentMetadata(args.name);
+      if (!agent) {
+        return {
+          success: false,
+          error: 'Agent metadata not found: ' + args.name
+        };
+      }
+
+      // Format and display results
+      const format = args.format || 'table';
+      const result = this.formatAgentInfo(agent, format);
+      Logger.info(result);
+
+      return {
+        success: true,
+        data: agent
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: `Failed to get agent info: ${errorMessage}`
+      };
+    }
   }
 
   /**
@@ -289,6 +332,62 @@ export class AgentsCommand implements Command {
         agents.forEach(agent => {
           table += `${agent.name}\t\t${agent.category}\t\t${agent.description}\n`;
         });
+        return table;
+    }
+  }
+
+  /**
+   * Format agent info for display
+   */
+  private formatAgentInfo(agent: AgentMetadata, format: string): string {
+    switch (format) {
+      case 'json':
+        return JSON.stringify(agent, null, 2);
+      case 'tree':
+        let result = `Agent: ${agent.name}\n`;
+        result += `├── Category: ${agent.category}\n`;
+        result += `├── Description: ${agent.description}\n`;
+        result += `├── Tags: ${agent.tags.join(', ')}\n`;
+        result += `└── Relationships:\n`;
+        
+        if (agent.relationships.requires.length > 0) {
+          result += `    ├── Requires: ${agent.relationships.requires.join(', ')}\n`;
+        }
+        if (agent.relationships.enhances.length > 0) {
+          result += `    ├── Enhances: ${agent.relationships.enhances.join(', ')}\n`;
+        }
+        if (agent.relationships.collaborates_with.length > 0) {
+          result += `    ├── Collaborates with: ${agent.relationships.collaborates_with.join(', ')}\n`;
+        }
+        if (agent.relationships.conflicts_with.length > 0) {
+          result += `    └── Conflicts with: ${agent.relationships.conflicts_with.join(', ')}\n`;
+        }
+        
+        return result;
+      case 'table':
+      default:
+        // Simple table format
+        let table = 'Agent Information\n';
+        table += '─'.repeat(60) + '\n';
+        table += `Name:\t\t${agent.name}\n`;
+        table += `Category:\t${agent.category}\n`;
+        table += `Description:\t${agent.description}\n`;
+        table += `Tags:\t\t${agent.tags.join(', ')}\n`;
+        
+        table += '\nRelationships:\n';
+        if (agent.relationships.requires.length > 0) {
+          table += `  Requires:\t\t${agent.relationships.requires.join(', ')}\n`;
+        }
+        if (agent.relationships.enhances.length > 0) {
+          table += `  Enhances:\t\t${agent.relationships.enhances.join(', ')}\n`;
+        }
+        if (agent.relationships.collaborates_with.length > 0) {
+          table += `  Collaborates:\t\t${agent.relationships.collaborates_with.join(', ')}\n`;
+        }
+        if (agent.relationships.conflicts_with.length > 0) {
+          table += `  Conflicts:\t\t${agent.relationships.conflicts_with.join(', ')}\n`;
+        }
+        
         return table;
     }
   }
