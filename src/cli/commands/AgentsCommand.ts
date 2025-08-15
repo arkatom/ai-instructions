@@ -741,7 +741,9 @@ export class AgentsCommand implements Command {
       case 'table':
       default:
         // Simple table format
-        let table = 'Name\t\tCategory\t\tDescription\n';
+        let table = 'Available Agents\n';
+        table += '─'.repeat(60) + '\n';
+        table += 'Name\t\tCategory\t\tDescription\n';
         table += '─'.repeat(60) + '\n';
         agents.forEach(agent => {
           table += `${agent.name}\t\t${agent.category}\t\t${agent.description}\n`;
@@ -834,7 +836,9 @@ export class AgentsCommand implements Command {
         return result;
       case 'table':
       default:
-        let table = 'Type\t\tAgent\t\tExplanation\n';
+        let table = 'Recommended Agents\n';
+        table += '─'.repeat(60) + '\n';
+        table += 'Type\t\tAgent\t\tExplanation\n';
         table += '─'.repeat(60) + '\n';
         recommendations.primary.forEach(agentName => {
           const explanation = recommendations.explanations?.[agentName] || 'No explanation';

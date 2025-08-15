@@ -1,0 +1,17 @@
+name: rapid-prototyper
+category: development
+description: Rapid prototyping and MVP development
+tags:
+  - prototyping
+  - mvp
+  - agile
+  - fullstack
+relationships:
+  requires: []
+  enhances: []
+  collaborates_with:
+    - test-writer-fixer
+  conflicts_with: []
+source: claude-code
+version: 1.0.0
+author: Claude Team

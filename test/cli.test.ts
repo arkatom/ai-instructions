@@ -83,6 +83,72 @@ describe('CLI Basic Functionality', () => {
   });
 });
 
+describe('CLI Agents Command', () => {
+  it('should display agents help when agents --help is used', () => {
+    // Arrange
+    const expectedContent = ['list [options]', 'recommend [options]', 'deploy [options] <agents...>', 'info [options] <name>', 'profile [options] <project>'];
+    
+    // Act
+    const result = runCliCommand('agents --help');
+    
+    // Assert
+    expectedContent.forEach(content => {
+      expect(result).toContain(content);
+    });
+  });
+
+  it('should list available agents', () => {
+    // Act
+    const result = runCliCommand('agents list');
+    
+    // Assert
+    expect(result).toContain('Available Agents');
+  });
+
+  it('should show agent info', () => {
+    // Act
+    const result = runCliCommand('agents info test-writer-fixer');
+    
+    // Assert
+    expect(result).toContain('Agent Information');
+    expect(result).toContain('test-writer-fixer');
+  });
+
+  it('should recommend agents based on project', () => {
+    // Act
+    const result = runCliCommand('agents recommend');
+    
+    // Assert
+    expect(result).toContain('Recommended Agents');
+  });
+
+  it('should deploy agents to specified directory', () => {
+    // Arrange
+    const testOutputDir = join(__dirname, '.test-agents-deploy');
+    
+    // Act
+    const result = runCliCommand(`agents deploy test-writer-fixer --output "${testOutputDir}"`);
+    
+    // Assert
+    expect(result).toContain('Successfully deployed');
+    
+    // Cleanup
+    if (existsSync(testOutputDir)) {
+      rm(testOutputDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should profile project and recommend agents', () => {
+    // Act
+    const result = runCliCommand('agents profile .');
+    
+    // Assert
+    expect(result).toContain('Project Profile');
+    expect(result).toContain('Project Type');
+    expect(result).toContain('Recommended Agents');
+  });
+});
+
 describe('CLI Error Handling', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
 
