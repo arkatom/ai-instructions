@@ -36,6 +36,8 @@ export interface AgentCommandArgs extends CommandArgs {
   output?: string;
   name?: string;
   action?: string;
+  project?: string;
+  verbose?: boolean;
 }
 
 /**

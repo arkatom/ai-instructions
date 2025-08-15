@@ -34,6 +34,24 @@ interface DeployResult {
   generated?: unknown;
 }
 
+// Type for profile result
+interface ProfileResult {
+  projectContext: {
+    projectType: string;
+    frameworks: string[];
+    developmentPhase: string;
+  };
+  recommended: {
+    primary: string[];
+    suggested: string[];
+  };
+  detailedAnalysis?: {
+    files: string[];
+    dependencies: string[];
+    testingTools: string[];
+  };
+}
+
 describe('AgentsCommand', () => {
   let command: AgentsCommand;
   
@@ -452,6 +470,128 @@ describe('AgentsCommand', () => {
         expect(result.success).toBe(true);
         expect(result.data).toHaveProperty('action', 'generate');
         expect(result.data).toHaveProperty('generated');
+      });
+    });
+  });
+
+  describe('profile subcommand', () => {
+    describe('validation', () => {
+      it('should require project argument for profile subcommand', () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'profile'
+          // project is missing
+        };
+        
+        const result = command.validate(args);
+        expect(result.isValid).toBe(false);
+        expect(result.errors).toContain('Project directory is required for profile subcommand');
+      });
+
+      it('should validate project path exists', () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'profile',
+          project: '/non/existent/path'
+        };
+        
+        const result = command.validate(args);
+        expect(result.isValid).toBe(false);
+        expect(result.errors.some(e => e.includes('Project directory does not exist'))).toBe(true);
+      });
+
+      it('should pass validation with valid project path', () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'profile',
+          project: '.',
+          format: 'json'
+        };
+        
+        const result = command.validate(args);
+        expect(result.isValid).toBe(true);
+        expect(result.errors.length).toBe(0);
+      });
+    });
+
+    describe('execution', () => {
+      it('should profile agents for the project', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'profile',
+          project: '.'
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        expect(result.data).toBeDefined();
+        expect(result.data).toHaveProperty('recommended');
+        expect(result.data).toHaveProperty('projectContext');
+      });
+
+      it('should detect project type and frameworks', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'profile',
+          project: '.'
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        
+        const data = result.data as ProfileResult;
+        expect(data.projectContext).toHaveProperty('projectType');
+        expect(data.projectContext).toHaveProperty('frameworks');
+        expect(data.projectContext).toHaveProperty('developmentPhase');
+      });
+
+      it('should provide agent recommendations based on project analysis', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'profile',
+          project: '.'
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        
+        const data = result.data as ProfileResult;
+        expect(data.recommended).toHaveProperty('primary');
+        expect(data.recommended).toHaveProperty('suggested');
+        expect(Array.isArray(data.recommended.primary)).toBe(true);
+        expect(Array.isArray(data.recommended.suggested)).toBe(true);
+      });
+
+      it('should support JSON output format', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'profile',
+          project: '.',
+          format: 'json'
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        expect(result.data).toBeDefined();
+        // JSON format should be handled by display logic
+      });
+
+      it('should include detailed analysis with verbose flag', async () => {
+        const args: AgentCommandArgs = {
+          command: 'agents',
+          subcommand: 'profile',
+          project: '.',
+          verbose: true
+        };
+        
+        const result = await command.execute(args);
+        expect(result.success).toBe(true);
+        
+        const data = result.data as ProfileResult;
+        expect(data).toHaveProperty('detailedAnalysis');
+        expect(data.detailedAnalysis).toHaveProperty('files');
+        expect(data.detailedAnalysis).toHaveProperty('dependencies');
+        expect(data.detailedAnalysis).toHaveProperty('testingTools');
       });
     });
   });

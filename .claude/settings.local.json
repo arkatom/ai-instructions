@@ -222,7 +222,12 @@
       "mcp__serena__find_symbol",
       "mcp__github__get_pull_request_comments",
       "Bash(gh issue comment:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(git -C \"/Volumes/OWCUS4EXP 1M2 4TB SSD/ghq/github.com/arkatom/ai-instructions\" status)",
+      "Bash(git -C \"/Volumes/OWCUS4EXP 1M2 4TB SSD/ghq/github.com/arkatom/ai-instructions\" diff test/cli/agents-command.test.ts)",
+      "Bash(git -C \"/Volumes/OWCUS4EXP 1M2 4TB SSD/ghq/github.com/arkatom/ai-instructions\" add src/cli/commands/AgentsCommand.ts test/cli/agents-command.test.ts)",
+      "Bash(git -C \"/Volumes/OWCUS4EXP 1M2 4TB SSD/ghq/github.com/arkatom/ai-instructions\" diff --cached --stat)",
+      "Bash(git -C \"/Volumes/OWCUS4EXP 1M2 4TB SSD/ghq/github.com/arkatom/ai-instructions\" add -A)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

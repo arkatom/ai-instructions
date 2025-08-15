@@ -33,6 +33,19 @@ interface DeploymentResult {
 }
 
 /**
+ * Profile result interface
+ */
+interface ProfileResult {
+  projectContext: ProjectContext;
+  recommended: RecommendationResult;
+  detailedAnalysis?: {
+    files: string[];
+    dependencies: string[];
+    testingTools: string[];
+  };
+}
+
+/**
  * Command Pattern implementation for agents command with subcommands
  */
 export class AgentsCommand implements Command {
@@ -119,6 +132,18 @@ export class AgentsCommand implements Command {
     if (agentArgs.subcommand === 'deploy') {
       if (!agentArgs.agents || agentArgs.agents.length === 0) {
         errors.push('At least one agent name is required for deploy subcommand');
+      }
+    }
+
+    if (agentArgs.subcommand === 'profile') {
+      if (!agentArgs.project) {
+        errors.push('Project directory is required for profile subcommand');
+      } else {
+        // Check if project directory exists
+        const { existsSync } = require('fs');
+        if (!existsSync(agentArgs.project)) {
+          errors.push('Project directory does not exist: ' + agentArgs.project);
+        }
       }
     }
 
@@ -439,11 +464,251 @@ export class AgentsCommand implements Command {
    * Execute 'agents profile' subcommand
    */
   private async executeProfileCommand(args: AgentCommandArgs): Promise<CommandResult> {
-    // TODO: Implement in Phase 4-8
-    return {
-      success: false,
-      error: 'Profile command not yet implemented'
+    try {
+      if (!args.project) {
+        return {
+          success: false,
+          error: 'Project directory is required for profile subcommand'
+        };
+      }
+
+      // Analyze project
+      const projectContext = await this.analyzeProject(args.project);
+      
+      // Initialize recommendation engine
+      await this.initializeRecommendationEngine();
+      
+      if (!this.recommendationEngine) {
+        return {
+          success: false,
+          error: 'Failed to initialize recommendation engine'
+        };
+      }
+
+      // Get recommendations based on project analysis
+      const recommendationOptions: RecommendationOptions = {
+        includeExplanations: true,
+        includeScores: args.verbose || false
+      };
+      
+      const recommendations = this.recommendationEngine.recommend(
+        projectContext, 
+        recommendationOptions
+      );
+
+      // Build result data
+      const resultData: ProfileResult = {
+        projectContext,
+        recommended: recommendations
+      };
+
+      // Add detailed analysis if verbose
+      if (args.verbose) {
+        resultData.detailedAnalysis = {
+          files: await this.getProjectFiles(args.project),
+          dependencies: await this.getProjectDependencies(args.project),
+          testingTools: projectContext.testingTools || []
+        };
+      }
+
+      // Format output
+      const format = args.format || 'table';
+      const output = this.formatProfileResult(resultData, format);
+      Logger.info(output);
+
+      return {
+        success: true,
+        data: resultData
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: `Failed to profile project: ${errorMessage}`
+      };
+    }
+  }
+
+  /**
+   * Analyze project to determine context
+   */
+  private async analyzeProject(projectPath: string): Promise<ProjectContext> {
+    const { existsSync, readFileSync } = require('fs');
+    const { join } = require('path');
+    
+    // Default context
+    const context: ProjectContext = {
+      projectType: 'unknown',
+      frameworks: [],
+      developmentPhase: 'active-development'
     };
+
+    // Check for package.json
+    const packageJsonPath = join(projectPath, 'package.json');
+    if (existsSync(packageJsonPath)) {
+      try {
+        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+        
+        // Detect project type
+        if (packageJson.dependencies || packageJson.devDependencies) {
+          context.projectType = 'nodejs';
+          
+          // Detect frameworks
+          const deps = {
+            ...packageJson.dependencies,
+            ...packageJson.devDependencies
+          };
+          
+          if (deps.react) context.frameworks.push('react');
+          if (deps.vue) context.frameworks.push('vue');
+          if (deps.angular) context.frameworks.push('angular');
+          if (deps.express) context.frameworks.push('express');
+          if (deps.next) context.frameworks.push('nextjs');
+          
+          // Detect testing tools
+          context.testingTools = [];
+          if (deps.jest) context.testingTools.push('jest');
+          if (deps.mocha) context.testingTools.push('mocha');
+          if (deps.cypress) context.testingTools.push('cypress');
+          
+          // Detect build tools
+          context.buildTools = [];
+          if (deps.webpack) context.buildTools.push('webpack');
+          if (deps.vite) context.buildTools.push('vite');
+          if (deps.typescript) context.buildTools.push('typescript');
+        }
+      } catch (error) {
+        // Silent fail, use defaults
+      }
+    }
+
+    // Check for requirements.txt (Python)
+    const requirementsPath = join(projectPath, 'requirements.txt');
+    if (existsSync(requirementsPath)) {
+      context.projectType = 'python';
+      
+      try {
+        const requirements = readFileSync(requirementsPath, 'utf-8');
+        if (requirements.includes('django')) context.frameworks.push('django');
+        if (requirements.includes('flask')) context.frameworks.push('flask');
+        if (requirements.includes('pytest')) {
+          context.testingTools = context.testingTools || [];
+          context.testingTools.push('pytest');
+        }
+      } catch (error) {
+        // Silent fail
+      }
+    }
+
+    return context;
+  }
+
+  /**
+   * Get project files for detailed analysis
+   */
+  private async getProjectFiles(projectPath: string): Promise<string[]> {
+    const { readdirSync, statSync } = require('fs');
+    const { join } = require('path');
+    
+    try {
+      const files: string[] = [];
+      const items = readdirSync(projectPath);
+      
+      for (const item of items) {
+        if (item.startsWith('.') || item === 'node_modules') continue;
+        
+        const fullPath = join(projectPath, item);
+        const stat = statSync(fullPath);
+        
+        if (stat.isFile()) {
+          files.push(item);
+        }
+      }
+      
+      return files;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Get project dependencies for detailed analysis
+   */
+  private async getProjectDependencies(projectPath: string): Promise<string[]> {
+    const { existsSync, readFileSync } = require('fs');
+    const { join } = require('path');
+    
+    const dependencies: string[] = [];
+    
+    // Check package.json
+    const packageJsonPath = join(projectPath, 'package.json');
+    if (existsSync(packageJsonPath)) {
+      try {
+        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+        if (packageJson.dependencies) {
+          dependencies.push(...Object.keys(packageJson.dependencies));
+        }
+      } catch (error) {
+        // Silent fail
+      }
+    }
+    
+    return dependencies;
+  }
+
+  /**
+   * Format profile result for display
+   */
+  private formatProfileResult(data: ProfileResult, format: string): string {
+    switch (format) {
+      case 'json':
+        return JSON.stringify(data, null, 2);
+      case 'tree':
+        let result = 'Project Profile\n';
+        result += `├── Type: ${data.projectContext.projectType}\n`;
+        result += `├── Phase: ${data.projectContext.developmentPhase}\n`;
+        if (data.projectContext.frameworks.length > 0) {
+          result += `├── Frameworks:\n`;
+          data.projectContext.frameworks.forEach((fw: string, idx: number) => {
+            const isLast = idx === data.projectContext.frameworks.length - 1;
+            result += `│   ${isLast ? '└──' : '├──'} ${fw}\n`;
+          });
+        }
+        result += `└── Recommended Agents:\n`;
+        if (data.recommended.primary.length > 0) {
+          result += `    ├── Primary:\n`;
+          data.recommended.primary.forEach((agent: string, idx: number) => {
+            const isLast = idx === data.recommended.primary.length - 1;
+            result += `    │   ${isLast ? '└──' : '├──'} ${agent}\n`;
+          });
+        }
+        if (data.recommended.suggested.length > 0) {
+          result += `    └── Suggested:\n`;
+          data.recommended.suggested.forEach((agent: string, idx: number) => {
+            const isLast = idx === data.recommended.suggested.length - 1;
+            result += `        ${isLast ? '└──' : '├──'} ${agent}\n`;
+          });
+        }
+        return result;
+      case 'table':
+      default:
+        let table = 'Project Profile\n';
+        table += '─'.repeat(60) + '\n';
+        table += `Project Type:\t${data.projectContext.projectType}\n`;
+        table += `Development Phase:\t${data.projectContext.developmentPhase}\n`;
+        if (data.projectContext.frameworks.length > 0) {
+          table += `Frameworks:\t${data.projectContext.frameworks.join(', ')}\n`;
+        }
+        table += '\nRecommended Agents:\n';
+        table += '─'.repeat(60) + '\n';
+        if (data.recommended.primary.length > 0) {
+          table += `Primary:\t${data.recommended.primary.join(', ')}\n`;
+        }
+        if (data.recommended.suggested.length > 0) {
+          table += `Suggested:\t${data.recommended.suggested.join(', ')}\n`;
+        }
+        return table;
+    }
   }
 
   /**
