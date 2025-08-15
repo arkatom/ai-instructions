@@ -216,20 +216,23 @@ export class ConfigManager {
    * Type-safe property checker for unknown objects
    */
   private static hasStringProperty(obj: unknown, prop: string): boolean {
-    return obj !== null && typeof obj === 'object' && prop in obj && 
-           typeof (obj as Record<string, unknown>)[prop] === 'string';
+    if (obj === null || typeof obj !== 'object') return false;
+    const objectRecord = obj as Record<string, unknown>;
+    return prop in objectRecord && typeof objectRecord[prop] === 'string';
   }
 
   private static hasArrayProperty(obj: unknown, prop: string): boolean {
-    return obj !== null && typeof obj === 'object' && prop in obj && 
-           Array.isArray((obj as Record<string, unknown>)[prop]);
+    if (obj === null || typeof obj !== 'object') return false;
+    const objectRecord = obj as Record<string, unknown>;
+    return prop in objectRecord && Array.isArray(objectRecord[prop]);
   }
 
   private static getProperty(obj: unknown, prop: string): unknown {
-    if (obj !== null && typeof obj === 'object' && prop in obj) {
-      return (obj as Record<string, unknown>)[prop];
+    if (obj === null || typeof obj !== 'object' || !(prop in obj)) {
+      return undefined;
     }
-    return undefined;
+    const objectRecord = obj as Record<string, unknown>;
+    return objectRecord[prop];
   }
 
   /**

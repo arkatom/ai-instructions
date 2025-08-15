@@ -341,11 +341,12 @@ export class JsonValidator {
 
     // Type-safe: we've verified obj is a non-null object above
     // Use Object.entries directly on obj since we know it's an object
+    const objectRecord = obj as Record<string, unknown>;
     
     // Validate prototype pollution and individual properties
-    this.validatePrototypePollution(obj as Record<string, unknown>);
+    this.validatePrototypePollution(objectRecord);
     
-    for (const [key, value] of Object.entries(obj)) {
+    for (const [key, value] of Object.entries(objectRecord)) {
       this.validateProperty(key, value);
     }
   }

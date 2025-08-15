@@ -229,12 +229,13 @@ export interface AgentValidationResult {
 export function isAgentMetadata(obj: unknown): obj is AgentMetadata {
   if (!obj || typeof obj !== 'object') return false;
   
-  // Type-safe property access - we've verified obj is a non-null object above
-  const metadata = obj as Record<string, unknown>;
-  const hasStringProp = (prop: string): boolean => 
-    prop in metadata && typeof metadata[prop] === 'string';
-  const hasProp = (prop: string): boolean => prop in metadata;
-  const getProp = (prop: string): unknown => metadata[prop];
+  // Type-safe property access helper functions - we've verified obj is a non-null object above
+  const hasStringProp = (prop: string): boolean => {
+    const objRecord = obj as Record<string, unknown>;
+    return prop in objRecord && typeof objRecord[prop] === 'string';
+  };
+  const hasProp = (prop: string): boolean => prop in (obj as Record<string, unknown>);
+  const getProp = (prop: string): unknown => (obj as Record<string, unknown>)[prop];
   
   return (
     hasStringProp('name') &&
@@ -252,10 +253,11 @@ export function isAgentMetadata(obj: unknown): obj is AgentMetadata {
 export function isAgentRelationship(obj: unknown): obj is AgentRelationship {
   if (!obj || typeof obj !== 'object') return false;
   
-  // Type-safe property access - we've verified obj is a non-null object above
-  const relationship = obj as Record<string, unknown>;
-  const isArrayProp = (prop: string): boolean => 
-    prop in relationship && Array.isArray(relationship[prop]);
+  // Type-safe property access helper - we've verified obj is a non-null object above
+  const isArrayProp = (prop: string): boolean => {
+    const objRecord = obj as Record<string, unknown>;
+    return prop in objRecord && Array.isArray(objRecord[prop]);
+  };
   
   return (
     isArrayProp('requires') &&
