@@ -20,15 +20,15 @@
 - **🛠️ Multi-Tool Support**: Claude Code, GitHub Copilot, Cursor AI IDE, and Cline AI support
 - **📚 Development Templates**: Essential development methodology guides (TDD, Git workflow, Scrum)
 - **🌐 Multilingual Core**: Main instructions available in English, Japanese, and Chinese
-- **🛡️ Advanced File Safety**: 5 intelligent conflict resolution strategies with smart merging
+- **🛡️ File Safety System**: 5 conflict resolution strategies with smart merging
 - **⚙️ Highly Configurable**: Customizable project names and output directories
 - **🔒 Validated Input**: Built-in validation for project names and paths
-- **🧪 Battle-tested**: Comprehensive test suite ensuring reliability
-- **🎯 Agent Templates**: 70+ specialized agent templates (CLI integration pending - see Issue #93)
+- **🧪 Well-tested**: Comprehensive test suite ensuring reliability
+- **🎯 Agent Templates**: Agent templates for specialized tasks (CLI integration pending - see Issue #93)
 
-## 🛡️ Advanced File Safety System (v0.5.0)
+## 🛡️ File Safety System (v0.5.0)
 
-**🚀 NEW: Intelligent conflict resolution with 5 resolution strategies**
+**🚀 NEW: Conflict resolution with 5 resolution strategies**
 
 ### 🔒 Safe Usage Patterns
 
@@ -39,7 +39,7 @@ ai-instructions init --project-name "My Project"
 # ✅ SAFE: Automatic backup creation
 ai-instructions init --conflict-resolution backup --project-name "My Project"
 
-# ✅ SMART: Merge existing + template content intelligently
+# ✅ SMART: Merge existing + template content
 ai-instructions init --conflict-resolution merge --project-name "My Project"
 
 # ✅ PREVIEW: See what files would be created/modified
@@ -54,17 +54,17 @@ ai-instructions init --force --conflict-resolution overwrite
 
 ### 🛡️ Conflict Resolution Strategies
 
-When existing files are detected, you can choose from 5 intelligent strategies:
+When existing files are detected, you can choose from 5 strategies:
 
 | Strategy | Behavior | Use Case | Data Safety |
 |----------|----------|----------|-------------|
 | `backup` | Creates timestamped backup, writes new file | **Default** - Safest option | 🟢 High |
-| `merge` | Intelligently merges existing + template content | Update existing instructions | 🟢 High |
+| `merge` | Merges existing + template content | Update existing instructions | 🟢 High |
 | `interactive` | Prompts for choice per conflict | Full control over each file | 🟢 High |
 | `skip` | Skips conflicting files, creates non-conflicting ones | Partial update scenarios | 🟢 High |
 | `overwrite` | Overwrites without backup | **Dangerous** - Only with --force | 🔴 None |
 
-### 🔧 Advanced CLI Options (v0.5.0)
+### 🔧 CLI Options (v0.5.0)
 
 ```bash
 # Conflict resolution strategy
@@ -80,7 +80,7 @@ ai-instructions init --no-backup
 ai-instructions init --preview
 ```
 
-### 🧠 Intelligent Content Merging
+### 🧠 Content Merging
 
 For markdown files, the merge strategy uses smart content analysis:
 - **Headers**: Preserves unique sections from both files
@@ -398,7 +398,7 @@ ai-instructions init -f cursor --lang ja --project-name "カーソルプロジ�
 ### Safe Updates and Migrations (v0.5.0)
 
 ```bash
-# Update existing project instructions with intelligent merging
+# Update existing project instructions with merging
 ai-instructions init --conflict-resolution merge --project-name "existing-project"
 
 # Backup existing files before updating
