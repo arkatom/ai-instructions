@@ -150,7 +150,18 @@ export function arraysEqual<T>(
   }
   
   const compare = compareFn ?? ((a, b) => a === b);
-  return array1.every((item, index) => compare(item, array2[index]!));
+  // Use manual iteration to avoid TypeScript's inability to understand array bounds
+  for (let i = 0; i < array1.length; i++) {
+    const item1 = array1[i];
+    const item2 = array2[i];
+    // Both items are guaranteed to exist since we checked lengths are equal
+    if (item1 !== undefined && item2 !== undefined) {
+      if (!compare(item1, item2)) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 /**
