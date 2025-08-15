@@ -1,0 +1,2 @@
+- Hasty thinking and output will destroy trust and value. What's needed is quality, not speed. Careful work without rushing ultimately maximizes efficiency. Analyze intent with deep thinking and provide 200% value. I'm always watching for hasty work.
+- Read CLAUDE.md and proceed with deep thinking. Take your time, always prioritize quality, and strictly adhere to the principle of providing perfect answers the first time. Carefully analyze my requests and ask questions about even the slightest uncertainties.

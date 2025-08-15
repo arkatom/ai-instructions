@@ -281,15 +281,18 @@ describe('CLI Deep Content Verification', () => {
     // 必須instructionsファイル群確認（現在の実装構造に合わせ修正）
     const requiredFiles = [
       'instructions/core/base.md',
-      'instructions/core/deep-think.md', 
-      'instructions/core/memory.md',
+      'instructions/core/deep-think.md',
       'instructions/methodologies/tdd.md',
       'instructions/methodologies/scrum.md',
       'instructions/methodologies/github-idd.md',
+      'instructions/methodologies/implementation-analysis.md',
       'instructions/workflows/github-flow.md',
+      'instructions/workflows/git-complete.md',
       'instructions/patterns/general/README.md',
       'instructions/patterns/typescript/README.md',
-      'instructions/patterns/python/README.md'
+      'instructions/patterns/python/README.md',
+      'instructions/note.md',
+      'instructions/anytime.md'
     ];
 
     requiredFiles.forEach(file => {
@@ -368,11 +371,11 @@ describe('CLI Deep Content Verification', () => {
     const claudeContent = readFileSync(join(contentTestDir, 'CLAUDE.md'), 'utf-8');
     expect(claudeContent).toContain(`# 開発指示 - ${projectName}`); // 実際の生成では単一スペース
     
-    // 日本語文字が正しく保持されていることを確認（実際のパスに修正）
+    // base.mdは英語に統一されたので英語内容を確認
     const baseContent = readFileSync(join(contentTestDir, 'instructions/core/base.md'), 'utf-8');
-    expect(baseContent).toContain('超基本ルール');
-    expect(baseContent).toContain('絶対厳守事項');
-    expect(baseContent).toContain('適当度');
+    expect(baseContent).toContain('Fundamental Rules');
+    expect(baseContent).toContain('Absolute Requirements');
+    expect(baseContent).toContain('Deep Investigation');
   });
 });
 
@@ -711,14 +714,17 @@ describe('CLI Output Format Support', () => {
         'CLAUDE.md', 
         'instructions/core/base.md',
         'instructions/core/deep-think.md',
-        'instructions/core/memory.md',
         'instructions/methodologies/github-idd.md',
         'instructions/methodologies/scrum.md',
         'instructions/methodologies/tdd.md',
+        'instructions/methodologies/implementation-analysis.md',
         'instructions/patterns/general/README.md',
         'instructions/patterns/python/README.md',
         'instructions/patterns/typescript/README.md',
-        'instructions/workflows/github-flow.md'
+        'instructions/workflows/github-flow.md',
+        'instructions/workflows/git-complete.md',
+        'instructions/note.md',
+        'instructions/anytime.md'
       ] },
       { format: 'cursor', expectedFiles: ['.cursor/rules/main.mdc'] },
       { format: 'copilot', expectedFiles: ['.github/copilot-instructions.md'] }

@@ -18,14 +18,14 @@ describe('ClaudeGenerator', () => {
       const templateContent = await generator.loadDynamicTemplate('main.md', { lang: 'en', projectName: 'test-project' });
       
       expect(templateContent).toContain('Development Instructions');
-      expect(templateContent).toContain('## 🚨 Core Principles (MANDATORY)');
+      expect(templateContent).toContain('## 🚨 Core Principles (Required)');
     });
 
     it('should load dynamic template content for Chinese', async () => {
       const generator = new ClaudeGenerator();
       const templateContent = await generator.loadDynamicTemplate('main.md', { lang: 'ch', projectName: 'test-project' });
       
-      expect(templateContent).toContain('开发指示');
+      expect(templateContent).toContain('开发指导');
       expect(templateContent).toContain('## 🚨 核心原则（必须）');
     });
     
