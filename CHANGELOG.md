@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-08-15
+
+### Added
+- 🏗️ **Pure Function Architecture**: Complete architectural overhaul for better maintainability (#85, #88)
+- 🎯 **Agent Dependency Management System**: Core implementation for agent coordination (#81)
+- 🤖 **Interactive Recommendation System**: Intelligent agent recommendation with scoring (#79)
+- 📊 **Pre-Implementation Analysis Protocol**: Quality assurance framework before implementation
+- 🧩 **Template Structure Optimization**: Restructured templates to match actual usage patterns (#91, #92)
+- 🧪 **Comprehensive Test Suites**: Re-enabled and fixed all CLI integration tests (#56)
+
+### Fixed
+- 🚨 **Complete ESLint Resolution**: All 308 ESLint errors eliminated (#45, #58, #62, #87)
+- 🔒 **TypeScript Type Safety**: Eliminated all 'any' type usage for strict type safety (#49, #68)
+- 🛡️ **Security Enhancements**: Perfect security implementation with comprehensive tests (#48)
+- 🧹 **Test Contamination**: Resolved test isolation issues and architecture refactoring (#64, #50)
+- ⚠️ **Error Handling**: Improved error handling with custom error classes (#46)
+- 📝 **Documentation Accuracy**: Removed exaggerated claims from README for honest representation
+
+### Changed
+- 📚 **Core Instructions**: Consolidated and optimized instruction structure (#82)
+- 🏷️ **Template Organization**: Reorganized agents directory structure (#74)
+- 🌐 **Multi-language Support**: Enhanced documentation and template translations
+- 🔄 **Agent Templates**: Optimized with common variable patterns
+
+### Security
+- 🔐 **Path Traversal Protection**: Enhanced security tests with proper null byte testing (#71)
+- ✅ **Code Quality**: Added eslint-plugin-sonarjs for enhanced code quality checks (#59)
+
 ## [0.5.0] - 2025-08-09
 
 ### Added

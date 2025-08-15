@@ -18,13 +18,14 @@
 
 - **🚀 即座のセットアップ**: 数秒で完全な指示セットを生成
 - **🛠️ マルチツール対応**: Claude Code、GitHub Copilot、Cursor AI IDE、Cline、Windsurfをサポート
-- **📚 包括的なテンプレート**: 開発方法論ガイド（TDD、Gitワークフロー等）の完全なコレクション
+- **📚 開発テンプレート**: 主要な開発方法論ガイド（TDD、Gitワークフロー等）
 - **🌐 多言語対応**: 日本語、英語、中国語のテンプレート
 - **🛡️ 高度なファイル安全システム**: スマートマージによる5つの衝突解決戦略
 - **⚙️ 高い設定可能性**: プロジェクト名と出力ディレクトリのカスタマイズ
 - **🔒 入力検証**: プロジェクト名とパスの組み込み検証
 - **🧪 実戦テスト済み**: 110の包括的なテストによる信頼性の確保
 - **🔄 フォーマット変換**: Claude、Cursor、GitHub Copilot、Windsurf形式間の変換
+- **🎯 エージェントテンプレート**: 70+の専門エージェントテンプレート（CLIコマンド統合は開発中 - Issue #93参照）
 
 ## 🛡️ 高度なファイル安全システム (v0.5.0)
 
@@ -291,7 +292,6 @@ your-project/
 ### コア指示
 - **base.md**: 絶対厳守事項と基本原則
 - **deep-think.md**: AIの深層思考を活用した問題解決
-- **memory.md**: プロジェクト情報の効果的な管理
 
 ### 開発方法論
 - **tdd.md**: Kent BeckのTDD原則と実践
@@ -308,7 +308,7 @@ your-project/
 
 ## 🏗️ アーキテクチャ
 
-本プロジェクトは、厳密な依存関係管理を持つレイヤードアーキテクチャを採用しています。詳細は[アーキテクチャドキュメント](./docs/ARCHITECTURE.md)を参照してください。
+本プロジェクトは、厳密な依存関係管理を持つレイヤードアーキテクチャを採用しています。
 
 ## 🧪 テスト
 
@@ -335,7 +335,7 @@ MITライセンスの下で配布されています。詳細は[LICENSE](./LICEN
 
 - **Issues**: [GitHub Issues](https://github.com/arkatom/ai-instructions/issues)
 - **NPM**: [@arkatom/ai-instructions](https://www.npmjs.com/package/@arkatom/ai-instructions)
-- **ドキュメント**: [プロジェクトWiki](https://github.com/arkatom/ai-instructions/wiki)
+- **ドキュメント**: このREADMEと生成される指示ファイル
 
 ## 🎉 謝辞
 

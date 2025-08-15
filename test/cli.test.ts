@@ -31,7 +31,7 @@ const runCliCommand = (command: string) => {
 describe('CLI Basic Functionality', () => {
   it('should display version when --version flag is used', () => {
     // Arrange
-    const expectedVersion = '0.5.0';
+    const expectedVersion = '0.6.0';
     
     // Act
     const result = execSync(`npx ts-node "${cliPath}" --version`, { 

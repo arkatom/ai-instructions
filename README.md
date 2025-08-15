@@ -16,15 +16,15 @@
 
 ### ✨ Key Benefits
 
-- **🚀 Instant Setup**: Generate complete instruction sets in seconds
+- **🚀 Instant Setup**: Generate instruction templates in seconds
 - **🛠️ Multi-Tool Support**: Claude Code, GitHub Copilot, Cursor AI IDE, and Cline AI support
-- **📚 Comprehensive Templates**: Full collection of development methodology guides (TDD, Git workflow, etc.)
-- **🌐 Multi-language Support**: English, Japanese, and Chinese template support
+- **📚 Development Templates**: Essential development methodology guides (TDD, Git workflow, Scrum)
+- **🌐 Multilingual Core**: Main instructions available in English, Japanese, and Chinese
 - **🛡️ Advanced File Safety**: 5 intelligent conflict resolution strategies with smart merging
 - **⚙️ Highly Configurable**: Customizable project names and output directories
 - **🔒 Validated Input**: Built-in validation for project names and paths
-- **🧪 Battle-tested**: 110 comprehensive tests ensuring reliability
-- **🔄 Format Conversion**: Convert between Claude, Cursor, GitHub Copilot, and Windsurf formats
+- **🧪 Battle-tested**: Comprehensive test suite ensuring reliability
+- **🎯 Agent Templates**: 70+ specialized agent templates (CLI integration pending - see Issue #93)
 
 ## 🛡️ Advanced File Safety System (v0.5.0)
 
@@ -375,23 +375,25 @@ ai-instructions init --output-format windsurf --project-name "my-project"
 ai-instructions init --output-format claude --project-name "my-project"
 ```
 
-### Multi-Language Templates
+### Language Options
 
-Generate templates in different languages:
+The main instruction file is available in multiple languages:
 
 ```bash
-# English templates (default)
+# English (default)
 ai-instructions init --lang en --project-name "my-project"
 
-# Japanese templates
+# Japanese (main instruction file)
 ai-instructions init --lang ja --project-name "プロジェクト名"
 
-# Chinese templates
+# Chinese (main instruction file)
 ai-instructions init --lang ch --project-name "项目名称"
 
-# Combined: Japanese Cursor format
+# Combined: Japanese main file with Cursor format
 ai-instructions init -f cursor --lang ja --project-name "カーソルプロジェクト"
 ```
+
+**Note**: Currently, only the main instruction file (`CLAUDE.md`/core) supports multiple languages. Other templates are in English.
 
 ### Safe Updates and Migrations (v0.5.0)
 
@@ -433,10 +435,9 @@ The file structure varies depending on the AI tool you select:
 ```
 your-project/
 ├── CLAUDE.md                    # Main ClaudeCode instructions
-└── instructions/                # Comprehensive development guides
+└── instructions/                # Development methodology guides
     ├── base.md                  # Core development rules (MUST READ)
     ├── deep-think.md           # Deep thinking methodology
-    ├── memory.md               # Memory management instructions
     ├── KentBeck-tdd-rules.md   # Test-Driven Development rules
     ├── commit-rules.md         # Git commit conventions
     ├── pr-rules.md             # Pull request guidelines
@@ -477,8 +478,8 @@ your-project/
 └── instructions/              # Comprehensive development guides
     ├── base.md                # Core development rules (MUST READ)
     ├── deep-think.md         # Deep thinking methodology
-    ├── memory.md             # Memory management instructions
-    └── ... (13 additional files)
+    ├── note.md               # Work documentation guidelines
+    └── ... (additional methodology and workflow files)
 ```
 
 ### File Descriptions
@@ -488,7 +489,6 @@ your-project/
 | `CLAUDE.md` | Main entry point for AI assistants | Project-specific instructions with {{projectName}} replaced |
 | `base.md` | Core development principles | Fundamental rules that must be followed |
 | `deep-think.md` | Thinking methodology | Quality-first approach and analytical thinking |
-| `memory.md` | Memory management | How to store and retrieve project information |
 | `KentBeck-tdd-rules.md` | TDD methodology | Kent Beck's Test-Driven Development principles |
 | `commit-rules.md` | Git commit standards | Semantic commit message format with domain tags |
 | `pr-rules.md` | Pull request rules | PR creation guidelines and review process |

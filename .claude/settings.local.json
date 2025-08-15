@@ -222,7 +222,9 @@
       "mcp__serena__find_symbol",
       "mcp__github__get_pull_request_comments",
       "Bash(gh issue comment:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(git cherry-pick:*)",
+      "mcp__serena__find_file"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
