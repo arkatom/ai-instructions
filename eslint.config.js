@@ -49,8 +49,24 @@ module.exports = tseslint.config(
       '@typescript-eslint/no-var-requires': 'error',
       '@typescript-eslint/no-require-imports': 'error',
       
+      // God Class Prevention Rules
+      'max-lines': ['error', {
+        max: 300,
+        skipBlankLines: true,
+        skipComments: true
+      }],
+      'max-lines-per-function': ['error', {
+        max: 50,
+        skipBlankLines: true,
+        skipComments: true
+      }],
+      'complexity': ['error', 10],
+      'max-depth': ['error', 3],
+      'max-params': ['error', 4],
+      'max-nested-callbacks': ['error', 3],
+      
       // SonarJS code quality rules
-      'sonarjs/cognitive-complexity': ['error', 15],
+      'sonarjs/cognitive-complexity': ['error', 10],
       'sonarjs/no-duplicate-string': ['error', { threshold: 5 }],
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-redundant-boolean': 'error',
