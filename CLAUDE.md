@@ -35,10 +35,8 @@ alwaysApply: true
 
 - [基本ルール](./instructions/core/base.md) - 絶対厳守事項
 - [深層思考](./instructions/core/deep-think.md)
+- [実装前分析プロトコル](./instructions/methodologies/implementation-analysis.md) - **必須実行**
 
-## プロジェクト固有のアーキテクチャ・ルール・ドキュメント
-
-- [プロジェクトドキュメント索引](./docs/README.md)
 
 ## 📋 場面別必須参照ファイル
 
@@ -48,7 +46,6 @@ alwaysApply: true
 
 ### 開発プロセス
 
-- [実装前分析プロトコル](./instructions/methodologies/implementation-analysis.md) - **必須実行**
 - [TDD開発スタイル](./instructions/methodologies/tdd.md)
 - [Github Issue Driven Development](./instructions/methodologies/github-idd.md)
 
@@ -60,4 +57,4 @@ alwaysApply: true
 ### 記録・管理
 
 - [ノート・日誌](./instructions/note.md) - 作業記録の書き方
-- [Memory管理](./instructions/core/memory.md) - 重要情報の記録（必要時のみ）
+
