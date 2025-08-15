@@ -24,6 +24,33 @@ export interface InitCommandArgs extends CommandArgs {
  * Commander.js options interface - without 'command' property
  * Used for CLI action callbacks
  */
+/**
+ * Agent command arguments interface
+ * Issue #93: Agent deployment CLI commands implementation
+ */
+export interface AgentCommandArgs extends CommandArgs {
+  subcommand: 'list' | 'recommend' | 'deploy' | 'info' | 'profile';
+  category?: string;
+  agents?: string[];
+  format?: 'table' | 'json' | 'tree';
+  output?: string;
+  name?: string;
+  action?: string;
+}
+
+/**
+ * Commander.js options interface for agent commands
+ */
+export interface CommanderAgentOptions {
+  category?: string;
+  format?: 'table' | 'json' | 'tree';
+  output?: string;
+}
+
+/**
+ * Commander.js options interface - without 'command' property
+ * Used for CLI action callbacks
+ */
 export interface CommanderInitOptions {
   output?: string;
   projectName?: string;
