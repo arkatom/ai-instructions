@@ -35,9 +35,13 @@
     "claude",
     "cursor",
     "copilot",
+    "cline",
+    "windsurf",
     "development",
     "instructions",
-    "template"
+    "template",
+    "japanese",
+    "multilingual"
   ],
   "author": {
     "name": "arkatom",
@@ -53,6 +57,7 @@
     "dist/",
     "templates/",
     "README.md",
+    "README.ja.md",
     "LICENSE"
   ],
   "types": "dist/cli.d.ts",

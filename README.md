@@ -2,6 +2,8 @@
 
 🤖 **Professional CLI tool to scaffold AI development instructions for ClaudeCode, Cursor, GitHub Copilot and more**
 
+**English** | [日本語](./README.ja.md)
+
 [![NPM Version](https://img.shields.io/npm/v/@arkatom/ai-instructions)](https://www.npmjs.com/package/@arkatom/ai-instructions)
 [![Tests](https://img.shields.io/badge/tests-110%20passing-brightgreen)](./test)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
@@ -104,7 +106,7 @@ graph TB
     subgraph "CLI Layer"
         CLI[cli.ts]
     end
-    
+
     subgraph "Generator Layer"
         Factory[GeneratorFactory]
         Base[BaseGenerator]
@@ -114,7 +116,7 @@ graph TB
         Cline[ClineGenerator]
         Windsurf[WindsurfGenerator]
     end
-    
+
     subgraph "Core Services"
         Config[ConfigurationManager]
         SharedProc[SharedTemplateProcessor]
@@ -122,18 +124,18 @@ graph TB
         Errors[Error Classes]
         Types[Type Definitions]
     end
-    
+
     subgraph "Converter Layer"
         ConvFactory[ConverterFactory]
         FormatConv[Format Converters]
     end
-    
+
     subgraph "Utilities"
         FileUtils[FileUtils]
         ConflictHandler[FileConflictHandler]
         MergeHandler[SmartMergeHandler]
     end
-    
+
     CLI --> Factory
     Factory --> Base
     Base --> Claude
@@ -141,23 +143,23 @@ graph TB
     Base --> Copilot
     Base --> Cline
     Base --> Windsurf
-    
+
     Base --> Config
     Base --> SharedProc
     Base --> Errors
-    
+
     SharedProc --> Config
     SharedProc --> Parallel
     SharedProc --> Types
-    
+
     Config --> Types
     Config --> Errors
-    
+
     Parallel --> FileUtils
-    
+
     Claude --> ConvFactory
     ConvFactory --> FormatConv
-    
+
     FileUtils --> ConflictHandler
     ConflictHandler --> MergeHandler
 ```
@@ -170,55 +172,55 @@ graph LR
         Types[types.ts]
         Errors[errors.ts]
     end
-    
+
     subgraph "Low-Level Dependencies"
         FileUtils[file-utils.ts]
         MergeHandler[smart-merge-handler.ts]
     end
-    
+
     subgraph "Mid-Level Dependencies"
         Config[config-manager.ts]
         ConflictHandler[file-conflict-handler.ts]
         Parallel[parallel-generator.ts]
     end
-    
+
     subgraph "High-Level Dependencies"
         SharedProc[shared-processor.ts]
         Base[base.ts]
     end
-    
+
     subgraph "Top-Level Components"
         Generators[Specific Generators]
         Converters[Format Converters]
         CLI[cli.ts]
     end
-    
+
     Types --> Config
     Types --> SharedProc
     Types --> Base
-    
+
     Errors --> Config
     Errors --> SharedProc
     Errors --> Base
     Errors --> Parallel
-    
+
     FileUtils --> ConflictHandler
     FileUtils --> Parallel
-    
+
     MergeHandler --> ConflictHandler
-    
+
     Config --> SharedProc
     Config --> Base
-    
+
     ConflictHandler --> Base
-    
+
     Parallel --> SharedProc
-    
+
     SharedProc --> Base
-    
+
     Base --> Generators
     Base --> Converters
-    
+
     Generators --> CLI
     Converters --> CLI
 ```
@@ -314,6 +316,23 @@ ai-instructions init
 
 This creates a complete set of AI development instructions in your current directory.
 
+### Check Current Status
+
+```bash
+# Check AI instruction files in current directory
+ai-instructions status
+
+# Check specific directory
+ai-instructions status --directory ./my-project
+```
+
+### Interactive Help Guide
+
+```bash
+# Launch interactive setup guide with examples
+ai-instructions help-interactive
+```
+
 ### Custom Project Setup
 
 ```bash
@@ -331,7 +350,7 @@ ai-instructions init --tool claude
 # Generate GitHub Copilot instructions
 ai-instructions init --tool github-copilot --project-name "my-project"
 
-# Generate Cursor AI IDE instructions  
+# Generate Cursor AI IDE instructions
 ai-instructions init --tool cursor --project-name "my-project"
 
 # Generate Cline AI instructions
@@ -399,7 +418,7 @@ ai-instructions init --no-interactive --conflict-resolution backup
 # Setup for a React project
 ai-instructions init --project-name "react-dashboard" --output ./projects/dashboard
 
-# Setup for a Japanese project  
+# Setup for a Japanese project
 ai-instructions init --project-name "プロジェクト名" --output ./日本語プロジェクト
 
 # Setup with spaces in name
@@ -416,7 +435,7 @@ your-project/
 ├── CLAUDE.md                    # Main ClaudeCode instructions
 └── instructions/                # Comprehensive development guides
     ├── base.md                  # Core development rules (MUST READ)
-    ├── deep-think.md           # Deep thinking methodology  
+    ├── deep-think.md           # Deep thinking methodology
     ├── memory.md               # Memory management instructions
     ├── KentBeck-tdd-rules.md   # Test-Driven Development rules
     ├── commit-rules.md         # Git commit conventions
@@ -476,6 +495,15 @@ your-project/
 
 ## ⚙️ Configuration Options
 
+### Available Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `init` | Initialize AI development instructions | `ai-instructions init` |
+| `status` | Show current configuration status | `ai-instructions status` |
+| `help-interactive` | Launch interactive help guide | `ai-instructions help-interactive` |
+| `help` | Display help for a command | `ai-instructions help init` |
+
 ### Command Line Options
 
 | Option | Alias | Description | Default | Example |
@@ -505,7 +533,7 @@ The CLI validates project names to ensure filesystem compatibility:
 
 ```bash
 ai-instructions init --project-name "My Project"           # ✅ Spaces
-ai-instructions init --project-name "my-awesome_project-v2" # ✅ Hyphens & underscores  
+ai-instructions init --project-name "my-awesome_project-v2" # ✅ Hyphens & underscores
 ai-instructions init --project-name "プロジェクト名"          # ✅ Unicode/Japanese
 ai-instructions init --project-name "Project123"           # ✅ Numbers
 ```
@@ -547,7 +575,7 @@ The CLI validates output formats to ensure compatibility:
 
 ### Prerequisites
 
-- Node.js 16+ 
+- Node.js 16+
 - npm 7+
 - TypeScript 5.0+
 
@@ -589,7 +617,7 @@ npm run test:coverage
 Our comprehensive test suite includes:
 
 - **Basic CLI functionality** (version, help, commands) - 41 tests
-- **Format conversion system** (Claude → Cursor/Copilot/Windsurf) - 16 tests  
+- **Format conversion system** (Claude → Cursor/Copilot/Windsurf) - 16 tests
 - **Multi-language support** (English, Japanese, Chinese templates) - 21 tests
 - **Multi-tool generators** (Claude, GitHub Copilot, Cursor) - 17 tests
 - **Error handling** (invalid inputs, filesystem errors, validation) - 8 tests
