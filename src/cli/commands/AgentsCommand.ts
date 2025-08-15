@@ -54,6 +54,13 @@ export class AgentsCommand implements Command {
   private recommendationEngine: RecommendationEngine | null = null;
   private dependencyResolver: DependencyResolver | null = null;
 
+  // Display formatting constants
+  private readonly TABLE_SEPARATOR_LENGTH = 60;
+  private readonly TREE_BRANCH = '├──';
+  private readonly TREE_LAST_BRANCH = '└──';
+  private readonly TREE_VERTICAL = '│';
+  private readonly TAB_SEPARATOR = '\t\t';
+
   constructor() {
     this.agentValidator = new AgentValidator();
     
@@ -693,14 +700,14 @@ export class AgentsCommand implements Command {
       case 'table':
       default:
         let table = 'Project Profile\n';
-        table += '─'.repeat(60) + '\n';
+        table += '─'.repeat(this.TABLE_SEPARATOR_LENGTH) + '\n';
         table += `Project Type:\t${data.projectContext.projectType}\n`;
         table += `Development Phase:\t${data.projectContext.developmentPhase}\n`;
         if (data.projectContext.frameworks.length > 0) {
           table += `Frameworks:\t${data.projectContext.frameworks.join(', ')}\n`;
         }
         table += '\nRecommended Agents:\n';
-        table += '─'.repeat(60) + '\n';
+        table += '─'.repeat(this.TABLE_SEPARATOR_LENGTH) + '\n';
         if (data.recommended.primary.length > 0) {
           table += `Primary:\t${data.recommended.primary.join(', ')}\n`;
         }
@@ -730,11 +737,11 @@ export class AgentsCommand implements Command {
         
         let result = 'Available Agents:\n';
         for (const [category, categoryAgents] of Object.entries(categories)) {
-          result += `├── ${category}\n`;
+          result += `${this.TREE_BRANCH} ${category}\n`;
           categoryAgents.forEach((agent, index) => {
             const isLast = index === categoryAgents.length - 1;
-            const prefix = isLast ? '└──' : '├──';
-            result += `│   ${prefix} ${agent.name}: ${agent.description}\n`;
+            const prefix = isLast ? this.TREE_LAST_BRANCH : this.TREE_BRANCH;
+            result += `${this.TREE_VERTICAL}   ${prefix} ${agent.name}: ${agent.description}\n`;
           });
         }
         return result;
@@ -742,11 +749,11 @@ export class AgentsCommand implements Command {
       default:
         // Simple table format
         let table = 'Available Agents\n';
-        table += '─'.repeat(60) + '\n';
-        table += 'Name\t\tCategory\t\tDescription\n';
-        table += '─'.repeat(60) + '\n';
+        table += '─'.repeat(this.TABLE_SEPARATOR_LENGTH) + '\n';
+        table += `Name${this.TAB_SEPARATOR}Category${this.TAB_SEPARATOR}Description\n`;
+        table += '─'.repeat(this.TABLE_SEPARATOR_LENGTH) + '\n';
         agents.forEach(agent => {
-          table += `${agent.name}\t\t${agent.category}\t\t${agent.description}\n`;
+          table += `${agent.name}${this.TAB_SEPARATOR}${agent.category}${this.TAB_SEPARATOR}${agent.description}\n`;
         });
         return table;
     }
@@ -784,24 +791,24 @@ export class AgentsCommand implements Command {
       default:
         // Simple table format
         let table = 'Agent Information\n';
-        table += '─'.repeat(60) + '\n';
-        table += `Name:\t\t${agent.name}\n`;
+        table += '─'.repeat(this.TABLE_SEPARATOR_LENGTH) + '\n';
+        table += `Name:${this.TAB_SEPARATOR}${agent.name}\n`;
         table += `Category:\t${agent.category}\n`;
         table += `Description:\t${agent.description}\n`;
-        table += `Tags:\t\t${agent.tags.join(', ')}\n`;
+        table += `Tags:${this.TAB_SEPARATOR}${agent.tags.join(', ')}\n`;
         
         table += '\nRelationships:\n';
         if (agent.relationships.requires.length > 0) {
-          table += `  Requires:\t\t${agent.relationships.requires.join(', ')}\n`;
+          table += `  Requires:${this.TAB_SEPARATOR}${agent.relationships.requires.join(', ')}\n`;
         }
         if (agent.relationships.enhances.length > 0) {
-          table += `  Enhances:\t\t${agent.relationships.enhances.join(', ')}\n`;
+          table += `  Enhances:${this.TAB_SEPARATOR}${agent.relationships.enhances.join(', ')}\n`;
         }
         if (agent.relationships.collaborates_with.length > 0) {
-          table += `  Collaborates:\t\t${agent.relationships.collaborates_with.join(', ')}\n`;
+          table += `  Collaborates:${this.TAB_SEPARATOR}${agent.relationships.collaborates_with.join(', ')}\n`;
         }
         if (agent.relationships.conflicts_with.length > 0) {
-          table += `  Conflicts:\t\t${agent.relationships.conflicts_with.join(', ')}\n`;
+          table += `  Conflicts:${this.TAB_SEPARATOR}${agent.relationships.conflicts_with.join(', ')}\n`;
         }
         
         return table;
@@ -837,16 +844,16 @@ export class AgentsCommand implements Command {
       case 'table':
       default:
         let table = 'Recommended Agents\n';
-        table += '─'.repeat(60) + '\n';
-        table += 'Type\t\tAgent\t\tExplanation\n';
-        table += '─'.repeat(60) + '\n';
+        table += '─'.repeat(this.TABLE_SEPARATOR_LENGTH) + '\n';
+        table += `Type${this.TAB_SEPARATOR}Agent${this.TAB_SEPARATOR}Explanation\n`;
+        table += '─'.repeat(this.TABLE_SEPARATOR_LENGTH) + '\n';
         recommendations.primary.forEach(agentName => {
           const explanation = recommendations.explanations?.[agentName] || 'No explanation';
-          table += `Primary\t\t${agentName}\t\t${explanation}\n`;
+          table += `Primary${this.TAB_SEPARATOR}${agentName}${this.TAB_SEPARATOR}${explanation}\n`;
         });
         recommendations.suggested.forEach(agentName => {
           const explanation = recommendations.explanations?.[agentName] || 'No explanation';
-          table += `Suggested\t${agentName}\t\t${explanation}\n`;
+          table += `Suggested\t${agentName}${this.TAB_SEPARATOR}${explanation}\n`;
         });
         return table;
     }
