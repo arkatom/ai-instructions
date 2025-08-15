@@ -161,10 +161,105 @@ export function validateCliOptions(rawOptions: RawInitOptions, currentWorkingDir
 }
 
 /**
+ * Validates and extracts tool option
+ */
+function extractTool(rawOptions: RawInitOptions, errors: ValidationError[]): SupportedTool {
+  const toolString = typeof rawOptions.tool === 'string' ? rawOptions.tool : CLI_DEFAULTS.tool;
+  switch (toolString) {
+    case 'claude':
+    case 'cursor':
+    case 'windsurf':
+    case 'github-copilot':
+    case 'cline':
+      return toolString;
+    default:
+      if (typeof rawOptions.tool === 'string') {
+        errors.push({
+          field: 'tool',
+          message: `Unsupported tool: ${rawOptions.tool}`,
+          received: rawOptions.tool,
+          expected: [...GeneratorFactory.getSupportedTools()]
+        });
+      }
+      return CLI_DEFAULTS.tool;
+  }
+}
+
+/**
+ * Validates and extracts language option
+ */
+function extractLanguage(rawOptions: RawInitOptions, errors: ValidationError[]): SupportedLanguage {
+  const langString = typeof rawOptions.lang === 'string' ? rawOptions.lang : CLI_DEFAULTS.lang;
+  switch (langString) {
+    case 'en':
+    case 'ja':
+    case 'ch':
+      return langString;
+    default:
+      if (typeof rawOptions.lang === 'string') {
+        errors.push({
+          field: 'lang',
+          message: `Unsupported language: ${rawOptions.lang}`,
+          received: rawOptions.lang,
+          expected: [...SUPPORTED_LANGUAGES]
+        });
+      }
+      return CLI_DEFAULTS.lang;
+  }
+}
+
+/**
+ * Validates and extracts output format option
+ */
+function extractOutputFormat(rawOptions: RawInitOptions, errors: ValidationError[]): OutputFormat {
+  const outputFormatString = typeof rawOptions.outputFormat === 'string' ? rawOptions.outputFormat : CLI_DEFAULTS.outputFormat;
+  switch (outputFormatString) {
+    case 'claude':
+    case 'cursor':
+    case 'copilot':
+    case 'windsurf':
+      return outputFormatString;
+    default:
+      if (typeof rawOptions.outputFormat === 'string') {
+        errors.push({
+          field: 'outputFormat',
+          message: `Unsupported output format: ${rawOptions.outputFormat}`,
+          received: rawOptions.outputFormat,
+          expected: ConverterFactory.getAvailableFormats()
+        });
+      }
+      return CLI_DEFAULTS.outputFormat;
+  }
+}
+
+/**
+ * Validates and extracts conflict resolution strategy
+ */
+function extractConflictResolution(rawOptions: RawInitOptions, errors: ValidationError[]): ConflictResolutionStrategy {
+  const conflictResolutionString = typeof rawOptions.conflictResolution === 'string' ? rawOptions.conflictResolution : CLI_DEFAULTS.conflictResolution;
+  switch (conflictResolutionString) {
+    case 'backup':
+    case 'merge':
+    case 'skip':
+    case 'overwrite':
+      return conflictResolutionString;
+    default:
+      if (typeof rawOptions.conflictResolution === 'string') {
+        errors.push({
+          field: 'conflictResolution',
+          message: `Unsupported conflict resolution strategy: ${rawOptions.conflictResolution}`,
+          received: rawOptions.conflictResolution,
+          expected: [...CONFLICT_RESOLUTION_STRATEGIES]
+        });
+      }
+      return CLI_DEFAULTS.conflictResolution;
+  }
+}
+
+/**
  * Internal function that validates and extracts options with proper type narrowing
  * Uses explicit typing approach to avoid any type assertions
  */
-// eslint-disable-next-line sonarjs/cognitive-complexity
 function validateAndExtractOptions(
   rawOptions: RawInitOptions, 
   currentWorkingDirectory: string,
@@ -192,97 +287,11 @@ function validateAndExtractOptions(
     });
   }
 
-  // Validate tool - using explicit switch/case for type safety
-  let tool: SupportedTool;
-  const toolString = typeof rawOptions.tool === 'string' ? rawOptions.tool : CLI_DEFAULTS.tool;
-  switch (toolString) {
-    case 'claude':
-    case 'cursor':
-    case 'windsurf':
-    case 'github-copilot':
-    case 'cline':
-      tool = toolString;
-      break;
-    default:
-      tool = CLI_DEFAULTS.tool;
-      if (typeof rawOptions.tool === 'string') {
-        errors.push({
-          field: 'tool',
-          message: `Unsupported tool: ${rawOptions.tool}`,
-          received: rawOptions.tool,
-          expected: [...GeneratorFactory.getSupportedTools()]
-        });
-      }
-      break;
-  }
-
-  // Validate language - using explicit switch/case for type safety
-  let lang: SupportedLanguage;
-  const langString = typeof rawOptions.lang === 'string' ? rawOptions.lang : CLI_DEFAULTS.lang;
-  switch (langString) {
-    case 'en':
-    case 'ja':
-    case 'ch':
-      lang = langString;
-      break;
-    default:
-      lang = CLI_DEFAULTS.lang;
-      if (typeof rawOptions.lang === 'string') {
-        errors.push({
-          field: 'lang',
-          message: `Unsupported language: ${rawOptions.lang}`,
-          received: rawOptions.lang,
-          expected: [...SUPPORTED_LANGUAGES]
-        });
-      }
-      break;
-  }
-
-  // Validate output format - using explicit switch/case for type safety
-  let outputFormat: OutputFormat;
-  const outputFormatString = typeof rawOptions.outputFormat === 'string' ? rawOptions.outputFormat : CLI_DEFAULTS.outputFormat;
-  switch (outputFormatString) {
-    case 'claude':
-    case 'cursor':
-    case 'copilot':
-    case 'windsurf':
-      outputFormat = outputFormatString;
-      break;
-    default:
-      outputFormat = CLI_DEFAULTS.outputFormat;
-      if (typeof rawOptions.outputFormat === 'string') {
-        errors.push({
-          field: 'outputFormat',
-          message: `Unsupported output format: ${rawOptions.outputFormat}`,
-          received: rawOptions.outputFormat,
-          expected: ConverterFactory.getAvailableFormats()
-        });
-      }
-      break;
-  }
-
-  // Validate conflict resolution - using explicit switch/case for type safety
-  let conflictResolution: ConflictResolutionStrategy;
-  const conflictResolutionString = typeof rawOptions.conflictResolution === 'string' ? rawOptions.conflictResolution : CLI_DEFAULTS.conflictResolution;
-  switch (conflictResolutionString) {
-    case 'backup':
-    case 'merge':
-    case 'skip':
-    case 'overwrite':
-      conflictResolution = conflictResolutionString;
-      break;
-    default:
-      conflictResolution = CLI_DEFAULTS.conflictResolution;
-      if (typeof rawOptions.conflictResolution === 'string') {
-        errors.push({
-          field: 'conflictResolution',
-          message: `Unsupported conflict resolution strategy: ${rawOptions.conflictResolution}`,
-          received: rawOptions.conflictResolution,
-          expected: [...CONFLICT_RESOLUTION_STRATEGIES]
-        });
-      }
-      break;
-  }
+  // Extract validated options using helper functions
+  const tool = extractTool(rawOptions, errors);
+  const lang = extractLanguage(rawOptions, errors);
+  const outputFormat = extractOutputFormat(rawOptions, errors);
+  const conflictResolution = extractConflictResolution(rawOptions, errors);
 
   // Validate boolean flags
   const force = typeof rawOptions.force === 'boolean' ? rawOptions.force : CLI_DEFAULTS.force;
