@@ -48,7 +48,7 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
       // AI開発アシスタント指示が含まれることを確認（ツール固有ブランド削除）
       expect(copilotContent).toContain('Development Instructions'); // ツール名は空文字列に置換される
       expect(copilotContent).not.toContain('{{toolName}}'); // プレースホルダーが残っていないこと確認
-      expect(copilotContent).toContain('TDD Rules');
+      expect(copilotContent).toContain('TDD Development Style');
     });
 
     it('should support multi-language templates with 2024 standard', async () => {
@@ -121,11 +121,11 @@ describe('GitHub Copilot 2024 Standard (Issue #19)', () => {
       const content = await readFile(join(testOutputDir, '.github', 'copilot-instructions.md'), 'utf-8');
       
       // 必要なセクションが含まれることを確認
-      expect(content).toContain('Core Development Principles');
-      expect(content).toContain('GitHub Copilot');
-      expect(content).toContain('Development Process');
-      expect(content).toContain('Git Rules');
-      expect(content).toContain('Issue-driven, TDD, Scrum');
+      expect(content).toContain('Development Instructions');
+      expect(content).toContain('Code Completion Context');
+      expect(content).toContain('Common Patterns to Follow');
+      expect(content).toContain('Error Handling');
+      expect(content).toContain('Testing');
       
       // ファイルが空でないことを確認
       expect(content.length).toBeGreaterThan(500);

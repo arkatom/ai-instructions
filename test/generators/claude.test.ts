@@ -26,7 +26,7 @@ describe('ClaudeGenerator', () => {
       const templateContent = await generator.loadDynamicTemplate('main.md', { lang: 'ch', projectName: 'test-project' });
       
       expect(templateContent).toContain('开发指导');
-      expect(templateContent).toContain('## 🚨 核心原则（必须）');
+      expect(templateContent).toContain('## 🚨 核心原则（必需）');
     });
     
     it('should throw error when template file does not exist', async () => {
