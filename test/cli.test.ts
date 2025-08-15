@@ -122,9 +122,9 @@ describe('CLI Agents Command', () => {
     expect(result).toContain('Recommended Agents');
   });
 
-  it('should deploy agents to specified directory', () => {
+  it('should deploy agents to specified directory', async () => {
     // Arrange
-    const testOutputDir = join(__dirname, '.test-agents-deploy');
+    const testOutputDir = join(__dirname, './.temp-test-output');
     
     // Act
     const result = runCliCommand(`agents deploy test-writer-fixer --output "${testOutputDir}"`);
@@ -134,7 +134,7 @@ describe('CLI Agents Command', () => {
     
     // Cleanup
     if (existsSync(testOutputDir)) {
-      rm(testOutputDir, { recursive: true, force: true });
+      await rm(testOutputDir, { recursive: true, force: true });
     }
   });
 
@@ -174,7 +174,7 @@ describe('CLI Error Handling', () => {
   it('should validate project name and show error for invalid characters', () => {
     // Red: 無効なプロジェクト名文字でエラーメッセージを表示すべき  
     const invalidProjectName = 'invalid<>project|name';
-    const testOutputDir = join(__dirname, './temp-invalid-test');
+    const testOutputDir = join(__dirname, './.temp-test-output');
     
     try {
       execSync(`NODE_ENV=test npx ts-node "${cliPath}" init --output "${testOutputDir}" --project-name "${invalidProjectName}"`, { 
@@ -191,7 +191,7 @@ describe('CLI Error Handling', () => {
 
 describe('CLI Isolated Environment Testing', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const isolatedTestDir = join(__dirname, './temp-isolated-test');
+  const isolatedTestDir = join(__dirname, './.temp-isolated-test');
 
   afterEach(async () => {
     // 完全にクリーンアップ
@@ -236,7 +236,7 @@ describe('CLI Isolated Environment Testing', () => {
 
 describe('CLI Edge Case Project Names', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const edgeCaseTestDir = join(__dirname, './temp-edge-case-test');
+  const edgeCaseTestDir = join(__dirname, './.temp-edge-case-test');
 
   afterEach(async () => {
     if (existsSync(edgeCaseTestDir)) {
@@ -320,7 +320,7 @@ describe('CLI Edge Case Project Names', () => {
 
 describe('CLI Deep Content Verification', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const contentTestDir = join(__dirname, './temp-content-test');
+  const contentTestDir = join(__dirname, './.temp-content-test');
   const baseCwd = join(__dirname, '..');
   const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
 
@@ -447,7 +447,7 @@ describe('CLI Deep Content Verification', () => {
 
 describe('CLI Init Command Integration', () => {
   const cliPath = join(__dirname, '../src/cli.ts');
-  const testOutputDir = join(__dirname, './temp-cli-test');
+  const testOutputDir = join(__dirname, './.temp-test-output');
   const baseCwd = join(__dirname, '..');
   const testEnv = { ...process.env, NODE_ENV: 'cli-test' };
 
@@ -476,7 +476,7 @@ describe('CLI Init Command Integration', () => {
 });
 
 describe('CLI Multi-Tool Support', () => {
-  const testOutputDir = join(__dirname, './temp-cli-multi-tool-test');
+  const testOutputDir = join(__dirname, './.temp-test-output');
   const runCliInit = createRunCliInit(testOutputDir);
 
   afterEach(async () => {
@@ -542,7 +542,7 @@ describe('CLI Multi-Tool Support', () => {
 });
 
 describe('CLI Multi-Language Support', () => {
-  const testOutputDir = join(__dirname, './temp-cli-lang-test');
+  const testOutputDir = join(__dirname, './.temp-test-output');
   const runCliInit = createRunCliInit(testOutputDir);
 
   afterEach(async () => {
@@ -647,7 +647,7 @@ describe('CLI Multi-Language Support', () => {
 });
 
 describe('CLI Output Format Support', () => {
-  const testOutputDir = join(__dirname, './temp-cli-output-format-test');
+  const testOutputDir = join(__dirname, './.temp-test-output');
   const runCliInit = createRunCliInit(testOutputDir);
 
   afterEach(async () => {

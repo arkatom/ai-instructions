@@ -5,6 +5,9 @@
  * Test-First Development following strict TDD principles
  */
 
+import { join } from 'path';
+import { existsSync } from 'fs';
+import { rm } from 'fs/promises';
 import { AgentsCommand } from '../../src/cli/commands/AgentsCommand';
 import { AgentCommandArgs } from '../../src/cli/interfaces/CommandArgs';
 import { AgentMetadata } from '../../src/agents/types';
@@ -54,6 +57,7 @@ interface ProfileResult {
 
 describe('AgentsCommand', () => {
   let command: AgentsCommand;
+  const testOutputDir = join(__dirname, '../temp-test-output');
   
   beforeEach(() => {
     // Clear all mocks
@@ -201,6 +205,13 @@ describe('AgentsCommand', () => {
     });
     
     command = new AgentsCommand();
+  });
+  
+  afterEach(async () => {
+    // Clean up test output directory
+    if (existsSync(testOutputDir)) {
+      await rm(testOutputDir, { recursive: true, force: true });
+    }
   });
 
   describe('Command Interface Compliance', () => {
@@ -438,12 +449,12 @@ describe('AgentsCommand', () => {
           command: 'agents',
           subcommand: 'deploy',
           agents: [AGENT_NAMES.TEST_WRITER],
-          output: './test-output'
+          output: testOutputDir
         };
         
         const result = await command.execute(args);
         expect(result.success).toBe(true);
-        expect(result.data).toHaveProperty('outputPath', './test-output');
+        expect(result.data).toHaveProperty('outputPath', testOutputDir);
       });
 
       it('should return error for non-existent agents', async () => {
