@@ -18,6 +18,7 @@ import {
 import { DependencyResolver } from '../../agents/dependency-resolver';
 import { AgentMetadata, ProjectContext } from '../../agents/types';
 import { Logger } from '../../utils/logger';
+import { SafeOperation, ErrorFormatter } from '../../utils/error-helpers';
 import { join } from 'path';
 
 /**
@@ -423,11 +424,11 @@ export class AgentsCommand implements Command {
             deployedFiles.push(outputFile);
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          Logger.error(`Failed to deploy agent ${agentName}: ${errorMessage}`);
+          const formattedError = ErrorFormatter.formatError(error, `Deploy agent ${agentName}`);
+          Logger.error(formattedError);
           return {
             success: false,
-            error: `Failed to deploy agent ${agentName}: ${errorMessage}`
+            error: formattedError
           };
         }
       }
@@ -633,8 +634,7 @@ export class AgentsCommand implements Command {
           if (deps.typescript) context.buildTools.push('typescript');
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        Logger.error(`Failed to parse package.json at ${packageJsonPath}: ${errorMessage}`);
+        Logger.error(ErrorFormatter.formatError(error, `Parse package.json at ${packageJsonPath}`));
         // Continue with defaults but log the error
       }
     }
@@ -653,8 +653,7 @@ export class AgentsCommand implements Command {
           context.testingTools.push('pytest');
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        Logger.error(`Failed to parse requirements.txt at ${requirementsPath}: ${errorMessage}`);
+        Logger.error(ErrorFormatter.formatError(error, `Parse requirements.txt at ${requirementsPath}`));
         // Continue with defaults but log the error
       }
     }
@@ -708,8 +707,7 @@ export class AgentsCommand implements Command {
           dependencies.push(...Object.keys(packageJson.dependencies));
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        Logger.error(`Failed to read dependencies from ${packageJsonPath}: ${errorMessage}`);
+        Logger.error(ErrorFormatter.formatError(error, `Read dependencies from ${packageJsonPath}`));
         // Continue with empty array but log the error
       }
     }

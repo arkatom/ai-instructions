@@ -1,10 +1,28 @@
 /**
  * SecurityValidator - Security validation utilities for CLI operations
  * Issue #93: Security vulnerability fixes
+ * 
+ * This class provides comprehensive security validation for CLI operations,
+ * including path traversal prevention, input sanitization, and system directory protection.
+ * 
+ * Key security features:
+ * - Path traversal detection and prevention
+ * - System directory access blocking
+ * - Input sanitization and validation
+ * - Command injection pattern detection
+ * - Boundary checking for file operations
+ * 
+ * @example
+ * ```typescript
+ * const validator = new SecurityValidator();
+ * const pathResult = validator.validatePath('./user-input');
+ * const nameResult = validator.validateAgentName('my-agent');
+ * ```
  */
 
 import { resolve, normalize, relative, sep } from 'path';
 import { Logger } from '../../utils/logger';
+import { PathSecurity, InputValidator } from '../../utils/path-security';
 
 /**
  * Security validation result interface
@@ -18,6 +36,9 @@ export interface SecurityValidationResult {
 /**
  * Security validator for CLI operations
  * Provides path validation, traversal prevention, and input sanitization
+ * 
+ * This class encapsulates all security validation logic for the CLI,
+ * ensuring that user inputs are safe and cannot be used for malicious purposes.
  */
 export class SecurityValidator {
   private readonly projectRoot: string;
@@ -116,25 +137,14 @@ export class SecurityValidator {
   validateAgentName(agentName: string): SecurityValidationResult {
     const errors: string[] = [];
 
-    // Check for null bytes and control characters
-    if (this.containsNullBytes(agentName)) {
-      errors.push('Agent name contains null bytes or control characters');
-    }
-
-    // Check for command injection patterns
-    if (this.containsCommandInjection(agentName)) {
-      errors.push('Agent name contains potentially dangerous command patterns');
-    }
-
-    // Check for path traversal in agent names
-    if (this.isPathTraversal(agentName)) {
-      errors.push('Agent name contains path traversal patterns');
-    }
-
-    // Basic format validation
-    const validPattern = /^[a-zA-Z0-9\-_]+$/;
-    if (!validPattern.test(agentName)) {
+    // Use utility for comprehensive validation
+    if (!InputValidator.isSafeString(agentName, /^[a-zA-Z0-9\-_]+$/)) {
       errors.push('Agent name contains invalid characters. Only alphanumeric, hyphens, and underscores are allowed');
+    }
+
+    // Check for path traversal in agent names using utility
+    if (PathSecurity.hasTraversalPatterns(agentName)) {
+      errors.push('Agent name contains path traversal patterns');
     }
 
     return {
