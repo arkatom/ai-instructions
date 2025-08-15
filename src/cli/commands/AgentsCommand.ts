@@ -372,7 +372,29 @@ export class AgentsCommand implements Command {
         };
       }
 
-      // Simulate deployment (in real implementation, this would copy agent files)
+      // Create output directory if it doesn't exist
+      const { mkdirSync, copyFileSync, writeFileSync, existsSync } = require('fs');
+      const { join } = require('path');
+      
+      if (!existsSync(outputPath)) {
+        mkdirSync(outputPath, { recursive: true });
+      }
+
+      // Deploy agent files
+      const deployedFiles: string[] = [];
+      for (const agentName of deployedAgents) {
+        const metadata = agentMetadataList.find(m => m.name === agentName);
+        if (metadata) {
+          const outputFile = join(outputPath, `${agentName}.yaml`);
+          
+          // Write agent metadata to file
+          const yaml = require('js-yaml');
+          const content = yaml.dump(metadata);
+          writeFileSync(outputFile, content, 'utf-8');
+          deployedFiles.push(outputFile);
+        }
+      }
+
       const deploymentResult: DeploymentResult = {
         deployed: deployedAgents,
         outputPath: outputPath
@@ -382,7 +404,7 @@ export class AgentsCommand implements Command {
       if (args.action === 'generate') {
         deploymentResult.action = 'generate';
         deploymentResult.generated = {
-          files: deployedAgents.map(name => `${outputPath}/${name}.md`),
+          files: deployedFiles,
           timestamp: new Date().toISOString()
         };
       }
