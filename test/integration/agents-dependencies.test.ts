@@ -4,6 +4,7 @@
  */
 
 import { AgentMetadataLoader } from '../../src/agents/metadata-loader';
+import { AgentMetadata } from '../../src/agents/types';
 import { DependencyResolver } from '../../src/agents/dependency-resolver';
 import { join } from 'path';
 
@@ -25,7 +26,7 @@ describe('Agent Dependencies Integration', () => {
       const agents = await metadataLoader.loadAllMetadata();
       
       // Extract conflict validation to reduce nesting
-      const validateConflictRelationship = (agent: any, conflictName: string, agents: any[]) => {
+      const validateConflictRelationship = (agent: AgentMetadata, conflictName: string, agents: AgentMetadata[]) => {
         const conflictAgent = agents.find(a => a.name === conflictName);
         if (conflictAgent) {
           expect(conflictAgent.relationships.conflicts_with).toContain(agent.name);
@@ -45,7 +46,7 @@ describe('Agent Dependencies Integration', () => {
       const agents = await metadataLoader.loadAllMetadata();
       
       // Extract enhancement validation to reduce nesting
-      const validateEnhancementRelationship = (agent: any, enhancedName: string, agents: any[]) => {
+      const validateEnhancementRelationship = (agent: AgentMetadata, enhancedName: string, agents: AgentMetadata[]) => {
         const enhancedAgent = agents.find(a => a.name === enhancedName);
         if (enhancedAgent) {
           const hasRelationship = 
