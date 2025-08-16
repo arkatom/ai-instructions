@@ -3,7 +3,7 @@
  * Testing Path Traversal and JSON Parse Error handling
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 
 import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import * as fs from 'fs';
@@ -44,8 +44,32 @@ describe('ContextAnalyzer Security Tests', () => {
       const mockedFs = fs as jest.Mocked<typeof fs>;
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.lstatSync.mockReturnValue({
-        isSymbolicLink: () => true
-      } as any);
+        isSymbolicLink: () => true,
+        isFile: () => false,
+        isDirectory: () => false,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        blksize: 0,
+        blocks: 0,
+        atimeMs: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        birthtimeMs: 0,
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date()
+      } as fs.Stats);
       
       // ACT & ASSERT
       expect(() => {
@@ -59,8 +83,32 @@ describe('ContextAnalyzer Security Tests', () => {
       const mockedFs = fs as jest.Mocked<typeof fs>;
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.lstatSync.mockReturnValue({
-        isSymbolicLink: () => false
-      } as any);
+        isSymbolicLink: () => false,
+        isFile: () => false,
+        isDirectory: () => true,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        blksize: 0,
+        blocks: 0,
+        atimeMs: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        birthtimeMs: 0,
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date()
+      } as fs.Stats);
       
       // ACT & ASSERT
       expect(() => {
@@ -76,8 +124,32 @@ describe('ContextAnalyzer Security Tests', () => {
       const mockedFs = fs as jest.Mocked<typeof fs>;
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.lstatSync.mockReturnValue({
-        isSymbolicLink: () => false
-      } as any);
+        isSymbolicLink: () => false,
+        isFile: () => false,
+        isDirectory: () => true,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        blksize: 0,
+        blocks: 0,
+        atimeMs: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        birthtimeMs: 0,
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date()
+      } as fs.Stats);
       analyzer = new ContextAnalyzer('./test-project');
     });
 
@@ -85,7 +157,33 @@ describe('ContextAnalyzer Security Tests', () => {
       // ARRANGE
       const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
       mockedFsPromises.readFile.mockResolvedValue('{invalid json}');
-      mockedFsPromises.stat.mockResolvedValue({ } as any);
+      mockedFsPromises.stat.mockResolvedValue({
+        isFile: () => true,
+        isDirectory: () => false,
+        isSymbolicLink: () => false,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        blksize: 0,
+        blocks: 0,
+        atimeMs: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        birthtimeMs: 0,
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date()
+      } as fs.Stats);
       
       // ACT
       const context = await analyzer.analyzeProject();
@@ -102,7 +200,33 @@ describe('ContextAnalyzer Security Tests', () => {
       // ARRANGE
       const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
       mockedFsPromises.readFile.mockResolvedValue('');
-      mockedFsPromises.stat.mockResolvedValue({ } as any);
+      mockedFsPromises.stat.mockResolvedValue({
+        isFile: () => true,
+        isDirectory: () => false,
+        isSymbolicLink: () => false,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        blksize: 0,
+        blocks: 0,
+        atimeMs: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        birthtimeMs: 0,
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date()
+      } as fs.Stats);
       
       // ACT
       const context = await analyzer.analyzeProject();
@@ -119,7 +243,33 @@ describe('ContextAnalyzer Security Tests', () => {
       // ARRANGE
       const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
       mockedFsPromises.readFile.mockResolvedValue('{"test": "value\u0000"}');
-      mockedFsPromises.stat.mockResolvedValue({ } as any);
+      mockedFsPromises.stat.mockResolvedValue({
+        isFile: () => true,
+        isDirectory: () => false,
+        isSymbolicLink: () => false,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        blksize: 0,
+        blocks: 0,
+        atimeMs: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        birthtimeMs: 0,
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date()
+      } as fs.Stats);
       
       // ACT
       const context = await analyzer.analyzeProject();
@@ -136,7 +286,33 @@ describe('ContextAnalyzer Security Tests', () => {
       const largeJson = JSON.stringify({ data: 'x'.repeat(10 * 1024 * 1024) }); // 10MB
       const mockedFsPromises = fsPromises as jest.Mocked<typeof fsPromises>;
       mockedFsPromises.readFile.mockResolvedValue(largeJson);
-      mockedFsPromises.stat.mockResolvedValue({ } as any);
+      mockedFsPromises.stat.mockResolvedValue({
+        isFile: () => true,
+        isDirectory: () => false,
+        isSymbolicLink: () => false,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        blksize: 0,
+        blocks: 0,
+        atimeMs: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        birthtimeMs: 0,
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date()
+      } as fs.Stats);
       
       // ACT
       const context = await analyzer.analyzeProject();
@@ -155,7 +331,33 @@ describe('ContextAnalyzer Security Tests', () => {
         .mockResolvedValueOnce('{invalid}') // package.json
         .mockResolvedValue('test content'); // other files
       
-      mockedFsPromises.stat.mockResolvedValue({ } as any);
+      mockedFsPromises.stat.mockResolvedValue({
+        isFile: () => true,
+        isDirectory: () => false,
+        isSymbolicLink: () => false,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: 0,
+        blksize: 0,
+        blocks: 0,
+        atimeMs: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        birthtimeMs: 0,
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date()
+      } as fs.Stats);
       
       // ACT
       const context = await analyzer.analyzeProject();

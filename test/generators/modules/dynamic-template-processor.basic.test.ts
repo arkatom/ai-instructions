@@ -37,7 +37,7 @@ describe('DynamicTemplateProcessor - Basic Tests', () => {
       loadTemplate: jest.fn(),
       buildTemplatePaths: jest.fn(),
       tryReadTemplate: jest.fn()
-    } as any;
+    } as unknown as jest.Mocked<TemplateResolver>;
     
     dynamicProcessor = new DynamicTemplateProcessor('/test/templates', mockTemplateResolver);
     jest.clearAllMocks();
@@ -158,7 +158,7 @@ describe('DynamicTemplateProcessor - Basic Tests', () => {
     test('should handle undefined globs gracefully', () => {
       const configWithUndefinedGlobs = {
         ...mockToolConfig,
-        globs: undefined as any
+        globs: undefined as unknown as { readonly inherit: string; readonly additional?: readonly string[] }
       };
 
       const result = DynamicTemplateProcessor.generateDynamicGlobs(configWithUndefinedGlobs, mockLanguageConfig);
@@ -175,7 +175,7 @@ describe('DynamicTemplateProcessor - Basic Tests', () => {
         ...mockToolConfig,
         globs: {
           inherit: 'universal',
-          additional: null as any
+          additional: null as unknown as string[]
         }
       };
 

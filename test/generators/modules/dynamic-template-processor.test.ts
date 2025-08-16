@@ -76,7 +76,7 @@ describe('DynamicTemplateProcessor', () => {
       loadTemplate: jest.fn(),
       buildTemplatePaths: jest.fn(),
       tryReadTemplate: jest.fn()
-    } as any;
+    } as unknown as jest.Mocked<TemplateResolver>;
     
     jest.clearAllMocks();
     
@@ -167,17 +167,17 @@ Extension: .md
       mockTypeGuards.isSupportedLanguage.mockReturnValue(false);
 
       await expect(
-        dynamicProcessor.loadDynamicTemplate('main.md', 'claude', { lang: 'invalid' as any })
+        dynamicProcessor.loadDynamicTemplate('main.md', 'claude', { lang: 'invalid' as 'en' | 'ja' | 'ch' })
       ).rejects.toThrow(UnsupportedLanguageError);
     });
 
-    test('should throw DynamicTemplateError for unsupported tool', async () => {
+    test('should throw ConfigurationNotFoundError for unsupported tool', async () => {
       mockTypeGuards.isSupportedLanguage.mockReturnValue(true);
       mockTypeGuards.isSupportedTool.mockReturnValue(false);
 
       await expect(
         dynamicProcessor.loadDynamicTemplate('main.md', 'unsupported-tool')
-      ).rejects.toThrow(DynamicTemplateError);
+      ).rejects.toThrow(ConfigurationNotFoundError);
     });
 
     test('should handle core template not found', async () => {
@@ -200,7 +200,7 @@ Extension: .md
 
       await expect(
         dynamicProcessor.loadDynamicTemplate('main.md', 'claude')
-      ).rejects.toThrow(DynamicTemplateError);
+      ).rejects.toThrow(ConfigurationNotFoundError);
     });
   });
 
@@ -254,7 +254,7 @@ Instructions: {{additionalInstructions}}
         ...templateContext,
         toolConfig: {
           ...mockToolConfig,
-          fileExtension: 'md' as any // Force invalid type for test
+          fileExtension: 'md' as `.${string}` // Force invalid type for test
         }
       };
 

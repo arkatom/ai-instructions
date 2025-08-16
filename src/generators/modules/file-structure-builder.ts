@@ -81,7 +81,7 @@ export class FileStructureBuilder {
       }
       
       // Type-safe: we've validated toolName is a SupportedTool above
-      return await ConfigurationManager.getFileStructureConfig(toolName as SupportedTool);
+      return await ConfigurationManager.getFileStructureConfig(toolName);
     } catch (error) {
       // Fallback to default file structure if configuration fails
       console.warn(`⚠️  Failed to load file structure config for ${toolName}, using defaults`);

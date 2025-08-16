@@ -16,7 +16,6 @@ import {
   type StrictToolConfiguration,
   type StrictLanguageConfiguration,
   type StrictGenerateFilesOptions,
-  type SupportedTool,
   TypeGuards
 } from './types';
 import { 
@@ -25,6 +24,7 @@ import {
   type FileStructureConfig 
 } from './config-manager';
 import { TemplateResolver, FileStructureBuilder, DynamicTemplateProcessor } from './modules';
+import { ValidationHelper } from './validation-helper';
 
 /**
  * Convert string to ConflictResolution enum
@@ -144,7 +144,7 @@ export abstract class BaseGenerator {
       }
       
       // Type-safe: we've validated this.toolConfig.name is a SupportedTool above
-      const configurableConfig = await ConfigurationManager.loadConfigurableToolConfig(this.toolConfig.name as SupportedTool);
+      const configurableConfig = await ConfigurationManager.loadConfigurableToolConfig(this.toolConfig.name);
       
       // Return the base tool configuration (without file structure for backward compatibility)
       return {
@@ -211,7 +211,7 @@ export abstract class BaseGenerator {
       }
       
       // Type-safe: we've validated this.toolConfig.name is a SupportedTool above
-      return await ConfigurationManager.loadConfigurableToolConfig(this.toolConfig.name as SupportedTool);
+      return await ConfigurationManager.loadConfigurableToolConfig(this.toolConfig.name);
     } catch (error) {
       // Re-throw configuration errors
       if (error instanceof ConfigurationNotFoundError || 
@@ -235,157 +235,18 @@ export abstract class BaseGenerator {
 
   /**
    * Validate tool configuration structure and required fields
+   * Delegates to ValidationHelper for centralized validation logic
    */
-  /**
-   * Required field validators for tool configuration
-   */
-  private static readonly TOOL_CONFIG_VALIDATORS = [
-    { field: 'displayName', type: 'string', message: 'displayName must be a string' },
-    { field: 'fileExtension', type: 'string', message: 'fileExtension must be a string' },  
-    { field: 'description', type: 'string', message: 'description must be a string' }
-  ];
-
-  /**
-   * Validates required fields of tool configuration
-   */
-  private validateRequiredFields(config: unknown): string[] {
-    if (!config || typeof config !== 'object') {
-      return ['Configuration must be an object'];
-    }
-    
-    const toolConfig = config as Record<string, unknown>;
-    const errors: string[] = [];
-    
-    for (const validator of BaseGenerator.TOOL_CONFIG_VALIDATORS) {
-      if (typeof toolConfig[validator.field] !== validator.type) {
-        errors.push(validator.message);
-      }
-    }
-    
-    return errors;
-  }
-
-  /**
-   * Validates globs structure in tool configuration
-   */
-  private validateGlobsStructure(config: unknown): string[] {
-    if (!config || typeof config !== 'object') {
-      return ['Configuration must be an object'];
-    }
-    
-    const toolConfig = config as Record<string, unknown>;
-    const globs = toolConfig.globs;
-    
-    if (globs === undefined) {
-      return [];
-    }
-    
-    return this.validateGlobsObject(globs);
-  }
-
-  /**
-   * Helper method to validate globs object structure
-   */
-  private validateGlobsObject(globs: unknown): string[] {
-    if (typeof globs !== 'object' || globs === null) {
-      return ['globs must be an object'];
-    }
-    
-    const globsRecord = globs as Record<string, unknown>;
-    const errors: string[] = [];
-    
-    if (globsRecord.inherit !== undefined && typeof globsRecord.inherit !== 'string') {
-      errors.push('globs.inherit must be a string');
-    }
-    
-    if (globsRecord.additional !== undefined) {
-      errors.push(...this.validateAdditionalGlobs(globsRecord.additional));
-    }
-    
-    return errors;
-  }
-
-  /**
-   * Helper method to validate additional globs array
-   */
-  private validateAdditionalGlobs(additional: unknown): string[] {
-    if (!Array.isArray(additional)) {
-      return ['globs.additional must be an array'];
-    }
-    
-    if (!additional.every(item => typeof item === 'string')) {
-      return ['globs.additional must be an array of strings'];
-    }
-    
-    return [];
-  }
-
   private validateToolConfiguration(config: unknown): string[] {
-    const errors: string[] = [];
-    
-    // Validate required fields and globs structure
-    errors.push(...this.validateRequiredFields(config));
-    errors.push(...this.validateGlobsStructure(config));
-    
-    return errors;
+    return ValidationHelper.validateToolConfiguration(config);
   }
 
   /**
    * Validate language configuration structure and required fields
+   * Delegates to ValidationHelper for centralized validation logic
    */
   private validateLanguageConfiguration(config: unknown): string[] {
-    if (typeof config !== 'object' || config === null) {
-      return ['Configuration must be an object'];
-    }
-    
-    const langConfig = config as Record<string, unknown>;
-    const errors: string[] = [];
-    
-    // Validate required fields
-    errors.push(...this.validateRequiredLanguageFields(langConfig));
-    
-    // Validate optional fields
-    errors.push(...this.validateOptionalLanguageFields(langConfig));
-    
-    return errors;
-  }
-
-  /**
-   * Validate required fields in language configuration
-   */
-  private validateRequiredLanguageFields(langConfig: Record<string, unknown>): string[] {
-    const errors: string[] = [];
-    
-    if (!Array.isArray(langConfig.globs)) {
-      errors.push('globs must be an array');
-    } else if (!langConfig.globs.every(item => typeof item === 'string')) {
-      errors.push('globs must be an array of strings');
-    }
-    
-    if (typeof langConfig.description !== 'string') {
-      errors.push('description must be a string');
-    }
-    
-    return errors;
-  }
-
-  /**
-   * Validate optional fields in language configuration
-   */
-  private validateOptionalLanguageFields(langConfig: Record<string, unknown>): string[] {
-    if (langConfig.languageFeatures === undefined) {
-      return [];
-    }
-    
-    if (!Array.isArray(langConfig.languageFeatures)) {
-      return ['languageFeatures must be an array'];
-    }
-    
-    if (!langConfig.languageFeatures.every(item => typeof item === 'string')) {
-      return ['languageFeatures must be an array of strings'];
-    }
-    
-    return [];
+    return ValidationHelper.validateLanguageConfiguration(config);
   }
 
 

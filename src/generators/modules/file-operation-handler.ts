@@ -6,6 +6,7 @@
 
 import { readFile } from 'fs/promises';
 import { FileUtils } from '../../utils/file-utils';
+import { ConflictResolution } from '../../utils/file-conflict-handler';
 import { type FileOperationTask } from '../parallel-generator';
 
 /**
@@ -53,7 +54,12 @@ export class FileOperationHandler {
     if (!task.content) {
       throw new Error('content is required for write operations');
     }
-    await FileUtils.writeFileContentSafe(task.targetPath, task.content);
+    await FileUtils.writeFileContentAdvanced(task.targetPath, task.content, {
+      force: false,
+      interactive: true,
+      defaultResolution: ConflictResolution.BACKUP,
+      backup: true
+    });
   }
 
   /**
@@ -64,7 +70,12 @@ export class FileOperationHandler {
       throw new Error('sourcePath is required for copy operations');
     }
     const sourceContent = await readFile(task.sourcePath, 'utf-8');
-    await FileUtils.writeFileContentSafe(task.targetPath, sourceContent);
+    await FileUtils.writeFileContentAdvanced(task.targetPath, sourceContent, {
+      force: false,
+      interactive: true,
+      defaultResolution: ConflictResolution.BACKUP,
+      backup: true
+    });
   }
 
   /**
@@ -85,7 +96,12 @@ export class FileOperationHandler {
    * Convenience method for executing write operation with path and content
    */
   async executeWriteOperationByPath(path: string, content: string): Promise<void> {
-    await FileUtils.writeFileContentSafe(path, content);
+    await FileUtils.writeFileContentAdvanced(path, content, {
+      force: false,
+      interactive: true,
+      defaultResolution: ConflictResolution.BACKUP,
+      backup: true
+    });
   }
 
   /**
@@ -93,7 +109,12 @@ export class FileOperationHandler {
    */
   async executeCopyOperationByPath(sourcePath: string, targetPath: string): Promise<void> {
     const sourceContent = await readFile(sourcePath, 'utf-8');
-    await FileUtils.writeFileContentSafe(targetPath, sourceContent);
+    await FileUtils.writeFileContentAdvanced(targetPath, sourceContent, {
+      force: false,
+      interactive: true,
+      defaultResolution: ConflictResolution.BACKUP,
+      backup: true
+    });
   }
 
   /**

@@ -192,7 +192,7 @@ describe('TemplateResolver', () => {
 
     test('should throw UnsupportedLanguageError for invalid language', async () => {
       await expect(
-        templateResolver.loadTemplate('main.md', { lang: 'invalid' as any })
+        templateResolver.loadTemplate('main.md', { lang: 'invalid' as 'en' | 'ja' | 'ch' })
       ).rejects.toThrow(UnsupportedLanguageError);
     });
 

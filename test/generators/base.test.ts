@@ -136,7 +136,7 @@ describe('BaseGenerator', () => {
     test('should return default for invalid values', () => {
       expect(stringToConflictResolution('invalid')).toBe(ConflictResolution.BACKUP);
       expect(stringToConflictResolution('')).toBe(ConflictResolution.BACKUP);
-      expect(stringToConflictResolution(undefined as any)).toBe(ConflictResolution.BACKUP);
+      expect(stringToConflictResolution(undefined as unknown as string)).toBe(ConflictResolution.BACKUP);
     });
   });
 

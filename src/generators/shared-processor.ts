@@ -3,8 +3,7 @@
  * Issue #35: Code Review - Extract shared template processing logic
  */
 
-/* eslint-disable complexity */
-// Template processing requires complex conditional logic
+// Template processing with extracted methods for clarity
 
 import { join } from 'path';
 import { readFile } from 'fs/promises';
@@ -42,6 +41,16 @@ export interface TemplateReplacementContext {
 }
 
 /**
+ * Internal template data structure for processing
+ */
+interface TemplateData {
+  readonly coreTemplate: string;
+  readonly toolConfig: StrictToolConfiguration;
+  readonly languageConfig: StrictLanguageConfiguration;
+  readonly options: GenerateFilesOptions | undefined;
+}
+
+/**
  * Shared template processing utilities
  */
 export class SharedTemplateProcessor {
@@ -54,44 +63,88 @@ export class SharedTemplateProcessor {
     toolName: string,
     options?: GenerateFilesOptions
   ): Promise<string> {
-    // Enhanced type validation
-    const lang = options?.lang || DEFAULT_VALUES.LANGUAGE;
-    
-    if (!TypeGuards.isSupportedLanguage(lang)) {
-      throw new UnsupportedLanguageError(lang, ['en', 'ja', 'ch']);
-    }
+    const lang = this.validateLanguage(options?.lang);
     
     try {
-      // Phase 1: Load core template
-      const coreTemplate = await this.loadCoreTemplate(templateName, lang);
-      
-      // Phase 2: Load tool configuration first
-      const toolConfig = await this.loadToolConfigSafely(toolName);
-      
-      // Phase 3: Load language configuration using tool config
-      const languageConfig = await this.loadLanguageConfigSafely(
-        options?.languageConfig || toolConfig.globs?.inherit || 'universal'
-      );
-      
-      // Phase 4: Apply shared template replacements
-      return this.applySharedReplacements(coreTemplate, {
-        projectName: options?.projectName || 'ai-project',
-        toolName: toolConfig.displayName || toolName,
-        lang,
-        fileExtension: toolConfig.fileExtension || '.md',
-        dynamicGlobs: DynamicTemplateProcessor.generateDynamicGlobs(toolConfig, languageConfig),
-        customReplacements: this.extractCustomReplacements(options)
-      });
-      
+      const templateData = await this.loadTemplateData(templateName, toolName, lang, options);
+      return this.processTemplateWithData(templateData);
     } catch (error) {
-      if (error instanceof TemplateNotFoundError || 
-          error instanceof UnsupportedLanguageError ||
-          error instanceof DynamicTemplateError) {
-        throw error;
-      }
-      
-      throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
+      return this.handleTemplateProcessingError(error, templateName);
     }
+  }
+
+  /**
+   * Validate language parameter
+   */
+  private static validateLanguage(lang?: string): SupportedLanguage {
+    const validatedLang = lang || DEFAULT_VALUES.LANGUAGE;
+    
+    if (!TypeGuards.isSupportedLanguage(validatedLang)) {
+      throw new UnsupportedLanguageError(validatedLang, ['en', 'ja', 'ch']);
+    }
+    
+    return validatedLang;
+  }
+
+  /**
+   * Load all template data (template, configs)
+   */
+  private static async loadTemplateData(
+    templateName: string,
+    toolName: string,
+    lang: SupportedLanguage,
+    options?: GenerateFilesOptions
+  ): Promise<TemplateData> {
+    // Phase 1: Load core template
+    const coreTemplate = await this.loadCoreTemplate(templateName, lang);
+    
+    // Phase 2: Load configurations
+    const toolConfig = await this.loadToolConfigSafely(toolName);
+    const languageConfig = await this.loadLanguageConfigSafely(
+      options?.languageConfig || toolConfig.globs?.inherit || 'universal'
+    );
+    
+    return {
+      coreTemplate,
+      toolConfig,
+      languageConfig,
+      options
+    };
+  }
+
+  /**
+   * Process template with loaded data
+   */
+  private static processTemplateWithData(data: TemplateData): string {
+    const context = this.buildReplacementContext(data);
+    return this.applySharedReplacements(data.coreTemplate, context);
+  }
+
+  /**
+   * Build replacement context from template data
+   */
+  private static buildReplacementContext(data: TemplateData): TemplateReplacementContext {
+    return {
+      projectName: data.options?.projectName || 'ai-project',
+      toolName: data.toolConfig.displayName || 'unknown-tool',
+      lang: data.options?.lang || DEFAULT_VALUES.LANGUAGE,
+      fileExtension: data.toolConfig.fileExtension || '.md',
+      dynamicGlobs: DynamicTemplateProcessor.generateDynamicGlobs(data.toolConfig, data.languageConfig),
+      customReplacements: this.extractCustomReplacements(data.options)
+    };
+  }
+
+  /**
+   * Handle template processing errors
+   */
+  private static handleTemplateProcessingError(error: unknown, templateName: string): never {
+    if (error instanceof TemplateNotFoundError || 
+        error instanceof UnsupportedLanguageError ||
+        error instanceof DynamicTemplateError) {
+      throw error;
+    }
+    
+    throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
   }
 
   /**

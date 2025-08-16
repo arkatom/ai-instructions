@@ -265,8 +265,7 @@ ${issueWorkflow}
    * Optimize content for inline code completion
    */
   private optimizeForInlineCompletion(content: string): string {
-    // eslint-disable-next-line prefer-const
-    let optimized = content;
+    const optimized = content;
     
     // Add context for common code patterns
     const codePatterns = `

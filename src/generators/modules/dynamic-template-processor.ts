@@ -186,6 +186,12 @@ export class DynamicTemplateProcessor {
       
       return rawToolConfig;
     } catch (error) {
+      // Re-throw specific configuration errors
+      if (error instanceof ConfigurationNotFoundError || 
+          error instanceof ConfigurationValidationError ||
+          error instanceof TemplateNotFoundError) {
+        throw error;
+      }
       throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
     }
   }
@@ -213,6 +219,13 @@ export class DynamicTemplateProcessor {
       
       return rawLanguageConfig;
     } catch (error) {
+      // Re-throw specific configuration errors to preserve type information
+      if (error instanceof ConfigurationNotFoundError || 
+          error instanceof ConfigurationValidationError ||
+          error instanceof TemplateNotFoundError) {
+        throw error;
+      }
+      // Only wrap generic errors as DynamicTemplateError
       throw new DynamicTemplateError(templateName || 'unknown', 'loading', ErrorHandler.normalizeToError(error));
     }
   }
@@ -276,7 +289,7 @@ export class DynamicTemplateProcessor {
       }
       
       // Type-safe: we've validated toolConfigName is a SupportedTool above
-      const configurableConfig = await ConfigurationManager.loadConfigurableToolConfig(toolConfigName as SupportedTool);
+      const configurableConfig = await ConfigurationManager.loadConfigurableToolConfig(toolConfigName);
       
       // Return the base tool configuration (without file structure for backward compatibility)
       return {
