@@ -27,10 +27,6 @@ export interface InteractiveResponses {
   confirmGeneration: boolean;
 }
 
-/**
- * Inquirer question type for prompts
- */
-type InquirerQuestion = Record<string, unknown>;
 
 export class InteractivePrompts {
   private templatesDir: string;

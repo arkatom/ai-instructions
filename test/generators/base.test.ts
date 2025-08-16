@@ -58,17 +58,17 @@ describe('BaseGenerator', () => {
       loadTemplate: jest.fn(),
       buildTemplatePaths: jest.fn(),
       tryReadTemplate: jest.fn()
-    } as any;
+    } as unknown as jest.Mocked<TemplateResolver>;
 
     mockFileStructureBuilderInstance = {
       generateOutputDirectoryStructure: jest.fn(),
       getFileStructureConfig: jest.fn()
-    } as any;
+    } as unknown as jest.Mocked<FileStructureBuilder>;
 
     mockDynamicTemplateProcessorInstance = {
       loadDynamicTemplate: jest.fn(),
       applyDynamicReplacements: jest.fn()
-    } as any;
+    } as unknown as jest.Mocked<DynamicTemplateProcessor>;
 
     // Clear previous mocks before setting up new test
     jest.clearAllMocks();
