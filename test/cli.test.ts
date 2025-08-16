@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
-import { rm } from 'fs/promises';
+import { rm, mkdir } from 'fs/promises';
 import { ExecException } from './types/exec-exception';
 
 // Common CLI test helpers
@@ -125,6 +125,11 @@ describe('CLI Agents Command', () => {
   it('should deploy agents to specified directory', async () => {
     // Arrange
     const testOutputDir = join(__dirname, './.temp-test-output');
+    
+    // Ensure the output directory exists before deploying
+    if (!existsSync(testOutputDir)) {
+      await mkdir(testOutputDir, { recursive: true });
+    }
     
     // Act
     const result = runCliCommand(`agents deploy test-writer-fixer --output "${testOutputDir}"`);

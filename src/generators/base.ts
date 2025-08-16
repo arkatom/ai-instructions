@@ -31,7 +31,7 @@ import { TemplateResolver, FileStructureBuilder, DynamicTemplateProcessor } from
  * @param resolution - String representation of conflict resolution strategy
  * @returns ConflictResolution enum value
  */
-function stringToConflictResolution(resolution: string): ConflictResolution {
+export function stringToConflictResolution(resolution: string): ConflictResolution {
   switch (resolution?.toLowerCase()) {
     case 'backup': return ConflictResolution.BACKUP;
     case 'merge': return ConflictResolution.MERGE;
