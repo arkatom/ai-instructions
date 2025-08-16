@@ -30,7 +30,7 @@ import {
   type ConfigurableToolConfig, 
   type FileStructureConfig 
 } from './config-manager';
-import { TemplateResolver } from './modules';
+import { TemplateResolver, FileStructureBuilder } from './modules';
 
 /**
  * Convert string to ConflictResolution enum
@@ -92,11 +92,13 @@ export abstract class BaseGenerator {
   protected templateDir: string;
   protected toolConfig: ToolConfig;
   private templateResolver: TemplateResolver;
+  private fileStructureBuilder: FileStructureBuilder;
 
   constructor(toolConfig: ToolConfig) {
     this.toolConfig = toolConfig;
     this.templateDir = join(__dirname, '../../templates', toolConfig.templateDir);
     this.templateResolver = new TemplateResolver(this.templateDir);
+    this.fileStructureBuilder = new FileStructureBuilder();
   }
 
   /**
@@ -349,38 +351,10 @@ export abstract class BaseGenerator {
 
   /**
    * Get configurable file structure for this tool
+   * Delegates to FileStructureBuilder for modular architecture
    */
   async getFileStructureConfig(): Promise<FileStructureConfig> {
-    try {
-      if (!TypeGuards.isSupportedTool(this.toolConfig.name)) {
-        throw new ConfigurationNotFoundError('tool', this.toolConfig.name, 'not a supported tool');
-      }
-      
-      // Type-safe: we've validated this.toolConfig.name is a SupportedTool above
-      return await ConfigurationManager.getFileStructureConfig(this.toolConfig.name as SupportedTool);
-    } catch {
-      // Fallback to default file structure if configuration fails
-      console.warn(`⚠️  Failed to load file structure config for ${this.toolConfig.name}, using defaults`);
-      
-      // Build fallback configuration with proper readonly handling
-      const fallbackOverrides: {
-        outputDirectory: string;
-        subdirectories: string[];
-        includeInstructionsDirectory: boolean;
-        mainFileName?: string;
-      } = {
-        outputDirectory: this.toolConfig.outputStructure.directory || '',
-        subdirectories: [],
-        includeInstructionsDirectory: true
-      };
-      
-      // Only include mainFileName if it's defined (proper handling of optional property)
-      if (this.toolConfig.outputStructure.mainFile) {
-        fallbackOverrides.mainFileName = this.toolConfig.outputStructure.mainFile;
-      }
-      
-      return ConfigurationManager.createCustomFileStructure(fallbackOverrides as Partial<FileStructureConfig>);
-    }
+    return this.fileStructureBuilder.getFileStructureConfig(this.toolConfig.name);
   }
 
   /**
@@ -409,31 +383,10 @@ export abstract class BaseGenerator {
 
   /**
    * Generate output directory structure based on configurable file structure
+   * Delegates to FileStructureBuilder for modular architecture
    */
   async generateOutputDirectoryStructure(baseOutputDir: string): Promise<string[]> {
-    const fileStructure = await this.getFileStructureConfig();
-    const createdPaths: string[] = [];
-    
-    try {
-      // Create main output directory if specified
-      if (fileStructure.outputDirectory) {
-        const mainDir = join(baseOutputDir, fileStructure.outputDirectory);
-        await FileUtils.ensureDirectory(mainDir);
-        createdPaths.push(mainDir);
-      }
-      
-      // Create subdirectories
-      for (const subDir of fileStructure.subdirectories) {
-        const fullSubDirPath = join(baseOutputDir, subDir);
-        await FileUtils.ensureDirectory(fullSubDirPath);
-        createdPaths.push(fullSubDirPath);
-      }
-      
-      return createdPaths;
-    } catch (error) {
-      const normalizedError = ErrorHandler.normalizeToError(error);
-      throw new FileSystemError('create_directory_structure', baseOutputDir, normalizedError);
-    }
+    return this.fileStructureBuilder.generateOutputDirectoryStructure(this.toolConfig, baseOutputDir);
   }
 
   /**
