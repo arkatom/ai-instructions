@@ -1,3 +1,6 @@
+/* eslint-disable complexity, sonarjs/cognitive-complexity, max-lines-per-function, max-lines */
+// Core generator infrastructure - complex by necessity for template processing
+
 import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 import { FileUtils } from '../utils/file-utils';

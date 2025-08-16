@@ -108,23 +108,29 @@ export abstract class BaseFormatConverter implements FormatConverter {
     // Extract YAML frontmatter if present
     const yamlMatch = content.match(/^---\n([\s\S]*?)\n---/);
     if (yamlMatch && yamlMatch[1]) {
-      try {
-        // Simple YAML parsing for basic key-value pairs
-        const yamlContent = yamlMatch[1];
-        const lines = yamlContent.split('\n');
-        
-        for (const line of lines) {
-          const match = line.match(/^(\w+):\s*(.+)$/);
-          if (match && match[1] && match[2]) {
-            metadata[match[1]] = match[2].trim();
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to parse YAML frontmatter:', error);
-      }
+      this.parseYamlContent(yamlMatch[1], metadata);
     }
     
     return metadata;
+  }
+
+  /**
+   * Parse YAML content and populate metadata
+   */
+  private parseYamlContent(yamlContent: string, metadata: Record<string, unknown>): void {
+    try {
+      // Simple YAML parsing for basic key-value pairs
+      const lines = yamlContent.split('\n');
+      
+      for (const line of lines) {
+        const match = line.match(/^(\w+):\s*(.+)$/);
+        if (match && match[1] && match[2]) {
+          metadata[match[1]] = match[2].trim();
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to parse YAML frontmatter:', error);
+    }
   }
 
   /**

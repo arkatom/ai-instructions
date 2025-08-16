@@ -24,15 +24,18 @@ describe('Agent Dependencies Integration', () => {
     it('should have bidirectional conflict relationships', async () => {
       const agents = await metadataLoader.loadAllMetadata();
       
+      // Extract conflict validation to reduce nesting
+      const validateConflictRelationship = (agent: any, conflictName: string, agents: any[]) => {
+        const conflictAgent = agents.find(a => a.name === conflictName);
+        if (conflictAgent) {
+          expect(conflictAgent.relationships.conflicts_with).toContain(agent.name);
+        }
+      };
+      
       for (const agent of agents) {
         if (agent.relationships.conflicts_with.length > 0) {
           for (const conflictName of agent.relationships.conflicts_with) {
-            const conflictAgent = agents.find(a => a.name === conflictName);
-            
-            if (conflictAgent) {
-              // Verify bidirectional conflict
-              expect(conflictAgent.relationships.conflicts_with).toContain(agent.name);
-            }
+            validateConflictRelationship(agent, conflictName, agents);
           }
         }
       }
@@ -41,21 +44,23 @@ describe('Agent Dependencies Integration', () => {
     it('should have complementary enhance/collaborate relationships', async () => {
       const agents = await metadataLoader.loadAllMetadata();
       
+      // Extract enhancement validation to reduce nesting
+      const validateEnhancementRelationship = (agent: any, enhancedName: string, agents: any[]) => {
+        const enhancedAgent = agents.find(a => a.name === enhancedName);
+        if (enhancedAgent) {
+          const hasRelationship = 
+            enhancedAgent.relationships.collaborates_with.includes(agent.name) ||
+            enhancedAgent.relationships.enhances.includes(agent.name) ||
+            agent.relationships.collaborates_with.includes(enhancedName);
+          
+          expect(hasRelationship).toBe(true);
+        }
+      };
+      
       for (const agent of agents) {
-        // Check enhances relationships
         if (agent.relationships.enhances.length > 0) {
           for (const enhancedName of agent.relationships.enhances) {
-            const enhancedAgent = agents.find(a => a.name === enhancedName);
-            
-            if (enhancedAgent) {
-              // The enhanced agent should either collaborate with or be aware of the enhancer
-              const hasRelationship = 
-                enhancedAgent.relationships.collaborates_with.includes(agent.name) ||
-                enhancedAgent.relationships.enhances.includes(agent.name) ||
-                agent.relationships.collaborates_with.includes(enhancedName);
-              
-              expect(hasRelationship).toBe(true);
-            }
+            validateEnhancementRelationship(agent, enhancedName, agents);
           }
         }
       }

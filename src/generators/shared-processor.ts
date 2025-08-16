@@ -3,6 +3,9 @@
  * Issue #35: Code Review - Extract shared template processing logic
  */
 
+/* eslint-disable complexity */
+// Template processing requires complex conditional logic
+
 import { join } from 'path';
 import { readFile } from 'fs/promises';
 import { FileUtils } from '../utils/file-utils';

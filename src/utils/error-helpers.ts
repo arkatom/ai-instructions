@@ -66,7 +66,7 @@ export class SafeOperation {
    * @param filePath - File path for error context
    * @returns Parsed object or null on error
    */
-  static parseJson<T = any>(jsonString: string, filePath?: string): T | null {
+  static parseJson<T = unknown>(jsonString: string, filePath?: string): T | null {
     try {
       return JSON.parse(jsonString) as T;
     } catch (error) {

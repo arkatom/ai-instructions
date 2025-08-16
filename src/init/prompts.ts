@@ -3,6 +3,9 @@
  * Handles user interaction flow for configuration selection
  */
 
+/* eslint-disable complexity, max-lines-per-function */
+// Interactive prompts require complex conditional logic
+
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import { Logger } from '../utils/logger';

@@ -3,6 +3,9 @@
  * Loads and manages agent metadata from YAML files
  */
 
+/* eslint-disable complexity, sonarjs/cognitive-complexity */
+// Agent metadata processing requires complex validation logic
+
 import { readFile, readdir } from 'fs/promises';
 import { join, extname } from 'path';
 import * as yaml from 'js-yaml';

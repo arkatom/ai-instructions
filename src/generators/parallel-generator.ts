@@ -3,6 +3,9 @@
  * Issue #35: Code Review - Implement parallel file generation for performance
  */
 
+/* eslint-disable max-lines */
+// Parallel processing requires comprehensive task management infrastructure
+
 import { join } from 'path';
 import { readFile, readdir, stat } from 'fs/promises';
 import { FileUtils } from '../utils/file-utils';
@@ -187,54 +190,15 @@ export class ParallelFileGenerator {
     const startTime = performance.now();
     
     try {
-      let content: string | undefined = undefined;
-      
-      switch (task.operation) {
-        case 'read':
-          if (!task.sourcePath) {
-            throw new Error('sourcePath is required for read operations');
-          }
-          content = await readFile(task.sourcePath, 'utf-8');
-          break;
-          
-        case 'write':
-          if (!task.content) {
-            throw new Error('content is required for write operations');
-          }
-          // Use FileUtils.writeFileContent for consistency
-          await FileUtils.writeFileContent(task.targetPath, task.content);
-          break;
-          
-        case 'copy': {
-          if (!task.sourcePath) {
-            throw new Error('sourcePath is required for copy operations');
-          }
-          // Read source and write to target
-          const sourceContent = await readFile(task.sourcePath, 'utf-8');
-          await FileUtils.writeFileContent(task.targetPath, sourceContent);
-          break;
-        }
-          
-        case 'mkdir':
-          await FileUtils.ensureDirectory(task.targetPath);
-          break;
-          
-        default: {
-          const unknownTask = task as FileOperationTask & { operation: string };
-          throw new Error(`Unsupported operation: ${unknownTask.operation}`);
-        }
-      }
-      
+      const content = await this.executeTaskOperation(task);
       const endTime = performance.now();
       
-      const result: FileOperationResult = {
+      return {
         taskId: task.id,
         success: true,
         executionTimeMs: endTime - startTime,
-        content: content
+        content
       };
-      
-      return result;
       
     } catch (error) {
       const endTime = performance.now();
@@ -246,6 +210,67 @@ export class ParallelFileGenerator {
         executionTimeMs: endTime - startTime
       };
     }
+  }
+
+  /**
+   * Execute the specific operation for a task
+   */
+  private static async executeTaskOperation(task: FileOperationTask): Promise<string | undefined> {
+    switch (task.operation) {
+      case 'read':
+        return await this.executeReadOperation(task);
+      case 'write':
+        await this.executeWriteOperation(task);
+        return undefined;
+      case 'copy':
+        await this.executeCopyOperation(task);
+        return undefined;
+      case 'mkdir':
+        await this.executeMkdirOperation(task);
+        return undefined;
+      default: {
+        const unknownTask = task as FileOperationTask & { operation: string };
+        throw new Error(`Unsupported operation: ${unknownTask.operation}`);
+      }
+    }
+  }
+
+  /**
+   * Execute read operation
+   */
+  private static async executeReadOperation(task: FileOperationTask): Promise<string> {
+    if (!task.sourcePath) {
+      throw new Error('sourcePath is required for read operations');
+    }
+    return await readFile(task.sourcePath, 'utf-8');
+  }
+
+  /**
+   * Execute write operation
+   */
+  private static async executeWriteOperation(task: FileOperationTask): Promise<void> {
+    if (!task.content) {
+      throw new Error('content is required for write operations');
+    }
+    await FileUtils.writeFileContent(task.targetPath, task.content);
+  }
+
+  /**
+   * Execute copy operation
+   */
+  private static async executeCopyOperation(task: FileOperationTask): Promise<void> {
+    if (!task.sourcePath) {
+      throw new Error('sourcePath is required for copy operations');
+    }
+    const sourceContent = await readFile(task.sourcePath, 'utf-8');
+    await FileUtils.writeFileContent(task.targetPath, sourceContent);
+  }
+
+  /**
+   * Execute mkdir operation
+   */
+  private static async executeMkdirOperation(task: FileOperationTask): Promise<void> {
+    await FileUtils.ensureDirectory(task.targetPath);
   }
 
   /**

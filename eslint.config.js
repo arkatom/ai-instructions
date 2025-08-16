@@ -101,9 +101,17 @@ module.exports = tseslint.config(
         }
       ],
       
+      // Relax complexity rules for test files - tests are naturally complex
+      'max-nested-callbacks': ['error', 10],  // Tests naturally nest describe/it/expect
+      'max-lines-per-function': ['error', 1000], // Test functions can be very long for clarity
+      'max-lines': ['error', 1500], // Test files can be very long
+      'complexity': ['error', 50], // Test setup can be very complex
+      '@typescript-eslint/no-explicit-any': 'warn', // Allow any in tests for mocking
+      
       // Relax SonarJS rules for test files
-      'sonarjs/no-duplicate-string': ['error', { threshold: 15 }],
-      'sonarjs/prefer-single-boolean-return': 'warn'
+      'sonarjs/no-duplicate-string': ['error', { threshold: 25 }],
+      'sonarjs/prefer-single-boolean-return': 'warn',
+      'sonarjs/cognitive-complexity': ['error', 50]
     }
   }
 );

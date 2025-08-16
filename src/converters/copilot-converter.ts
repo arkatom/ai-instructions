@@ -154,8 +154,30 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
    * Add GitHub-specific workflow sections
    */
   private addGitHubWorkflowSections(content: string): string {
+    const codeGuidelines = this.getCodeGenerationGuidelines();
+    const architecturePatterns = this.getArchitecturePatterns();
+    const qualityAssurance = this.getQualityAssuranceGuidelines();
+    const issueWorkflow = this.getIssueDrivenWorkflow();
+    
     const githubSections = `
-## 📋 Code Generation Guidelines
+${codeGuidelines}
+${architecturePatterns}
+${qualityAssurance}
+${issueWorkflow}
+`;
+
+    // Insert after project-specific section
+    return content.replace(
+      /(## Project-Specific Architecture[\s\S]*?)(?=## 📋|$)/,
+      `$1\n${githubSections}`
+    );
+  }
+
+  /**
+   * Generate code generation guidelines section
+   */
+  private getCodeGenerationGuidelines(): string {
+    return `## 📋 Code Generation Guidelines
 
 ### TypeScript/JavaScript Standards
 - Use strict TypeScript types and interfaces
@@ -173,9 +195,14 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
 - Follow GitHub Flow branch strategy (feature branches from main)
 - Use conventional commit messages (feat:, fix:, docs:, etc.)
 - Create descriptive PR descriptions with context and testing notes
-- Link all work to GitHub Issues with closing keywords
+- Link all work to GitHub Issues with closing keywords`;
+  }
 
-## 🔧 Architecture Patterns
+  /**
+   * Generate architecture patterns section
+   */
+  private getArchitecturePatterns(): string {
+    return `## 🔧 Architecture Patterns
 
 ### Code Organization
 - Implement clean architecture principles with clear layers
@@ -187,9 +214,14 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
 - Include JSDoc comments for all public methods and classes
 - Maintain README files for complex modules and packages
 - Document API endpoints with clear examples and response formats
-- Update documentation with every code change (never leave it stale)
+- Update documentation with every code change (never leave it stale)`;
+  }
 
-## 🎯 Quality Assurance
+  /**
+   * Generate quality assurance guidelines section
+   */
+  private getQualityAssuranceGuidelines(): string {
+    return `## 🎯 Quality Assurance
 
 ### Performance Optimization
 - Optimize for both development and production environments
@@ -201,9 +233,14 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
 - Validate and sanitize all user inputs
 - Use parameterized queries to prevent SQL injection
 - Implement proper authentication and authorization
-- Keep all dependencies updated to latest secure versions
+- Keep all dependencies updated to latest secure versions`;
+  }
 
-## 📊 Issue-Driven Development Workflow
+  /**
+   * Generate issue-driven workflow section
+   */
+  private getIssueDrivenWorkflow(): string {
+    return `## 📊 Issue-Driven Development Workflow
 
 ### GitHub Issue Integration
 - Break all work into small, manageable GitHub Issues
@@ -221,15 +258,7 @@ export class CopilotMarkdownConverter extends BaseFormatConverter {
 - All code must pass automated tests before merge
 - Code coverage must meet project standards (typically 90%+)
 - ESLint and TypeScript compiler must pass with zero errors
-- Security scans must pass without critical vulnerabilities
-
-`;
-
-    // Insert after project-specific section
-    return content.replace(
-      /(## Project-Specific Architecture[\s\S]*?)(?=## 📋|$)/,
-      `$1\n${githubSections}`
-    );
+- Security scans must pass without critical vulnerabilities`;
   }
 
   /**

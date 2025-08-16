@@ -5,9 +5,9 @@
  * Test-First Development following strict TDD principles
  */
 
-import { join, resolve, normalize } from 'path';
-import { existsSync } from 'fs';
-import { rm, mkdir, symlink } from 'fs/promises';
+import { join, resolve as _resolve, normalize as _normalize } from 'path';
+import { existsSync, readFileSync } from 'fs';
+import { rm, mkdir, symlink, writeFile } from 'fs/promises';
 import * as os from 'os';
 import { AgentsCommand } from '../../src/cli/commands/AgentsCommand';
 import { AgentCommandArgs } from '../../src/cli/interfaces/CommandArgs';
@@ -837,8 +837,7 @@ describe('AgentsCommand', () => {
         try {
           await mkdir(testDir, { recursive: true });
           // Create malformed package.json
-          const fs = require('fs').promises;
-          await fs.writeFile(malformedPackageJson, '{ "name": "test", invalid json }', 'utf-8');
+          await writeFile(malformedPackageJson, '{ "name": "test", invalid json }', 'utf-8');
           
           const args: AgentCommandArgs = {
             command: 'agents',
@@ -883,8 +882,7 @@ describe('AgentsCommand', () => {
 
       it('should never have empty catch blocks', () => {
         // This is a code analysis test - we'll check the source for empty catch blocks
-        const fs = require('fs');
-        const sourceCode = fs.readFileSync(
+        const sourceCode = readFileSync(
           join(__dirname, '../../src/cli/commands/AgentsCommand.ts'),
           'utf-8'
         );

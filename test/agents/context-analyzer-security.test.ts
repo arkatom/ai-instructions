@@ -3,6 +3,8 @@
  * Testing Path Traversal and JSON Parse Error handling
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';

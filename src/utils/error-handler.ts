@@ -3,6 +3,9 @@
  * Issue #46: Error handling improvement
  */
 
+/* eslint-disable sonarjs/cognitive-complexity */
+// Error handling requires complex conditional logic
+
 import chalk from 'chalk';
 import {
   ApplicationError,

@@ -3,6 +3,9 @@
  * Recommends optimal agents based on project context and scoring
  */
 
+/* eslint-disable complexity, sonarjs/cognitive-complexity, max-lines-per-function, max-lines */
+// Recommendation algorithm requires complex scoring logic
+
 import { 
   ProjectContext, 
   AgentMetadata

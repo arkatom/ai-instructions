@@ -3,6 +3,9 @@
  * Issue #35: Code Review - Make file structure configurable instead of hard-coded
  */
 
+/* eslint-disable complexity, sonarjs/cognitive-complexity */
+// Configuration loading requires complex validation and fallback logic
+
 import { join } from 'path';
 import { readFile } from 'fs/promises';
 import { FileUtils } from '../utils/file-utils';

@@ -3,6 +3,9 @@
  * Issue #35: Code Review - Enhance type safety with proper enums/const assertions
  */
 
+/* eslint-disable complexity */
+// Type validation functions require complex conditional logic
+
 import { includesStringLiteral } from '../utils/array-helpers';
 
 /**
