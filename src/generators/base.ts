@@ -1,36 +1,30 @@
-/* eslint-disable complexity, sonarjs/cognitive-complexity, max-lines-per-function, max-lines */
-// Core generator infrastructure - complex by necessity for template processing
+// Core generator infrastructure - modular architecture implementation
 
-import { readFile, readdir } from 'fs/promises';
+import { readdir } from 'fs/promises';
 import { join } from 'path';
 import { FileUtils } from '../utils/file-utils';
 import { ConflictResolution } from '../utils/file-conflict-handler';
 import { OutputFormat } from '../converters';
 import { ErrorHandler } from '../utils/error-handler';
-import { 
-  TemplateNotFoundError, 
-  TemplateParsingError, 
+import {
   ConfigurationNotFoundError,
   ConfigurationValidationError,
   FileSystemError,
-  UnsupportedLanguageError,
-  DynamicTemplateError 
+  TemplateParsingError
 } from './errors';
 import {
   type StrictToolConfiguration,
   type StrictLanguageConfiguration,
   type StrictGenerateFilesOptions,
   type SupportedTool,
-  TypeGuards,
-  SUPPORTED_LANGUAGES,
-  DEFAULT_VALUES
+  TypeGuards
 } from './types';
 import { 
   ConfigurationManager, 
   type ConfigurableToolConfig, 
   type FileStructureConfig 
 } from './config-manager';
-import { TemplateResolver, FileStructureBuilder } from './modules';
+import { TemplateResolver, FileStructureBuilder, DynamicTemplateProcessor } from './modules';
 
 /**
  * Convert string to ConflictResolution enum
@@ -93,12 +87,14 @@ export abstract class BaseGenerator {
   protected toolConfig: ToolConfig;
   private templateResolver: TemplateResolver;
   private fileStructureBuilder: FileStructureBuilder;
+  private dynamicTemplateProcessor: DynamicTemplateProcessor;
 
   constructor(toolConfig: ToolConfig) {
     this.toolConfig = toolConfig;
     this.templateDir = join(__dirname, '../../templates', toolConfig.templateDir);
     this.templateResolver = new TemplateResolver(this.templateDir);
     this.fileStructureBuilder = new FileStructureBuilder();
+    this.dynamicTemplateProcessor = new DynamicTemplateProcessor(this.templateDir, this.templateResolver);
   }
 
   /**
@@ -112,165 +108,13 @@ export abstract class BaseGenerator {
 
   /**
    * Load dynamic template from core templates with tool-specific customization
-   * TDD Implementation: Green Phase - Minimal implementation to make tests pass
+   * Delegates to DynamicTemplateProcessor for modular architecture
    */
   async loadDynamicTemplate(templateName: string, options?: GenerateFilesOptions): Promise<string> {
-    // Enhanced type validation
-    const lang = options?.lang || DEFAULT_VALUES.LANGUAGE;
-    
-    if (!TypeGuards.isSupportedLanguage(lang)) {
-      throw new UnsupportedLanguageError(lang, [...SUPPORTED_LANGUAGES]);
-    }
-    
-    try {
-      // Phase 1: Load core template
-      const coreTemplatePath = join(__dirname, '../../templates/core', lang, templateName);
-      let coreTemplate: string;
-      
-      // Check if core template exists
-      if (!await FileUtils.fileExists(coreTemplatePath)) {
-        // Handle missing core template directory
-        const coreDir = join(__dirname, '../../templates/core', lang);
-        if (!await FileUtils.fileExists(coreDir)) {
-          throw new TemplateNotFoundError(templateName, lang, [coreDir]);
-        }
-        throw new TemplateNotFoundError(templateName, lang, [coreTemplatePath]);
-      }
-      
-      try {
-        coreTemplate = await readFile(coreTemplatePath, 'utf-8');
-      } catch (error) {
-        throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
-      }
-      
-      // Phase 2: Load tool-specific configuration with validation
-      let toolConfig: StrictToolConfiguration;
-      try {
-        const rawToolConfig = await this.loadToolConfig();
-        
-        if (!TypeGuards.isStrictToolConfiguration(rawToolConfig)) {
-          throw new ConfigurationValidationError(
-            'tool', 
-            this.toolConfig.name, 
-            ['Configuration does not match StrictToolConfiguration schema']
-          );
-        }
-        
-        toolConfig = rawToolConfig;
-      } catch (error) {
-        throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
-      }
-      
-      // Phase 3: Load language configuration with validation
-      const languageName = options?.languageConfig || toolConfig.globs?.inherit || 'universal';
-      let languageConfig: StrictLanguageConfiguration;
-      try {
-        const rawLanguageConfig = await this.loadLanguageConfig(languageName);
-        
-        if (!TypeGuards.isStrictLanguageConfiguration(rawLanguageConfig)) {
-          throw new ConfigurationValidationError(
-            'language', 
-            languageName, 
-            ['Configuration does not match StrictLanguageConfiguration schema']
-          );
-        }
-        
-        languageConfig = rawLanguageConfig;
-      } catch (error) {
-        throw new DynamicTemplateError(templateName, 'loading', ErrorHandler.normalizeToError(error));
-      }
-      
-      // Phase 4: Apply dynamic replacements with enhanced type safety
-      try {
-        return this.applyDynamicReplacements(coreTemplate, toolConfig, languageConfig, options);
-      } catch (error) {
-        throw new DynamicTemplateError(templateName, 'processing', ErrorHandler.normalizeToError(error));
-      }
-      
-    } catch (error) {
-      // Re-throw our specific errors
-      if (error instanceof TemplateNotFoundError || 
-          error instanceof DynamicTemplateError ||
-          error instanceof ConfigurationNotFoundError ||
-          error instanceof ConfigurationValidationError ||
-          error instanceof UnsupportedLanguageError) {
-        throw error;
-      }
-      
-      // Handle unexpected errors using type-safe error handling
-      const normalizedError = ErrorHandler.normalizeToError(error);
-      throw new DynamicTemplateError(templateName, 'loading', normalizedError);
-    }
+    return this.dynamicTemplateProcessor.loadDynamicTemplate(templateName, this.toolConfig.name, options);
   }
 
-  /**
-   * Apply advanced dynamic replacements using tool and language configurations
-   * TDD Implementation: Green Phase - Complete dynamic replacement system
-   */
-  private applyDynamicReplacements(
-    template: string, 
-    toolConfig: StrictToolConfiguration, 
-    languageConfig: StrictLanguageConfiguration, 
-    options?: GenerateFilesOptions
-  ): string {
-    let result = template;
-    
-    // Validate inputs with type guards
-    if (!TypeGuards.isStrictToolConfiguration(toolConfig)) {
-      throw new Error('Invalid tool configuration passed to applyDynamicReplacements');
-    }
-    
-    if (!TypeGuards.isStrictLanguageConfiguration(languageConfig)) {
-      throw new Error('Invalid language configuration passed to applyDynamicReplacements');
-    }
-    
-    // 1. Project name replacement (existing)
-    if (options?.projectName) {
-      result = result.replace(/\{\{projectName\}\}/g, options.projectName);
-    }
-    
-    // 2. Remove tool name placeholders (tool-specific naming removed)
-    result = result.replace(/\{\{toolName\}\}/g, '');
-    
-    // 3. Dynamic globs replacement (NEW) with enhanced type safety
-    const dynamicGlobs = this.generateDynamicGlobs(toolConfig, languageConfig);
-    const globsJson = JSON.stringify(dynamicGlobs, null, 2).replace(/"/g, '\\"');
-    result = result.replace(/\{\{dynamicGlobs\}\}/g, globsJson);
-    
-    // 4. Remove tool-specific features placeholders (customSections removed)
-    result = result.replace(/\{\{toolSpecificFeatures\}\}/g, '');
-    
-    // 5. Remove additional instructions placeholders (customSections removed)
-    result = result.replace(/\{\{additionalInstructions\}\}/g, '');
-    
-    // 6. File extension replacement (NEW) with type validation
-    if (toolConfig.fileExtension && toolConfig.fileExtension.startsWith('.')) {
-      result = result.replace(/\{\{fileExtension\}\}/g, toolConfig.fileExtension);
-    }
-    
-    // 7. Apply existing template variable replacements
-    return this.replaceTemplateVariables(result, options || {});
-  }
 
-  /**
-   * Generate dynamic globs by merging language config and tool-specific additions
-   * TDD Implementation: Green Phase - Intelligent globs combination
-   */
-  private generateDynamicGlobs(
-    toolConfig: StrictToolConfiguration, 
-    languageConfig: StrictLanguageConfiguration
-  ): ReadonlyArray<string> {
-    // Validate inputs with type safety
-    const baseGlobs = [...(languageConfig.globs || [])];
-    const additionalGlobs = [...(toolConfig.globs?.additional || [])];
-    
-    // Combine and deduplicate globs with enhanced type safety
-    const allGlobs = [...baseGlobs, ...additionalGlobs];
-    const uniqueGlobs = Array.from(new Set(allGlobs));
-    
-    // Return as readonly array for immutability
-    return Object.freeze(uniqueGlobs.sort()); // Sort for consistency
-  }
 
   /**
    * Get display name for the tool (helper method for dynamic template generation)
@@ -430,32 +274,50 @@ export abstract class BaseGenerator {
     }
     
     const toolConfig = config as Record<string, unknown>;
-    const errors: string[] = [];
     const globs = toolConfig.globs;
     
-    if (globs === undefined) return errors;
-    
-    if (typeof globs !== 'object' || globs === null) {
-      errors.push('globs must be an object');
-      return errors;
+    if (globs === undefined) {
+      return [];
     }
     
-    // Type-safe access to globs properties
+    return this.validateGlobsObject(globs);
+  }
+
+  /**
+   * Helper method to validate globs object structure
+   */
+  private validateGlobsObject(globs: unknown): string[] {
+    if (typeof globs !== 'object' || globs === null) {
+      return ['globs must be an object'];
+    }
+    
     const globsRecord = globs as Record<string, unknown>;
+    const errors: string[] = [];
     
     if (globsRecord.inherit !== undefined && typeof globsRecord.inherit !== 'string') {
       errors.push('globs.inherit must be a string');
     }
     
     if (globsRecord.additional !== undefined) {
-      if (!Array.isArray(globsRecord.additional)) {
-        errors.push('globs.additional must be an array');
-      } else if (!globsRecord.additional.every(item => typeof item === 'string')) {
-        errors.push('globs.additional must be an array of strings');
-      }
+      errors.push(...this.validateAdditionalGlobs(globsRecord.additional));
     }
     
     return errors;
+  }
+
+  /**
+   * Helper method to validate additional globs array
+   */
+  private validateAdditionalGlobs(additional: unknown): string[] {
+    if (!Array.isArray(additional)) {
+      return ['globs.additional must be an array'];
+    }
+    
+    if (!additional.every(item => typeof item === 'string')) {
+      return ['globs.additional must be an array of strings'];
+    }
+    
+    return [];
   }
 
   private validateToolConfiguration(config: unknown): string[] {
@@ -472,54 +334,60 @@ export abstract class BaseGenerator {
    * Validate language configuration structure and required fields
    */
   private validateLanguageConfiguration(config: unknown): string[] {
-    const errors: string[] = [];
-    
     if (typeof config !== 'object' || config === null) {
-      errors.push('Configuration must be an object');
-      return errors;
+      return ['Configuration must be an object'];
     }
     
     const langConfig = config as Record<string, unknown>;
+    const errors: string[] = [];
     
     // Validate required fields
+    errors.push(...this.validateRequiredLanguageFields(langConfig));
+    
+    // Validate optional fields
+    errors.push(...this.validateOptionalLanguageFields(langConfig));
+    
+    return errors;
+  }
+
+  /**
+   * Validate required fields in language configuration
+   */
+  private validateRequiredLanguageFields(langConfig: Record<string, unknown>): string[] {
+    const errors: string[] = [];
+    
     if (!Array.isArray(langConfig.globs)) {
       errors.push('globs must be an array');
-    } else {
-      if (!langConfig.globs.every(item => typeof item === 'string')) {
-        errors.push('globs must be an array of strings');
-      }
+    } else if (!langConfig.globs.every(item => typeof item === 'string')) {
+      errors.push('globs must be an array of strings');
     }
     
     if (typeof langConfig.description !== 'string') {
       errors.push('description must be a string');
     }
     
-    // Validate optional fields
-    if (langConfig.languageFeatures !== undefined) {
-      if (!Array.isArray(langConfig.languageFeatures)) {
-        errors.push('languageFeatures must be an array');
-      } else {
-        if (!langConfig.languageFeatures.every(item => typeof item === 'string')) {
-          errors.push('languageFeatures must be an array of strings');
-        }
-      }
-    }
-    
     return errors;
   }
 
   /**
-   * Replace template variables in content
+   * Validate optional fields in language configuration
    */
-  protected replaceTemplateVariables(content: string, options: GenerateFilesOptions): string {
-    let processedContent = content;
-    
-    if (options.projectName) {
-      processedContent = processedContent.replace(/\{\{projectName\}\}/g, options.projectName);
+  private validateOptionalLanguageFields(langConfig: Record<string, unknown>): string[] {
+    if (langConfig.languageFeatures === undefined) {
+      return [];
     }
     
-    return processedContent;
+    if (!Array.isArray(langConfig.languageFeatures)) {
+      return ['languageFeatures must be an array'];
+    }
+    
+    if (!langConfig.languageFeatures.every(item => typeof item === 'string')) {
+      return ['languageFeatures must be an array of strings'];
+    }
+    
+    return [];
   }
+
 
   /**
    * Get instruction files from template directory

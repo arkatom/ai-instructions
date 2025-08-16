@@ -19,6 +19,7 @@ import {
 import { type GenerateFilesOptions } from './base';
 import { ConfigurationManager } from './config-manager';
 import { ParallelGeneratorOperations, ParallelFileGenerator } from './parallel-generator';
+import { DynamicTemplateProcessor } from './modules';
 import { ErrorHandler } from '../utils/error-handler';
 import {
   TemplateNotFoundError,
@@ -78,7 +79,7 @@ export class SharedTemplateProcessor {
         toolName: toolConfig.displayName || toolName,
         lang,
         fileExtension: toolConfig.fileExtension || '.md',
-        dynamicGlobs: this.generateDynamicGlobs(toolConfig, languageConfig),
+        dynamicGlobs: DynamicTemplateProcessor.generateDynamicGlobs(toolConfig, languageConfig),
         customReplacements: this.extractCustomReplacements(options)
       });
       
@@ -317,19 +318,4 @@ This file contains specialized development instructions.
     }
   }
   
-  /**
-   * Generate dynamic globs with shared logic
-   */
-  private static generateDynamicGlobs(
-    toolConfig: StrictToolConfiguration,
-    languageConfig: StrictLanguageConfiguration
-  ): ReadonlyArray<string> {
-    const baseGlobs = [...(languageConfig.globs || [])];
-    const additionalGlobs = [...(toolConfig.globs?.additional || [])];
-    
-    const allGlobs = [...baseGlobs, ...additionalGlobs];
-    const uniqueGlobs = Array.from(new Set(allGlobs));
-    
-    return Object.freeze(uniqueGlobs.sort());
-  }
 }
