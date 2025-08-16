@@ -30,6 +30,7 @@ import {
   type ConfigurableToolConfig, 
   type FileStructureConfig 
 } from './config-manager';
+import { TemplateResolver } from './modules';
 
 /**
  * Convert string to ConflictResolution enum
@@ -90,93 +91,21 @@ export interface ToolConfig {
 export abstract class BaseGenerator {
   protected templateDir: string;
   protected toolConfig: ToolConfig;
+  private templateResolver: TemplateResolver;
 
   constructor(toolConfig: ToolConfig) {
     this.toolConfig = toolConfig;
     this.templateDir = join(__dirname, '../../templates', toolConfig.templateDir);
+    this.templateResolver = new TemplateResolver(this.templateDir);
   }
 
   /**
    * Load template file content
+   * Delegates to TemplateResolver for modular architecture
    */
-  /**
-   * Strategy for template search paths
-   */
-  private buildTemplatePaths(templateName: string, lang: string): Array<{path: string, description: string}> {
-    const paths = [
-      { path: join(this.templateDir, lang, templateName), description: `${lang} version` },
-    ];
-    
-    if (lang !== 'en') {
-      paths.push({ path: join(this.templateDir, 'en', templateName), description: 'English fallback' });
-    }
-    
-    paths.push({ path: join(this.templateDir, templateName), description: 'legacy version' });
-    
-    return paths;
-  }
-
-  /**
-   * Attempts to read template from a single path
-   */
-  private async tryReadTemplate(templatePath: string, templateName: string): Promise<string | null> {
-    if (!await FileUtils.fileExists(templatePath)) {
-      return null;
-    }
-    
-    try {
-      return await readFile(templatePath, 'utf-8');
-    } catch (error) {
-      throw new TemplateParsingError(templateName, ErrorHandler.normalizeToError(error));
-    }
-  }
-
-  /**
-   * Shows appropriate warning for fallback usage
-   */
-  private showFallbackWarning(templateName: string, lang: string, description: string): void {
-    if (description === 'English fallback') {
-      console.warn(`⚠️  Template ${templateName} not found for ${lang}, using English version`);
-    } else if (description === 'legacy version' && lang !== 'en') {
-      console.warn(`⚠️  Using legacy template ${templateName} (no language support yet)`);
-    }
-  }
 
   async loadTemplate(templateName: string, options?: GenerateFilesOptions): Promise<string> {
-    const lang = options?.lang || DEFAULT_VALUES.LANGUAGE;
-    
-    if (!TypeGuards.isSupportedLanguage(lang)) {
-      throw new UnsupportedLanguageError(lang, [...SUPPORTED_LANGUAGES]);
-    }
-    
-    const templatePaths = this.buildTemplatePaths(templateName, lang);
-    const searchPaths: string[] = templatePaths.map(p => p.path);
-    
-    try {
-      // Try each template path in order
-      for (const {path: templatePath, description} of templatePaths) {
-        const content = await this.tryReadTemplate(templatePath, templateName);
-        if (content !== null) {
-          this.showFallbackWarning(templateName, lang, description);
-          return content;
-        }
-      }
-      
-      // No template found in any search path
-      throw new TemplateNotFoundError(templateName, lang, searchPaths);
-      
-    } catch (error) {
-      // Re-throw our specific errors
-      if (error instanceof TemplateNotFoundError || 
-          error instanceof TemplateParsingError ||
-          error instanceof UnsupportedLanguageError) {
-        throw error;
-      }
-      
-      // Handle unexpected filesystem errors using type-safe error handling
-      const normalizedError = ErrorHandler.normalizeToError(error);
-      throw new FileSystemError('read_template', this.templateDir, normalizedError);
-    }
+    return this.templateResolver.loadTemplate(templateName, options);
   }
 
   /**
