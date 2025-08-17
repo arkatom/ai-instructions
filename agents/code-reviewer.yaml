@@ -1,0 +1,12 @@
+name: code-reviewer
+category: quality
+description: Code review agent
+tags:
+  - quality
+  - review
+relationships:
+  requires: []
+  enhances: []
+  collaborates_with:
+    - test-writer-fixer
+  conflicts_with: []

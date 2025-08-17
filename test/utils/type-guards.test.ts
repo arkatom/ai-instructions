@@ -430,16 +430,12 @@ describe('Type Guards', () => {
           validatedOptions: {
             output: '/test',
             projectName: 'test',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            tool: 'claude' as any,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            lang: 'ja' as any,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            outputFormat: 'claude' as any,
+            tool: 'claude' as const,
+            lang: 'ja' as const,
+            outputFormat: 'claude' as const,
             force: false,
             preview: false,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            conflictResolution: 'backup' as any,
+            conflictResolution: 'backup' as const,
             interactive: true,
             backup: true
           }

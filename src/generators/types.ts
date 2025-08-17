@@ -3,6 +3,8 @@
  * Issue #35: Code Review - Enhance type safety with proper enums/const assertions
  */
 
+// Type validation functions with extracted helper methods for clarity
+
 import { includesStringLiteral } from '../utils/array-helpers';
 
 /**
@@ -147,31 +149,89 @@ export function isFileOperation(value: unknown): value is FileOperation {
 }
 
 export function isStrictToolConfiguration(value: unknown): value is StrictToolConfiguration {
-  if (typeof value !== 'object' || value === null) return false;
+  if (!TypeValidationHelpers.isNonNullObject(value)) return false;
   
-  // Type narrowing without assertions - check each property directly
-  if (!('displayName' in value) || typeof value.displayName !== 'string') return false;
-  if (!('fileExtension' in value) || typeof value.fileExtension !== 'string') return false;
-  if (!value.fileExtension.startsWith('.')) return false;
-  if (!('globs' in value) || typeof value.globs !== 'object' || value.globs === null) return false;
-  
-  // Further check globs object properties
-  const { globs } = value;
-  return ('inherit' in globs) && typeof globs.inherit === 'string' &&
-         ('description' in value) && typeof value.description === 'string';
+  return TypeValidationHelpers.hasValidDisplayName(value) &&
+         TypeValidationHelpers.hasValidFileExtension(value) &&
+         TypeValidationHelpers.hasValidGlobsObject(value) &&
+         TypeValidationHelpers.hasValidDescription(value);
 }
 
 export function isStrictLanguageConfiguration(value: unknown): value is StrictLanguageConfiguration {
-  if (typeof value !== 'object' || value === null) return false;
+  if (!TypeValidationHelpers.isNonNullObject(value)) return false;
   
-  // Type narrowing without assertions - check each property directly
-  if (!('globs' in value) || !Array.isArray(value.globs)) return false;
-  if (!value.globs.every((item: unknown) => typeof item === 'string')) return false;
-  
-  if (!('description' in value) || typeof value.description !== 'string') return false;
-  
-  if (!('languageFeatures' in value) || !Array.isArray(value.languageFeatures)) return false;
-  return value.languageFeatures.every((item: unknown) => typeof item === 'string');
+  return TypeValidationHelpers.hasValidGlobsArray(value) &&
+         TypeValidationHelpers.hasValidDescription(value) &&
+         TypeValidationHelpers.hasValidLanguageFeatures(value);
+}
+
+/**
+ * Type validation helper methods
+ */
+class TypeValidationHelpers {
+  /**
+   * Check if value is a non-null object
+   */
+  static isNonNullObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  /**
+   * Check if object has valid displayName property
+   */
+  static hasValidDisplayName(obj: Record<string, unknown>): boolean {
+    return 'displayName' in obj && typeof obj.displayName === 'string';
+  }
+
+  /**
+   * Check if object has valid fileExtension property
+   */
+  static hasValidFileExtension(obj: Record<string, unknown>): boolean {
+    return 'fileExtension' in obj && 
+           typeof obj.fileExtension === 'string' && 
+           obj.fileExtension.startsWith('.');
+  }
+
+  /**
+   * Check if object has valid globs object property
+   */
+  static hasValidGlobsObject(obj: Record<string, unknown>): boolean {
+    if (!('globs' in obj) || typeof obj.globs !== 'object' || obj.globs === null) {
+      return false;
+    }
+    
+    const globs = obj.globs as Record<string, unknown>;
+    return 'inherit' in globs && typeof globs.inherit === 'string';
+  }
+
+  /**
+   * Check if object has valid description property
+   */
+  static hasValidDescription(obj: Record<string, unknown>): boolean {
+    return 'description' in obj && typeof obj.description === 'string';
+  }
+
+  /**
+   * Check if object has valid globs array property
+   */
+  static hasValidGlobsArray(obj: Record<string, unknown>): boolean {
+    if (!('globs' in obj) || !Array.isArray(obj.globs)) {
+      return false;
+    }
+    
+    return obj.globs.every((item: unknown) => typeof item === 'string');
+  }
+
+  /**
+   * Check if object has valid languageFeatures property
+   */
+  static hasValidLanguageFeatures(obj: Record<string, unknown>): boolean {
+    if (!('languageFeatures' in obj) || !Array.isArray(obj.languageFeatures)) {
+      return false;
+    }
+    
+    return obj.languageFeatures.every((item: unknown) => typeof item === 'string');
+  }
 }
 
 /**

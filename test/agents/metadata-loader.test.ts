@@ -6,11 +6,12 @@
  * Tests for loading and parsing agent metadata including dependencies
  */
 
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { join } from 'path';
 import { mkdtemp, rm, writeFile, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { AgentMetadataLoader } from '../../src/agents/metadata-loader';
+import * as agentFileFinder from '../../src/agents/agent-file-finder';
 
 describe('Agent Metadata Loader', () => {
   let tempDir: string;
@@ -19,18 +20,26 @@ describe('Agent Metadata Loader', () => {
   beforeEach(async () => {
     // Create temporary directory for test files
     tempDir = await mkdtemp(join(tmpdir(), 'agent-metadata-test-'));
+    // Create templates/agents directory structure for MD files
+    await mkdir(join(tempDir, 'templates', 'agents'), { recursive: true });
+    
+    // Mock getTemplatesDir to return our test directory
+    jest.spyOn(agentFileFinder, 'getTemplatesDir').mockReturnValue(join(tempDir, 'templates', 'agents'));
+    
     loader = new AgentMetadataLoader(tempDir);
   });
 
   afterEach(async () => {
     // Clean up temporary directory
     await rm(tempDir, { recursive: true, force: true });
+    // Restore all mocks
+    jest.restoreAllMocks();
   });
 
   describe('Basic Metadata Loading', () => {
     test('should load a single agent metadata file', async () => {
-      // ARRANGE - Create test metadata file
-      const metadataContent = `
+      // ARRANGE - Create test metadata file (MD format with frontmatter)
+      const metadataContent = `---
 name: typescript-assistant
 category: development
 description: TypeScript development assistant
@@ -43,10 +52,14 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# TypeScript Assistant
+
+A test agent for TypeScript development.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       await writeFile(
-        join(tempDir, 'metadata', 'typescript-assistant.yaml'),
+        join(tempDir, 'templates', 'agents', 'typescript-assistant.md'),
         metadataContent
       );
 
@@ -64,8 +77,8 @@ relationships:
     });
 
     test('should load metadata with dependencies', async () => {
-      // ARRANGE - Create metadata with dependencies
-      const metadataContent = `
+      // ARRANGE - Create metadata with dependencies (MD format)
+      const metadataContent = `---
 name: react-developer
 category: frontend
 description: React development specialist
@@ -84,10 +97,14 @@ relationships:
     - eslint-expert
   conflicts_with:
     - vue-developer
+---
+
+# React Developer
+
+A test agent for React development.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       await writeFile(
-        join(tempDir, 'metadata', 'react-developer.yaml'),
+        join(tempDir, 'templates', 'agents', 'react-developer.md'),
         metadataContent
       );
 
@@ -108,28 +125,34 @@ relationships:
         .toThrow('Agent metadata not found: non-existent-agent');
     });
 
-    test('should throw error for invalid YAML format', async () => {
-      // ARRANGE - Create invalid YAML
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
+    test('should handle invalid YAML format gracefully', async () => {
+      // ARRANGE - Create invalid frontmatter (MD file)
       await writeFile(
-        join(tempDir, 'metadata', 'invalid-agent.yaml'),
-        'invalid: yaml: content: malformed'
+        join(tempDir, 'templates', 'agents', 'invalid-agent.md'),
+        `---
+invalid: yaml: content: malformed
+---
+
+# Invalid Agent
+
+This agent has malformed frontmatter.
+`
       );
 
-      // ACT & ASSERT
+      // ACT & ASSERT - Should throw error for missing name field
       await expect(loader.loadAgentMetadata('invalid-agent'))
         .rejects
-        .toThrow('Invalid metadata format');
+        .toThrow('Invalid metadata: missing or invalid name');
     });
   });
 
   describe('Batch Metadata Loading', () => {
     test('should load all agent metadata files in directory', async () => {
-      // ARRANGE - Create multiple metadata files
+      // ARRANGE - Create multiple metadata files (MD format)
       const agents = [
         {
           name: 'agent-1',
-          content: `
+          content: `---
 name: agent-1
 category: category-1
 description: First agent
@@ -139,11 +162,16 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# Agent 1
+
+First test agent.
 `
         },
         {
           name: 'agent-2',
-          content: `
+          content: `---
 name: agent-2
 category: category-2
 description: Second agent
@@ -153,14 +181,18 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# Agent 2
+
+Second test agent.
 `
         }
       ];
 
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       for (const agent of agents) {
         await writeFile(
-          join(tempDir, 'metadata', `${agent.name}.yaml`),
+          join(tempDir, 'templates', 'agents', `${agent.name}.md`),
           agent.content
         );
       }
@@ -177,8 +209,7 @@ relationships:
     });
 
     test('should handle empty metadata directory', async () => {
-      // ARRANGE
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
+      // ARRANGE - Empty templates/agents directory already created in beforeEach
 
       // ACT
       const allMetadata = await loader.loadAllMetadata();
@@ -187,13 +218,12 @@ relationships:
       expect(allMetadata).toEqual([]);
     });
 
-    test('should skip non-YAML files', async () => {
-      // ARRANGE
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
-      await writeFile(join(tempDir, 'metadata', 'README.md'), '# README');
+    test('should skip files without proper frontmatter', async () => {
+      // ARRANGE - Mix of MD files with and without frontmatter
+      await writeFile(join(tempDir, 'templates', 'agents', 'README.md'), '# README\n\nThis file has no frontmatter.');
       await writeFile(
-        join(tempDir, 'metadata', 'valid-agent.yaml'),
-        `
+        join(tempDir, 'templates', 'agents', 'valid-agent.md'),
+        `---
 name: valid-agent
 category: test
 description: Test agent
@@ -203,40 +233,50 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# Valid Agent
+
+A test agent with proper frontmatter.
 `
       );
 
       // ACT
       const allMetadata = await loader.loadAllMetadata();
 
-      // ASSERT
+      // ASSERT - Should only load files with valid metadata (name required)
       expect(allMetadata).toHaveLength(1);
-      expect(allMetadata[0]?.name).toBe('valid-agent');
+      const validAgent = allMetadata.find(m => m.name === 'valid-agent');
+      expect(validAgent?.description).toBe('Test agent');
     });
   });
 
   describe('Metadata Validation', () => {
     test('should validate required fields', async () => {
-      // ARRANGE - Missing required fields
-      const invalidContent = `
+      // ARRANGE - Missing required fields (MD format)
+      const invalidContent = `---
 category: test
 description: Missing name field
+---
+
+# Invalid
+
+This agent is missing the name field.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       await writeFile(
-        join(tempDir, 'metadata', 'invalid.yaml'),
+        join(tempDir, 'templates', 'agents', 'invalid.md'),
         invalidContent
       );
 
-      // ACT & ASSERT
+      // ACT & ASSERT - Should throw error for missing name
       await expect(loader.loadAgentMetadata('invalid'))
         .rejects
-        .toThrow('Missing required field: name');
+        .toThrow('Invalid metadata: missing or invalid name');
     });
 
     test('should validate relationship types', async () => {
-      // ARRANGE - Invalid relationship type
-      const content = `
+      // ARRANGE - Invalid relationship type (MD format)
+      const content = `---
 name: test-agent
 category: test
 description: Test agent
@@ -244,29 +284,37 @@ tags: []
 relationships:
   requires: []
   invalid_type: [other-agent]
+---
+
+# Test Agent
+
+Test agent with invalid relationship type.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       await writeFile(
-        join(tempDir, 'metadata', 'test-agent.yaml'),
+        join(tempDir, 'templates', 'agents', 'test-agent.md'),
         content
       );
 
-      // ACT & ASSERT
+      // ACT & ASSERT - Should throw error for invalid relationship type
       await expect(loader.loadAgentMetadata('test-agent'))
         .rejects
         .toThrow('Invalid relationship type: invalid_type');
     });
 
     test('should handle missing optional fields', async () => {
-      // ARRANGE - Minimal valid metadata
-      const content = `
+      // ARRANGE - Minimal valid metadata (MD format)
+      const content = `---
 name: minimal-agent
 category: test
 description: Minimal agent
+---
+
+# Minimal Agent
+
+A minimal test agent.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       await writeFile(
-        join(tempDir, 'metadata', 'minimal-agent.yaml'),
+        join(tempDir, 'templates', 'agents', 'minimal-agent.md'),
         content
       );
 
@@ -284,8 +332,8 @@ description: Minimal agent
 
   describe('Metadata Caching', () => {
     test('should cache loaded metadata', async () => {
-      // ARRANGE
-      const content = `
+      // ARRANGE (MD format)
+      const content = `---
 name: cached-agent
 category: test
 description: Cached agent
@@ -295,9 +343,13 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# Cached Agent
+
+Test agent for caching.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
-      const filePath = join(tempDir, 'metadata', 'cached-agent.yaml');
+      const filePath = join(tempDir, 'templates', 'agents', 'cached-agent.md');
       await writeFile(filePath, content);
 
       // ACT - Load twice
@@ -309,8 +361,8 @@ relationships:
     });
 
     test('should invalidate cache when clearCache is called', async () => {
-      // ARRANGE
-      const content = `
+      // ARRANGE (MD format)
+      const content = `---
 name: cache-test
 category: test
 description: Cache test agent
@@ -320,10 +372,14 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# Cache Test
+
+Test agent for cache invalidation.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       await writeFile(
-        join(tempDir, 'metadata', 'cache-test.yaml'),
+        join(tempDir, 'templates', 'agents', 'cache-test.md'),
         content
       );
 
@@ -338,9 +394,9 @@ relationships:
     });
 
     test('should respect cache TTL', async () => {
-      // ARRANGE - Create loader with short TTL
+      // ARRANGE - Create loader with short TTL (MD format)
       const shortTtlLoader = new AgentMetadataLoader(tempDir, { ttlMs: 100 });
-      const content = `
+      const content = `---
 name: ttl-test
 category: test
 description: TTL test agent
@@ -350,9 +406,13 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# TTL Test
+
+Test agent for TTL cache expiry.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
-      await writeFile(join(tempDir, 'metadata', 'ttl-test.yaml'), content);
+      await writeFile(join(tempDir, 'templates', 'agents', 'ttl-test.md'), content);
 
       // ACT
       const firstLoad = await shortTtlLoader.loadAgentMetadata('ttl-test');
@@ -368,13 +428,12 @@ relationships:
     });
 
     test('should manage cache size with eviction', async () => {
-      // ARRANGE - Create loader with small cache
+      // ARRANGE - Create loader with small cache (MD format)
       const smallCacheLoader = new AgentMetadataLoader(tempDir, { maxSize: 2 });
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
 
       // Create multiple agents
       for (let i = 1; i <= 4; i++) {
-        const content = `
+        const content = `---
 name: agent-${i}
 category: test
 description: Test agent ${i}
@@ -384,8 +443,13 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# Agent ${i}
+
+Test agent for cache eviction.
 `;
-        await writeFile(join(tempDir, 'metadata', `agent-${i}.yaml`), content);
+        await writeFile(join(tempDir, 'templates', 'agents', `agent-${i}.md`), content);
       }
 
       // ACT - Load agents to fill and exceed cache
@@ -401,8 +465,8 @@ relationships:
     });
 
     test('should provide cache statistics', async () => {
-      // ARRANGE
-      const content = `
+      // ARRANGE (MD format)
+      const content = `---
 name: stats-test
 category: test
 description: Stats test agent
@@ -412,9 +476,13 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# Stats Test
+
+Test agent for cache statistics.
 `;
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
-      await writeFile(join(tempDir, 'metadata', 'stats-test.yaml'), content);
+      await writeFile(join(tempDir, 'templates', 'agents', 'stats-test.md'), content);
 
       // ACT
       const initialStats = loader.getCacheStats();
@@ -430,7 +498,7 @@ relationships:
 
   describe('Agent Categories', () => {
     test('should get all unique categories', async () => {
-      // ARRANGE
+      // ARRANGE (MD format)
       const agents = [
         { name: 'agent1', category: 'development' },
         { name: 'agent2', category: 'testing' },
@@ -438,11 +506,10 @@ relationships:
         { name: 'agent4', category: 'security' }
       ];
 
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       for (const agent of agents) {
         await writeFile(
-          join(tempDir, 'metadata', `${agent.name}.yaml`),
-          `
+          join(tempDir, 'templates', 'agents', `${agent.name}.md`),
+          `---
 name: ${agent.name}
 category: ${agent.category}
 description: Test agent
@@ -452,6 +519,11 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# ${agent.name}
+
+Test agent for category testing.
 `
         );
       }
@@ -466,18 +538,17 @@ relationships:
 
   describe('Agents by Category', () => {
     test('should get agents filtered by category', async () => {
-      // ARRANGE
+      // ARRANGE (MD format)
       const agents = [
         { name: 'dev-agent-1', category: 'development' },
         { name: 'dev-agent-2', category: 'development' },
         { name: 'test-agent', category: 'testing' }
       ];
 
-      await mkdir(join(tempDir, 'metadata'), { recursive: true });
       for (const agent of agents) {
         await writeFile(
-          join(tempDir, 'metadata', `${agent.name}.yaml`),
-          `
+          join(tempDir, 'templates', 'agents', `${agent.name}.md`),
+          `---
 name: ${agent.name}
 category: ${agent.category}
 description: Test agent
@@ -487,6 +558,11 @@ relationships:
   enhances: []
   collaborates_with: []
   conflicts_with: []
+---
+
+# ${agent.name}
+
+Test agent for category filtering.
 `
         );
       }

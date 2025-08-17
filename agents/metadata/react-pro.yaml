@@ -1,0 +1,17 @@
+name: react-pro
+category: development
+description: React development expert
+tags:
+  - react
+  - frontend
+  - javascript
+  - hooks
+relationships:
+  requires: []
+  enhances: []
+  collaborates_with: []
+  conflicts_with:
+    - angular-expert
+source: claude-code
+version: 1.0.0
+author: Claude Team

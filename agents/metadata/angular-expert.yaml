@@ -1,0 +1,17 @@
+name: angular-expert
+category: development
+description: Angular development expert
+tags:
+  - angular
+  - frontend
+  - typescript
+  - rxjs
+relationships:
+  requires: []
+  enhances: []
+  collaborates_with: []
+  conflicts_with:
+    - react-pro
+source: claude-code
+version: 1.0.0
+author: Claude Team

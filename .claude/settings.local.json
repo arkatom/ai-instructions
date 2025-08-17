@@ -224,7 +224,13 @@
       "Bash(gh issue comment:*)",
       "Bash(cd:*)",
       "Bash(git cherry-pick:*)",
-      "mcp__serena__find_file"
+      "mcp__serena__find_file",
+      "Bash(git -C:*)",
+      "Bash(jest:*)",
+      "Bash(git log:*)",
+      "Bash(awk:*)",
+      "Bash(sed:*)",
+      "Bash(od:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

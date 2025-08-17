@@ -38,7 +38,13 @@ export class ClaudeGenerator extends BaseGenerator {
       await this.safeCopyInstructionsDirectory(targetDir, options, force);
     } else {
       // Convert to target format using FormatConverter system
-      await this.generateConvertedFormat(targetDir, claudeContent, outputFormat, options, force);
+      await this.generateConvertedFormat({
+        targetDir,
+        sourceContent: claudeContent,
+        outputFormat,
+        options,
+        force
+      });
     }
     
     // Generator completed
@@ -47,13 +53,14 @@ export class ClaudeGenerator extends BaseGenerator {
   /**
    * Generate files in converted format using FormatConverter system
    */
-  private async generateConvertedFormat(
-    targetDir: string, 
-    sourceContent: string, 
-    outputFormat: OutputFormat, 
-    options: GenerateFilesOptions,
-    force: boolean
-  ): Promise<void> {
+  private async generateConvertedFormat(params: {
+    targetDir: string;
+    sourceContent: string;
+    outputFormat: OutputFormat;
+    options: GenerateFilesOptions;
+    force: boolean;
+  }): Promise<void> {
+    const { targetDir, sourceContent, outputFormat, options, force } = params;
     const _projectName = options.projectName || 'ai-project';
     const lang = options.lang || 'en';
 

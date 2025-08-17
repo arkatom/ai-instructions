@@ -3,6 +3,8 @@
  * Issue #46: Error handling improvement
  */
 
+// Error handling with reduced complexity using strategy pattern
+
 import chalk from 'chalk';
 import {
   ApplicationError,
@@ -14,103 +16,142 @@ import {
   getExitCode
 } from '../errors/custom-errors';
 
-export class ErrorHandler {
-  /**
-   * Display main error message
-   */
-  private static displayMainError(icon: string, type: string, message: string): void {
+/**
+ * Error display strategy interface
+ */
+interface ErrorDisplayStrategy {
+  display(error: Error): void;
+}
+
+/**
+ * Base error display strategy with common functionality
+ */
+abstract class BaseErrorDisplay implements ErrorDisplayStrategy {
+  protected displayMainError(icon: string, type: string, message: string): void {
     console.error(chalk.red(`${icon} ${type}:`), message);
   }
   
-  /**
-   * Display warning or additional information
-   */
-  private static displayWarning(icon: string, content: string): void {
+  protected displayWarning(icon: string, content: string): void {
     console.warn(chalk.yellow(`${icon} ${content}`));
   }
   
-  /**
-   * Display debug information
-   */
-  private static displayDebugInfo(data: unknown, label: string = 'Debug Information'): void {
+  static displayDebugInfo(data: unknown, label: string = 'Debug Information'): void {
     if (process.env.DEBUG) {
       console.error(chalk.gray(`\n📊 ${label}:`));
       console.error(chalk.gray(typeof data === 'string' ? data : JSON.stringify(data, null, 2)));
     }
   }
-  
-  /**
-   * Display ConfigValidationError
-   */
-  private static displayConfigError(error: ConfigValidationError): void {
+
+  abstract display(error: Error): void;
+}
+
+/**
+ * Configuration error display strategy
+ */
+class ConfigErrorDisplay extends BaseErrorDisplay {
+  display(error: ConfigValidationError): void {
     this.displayMainError('❌', 'Configuration Error', error.message);
     this.displayWarning('💡', 'Tip: Check your .ai-instructions.json format');
     if (error.details) {
-      this.displayDebugInfo(error.details);
+      BaseErrorDisplay.displayDebugInfo(error.details);
     }
   }
-  
-  /**
-   * Display FileSystemError
-   */
-  private static displayFileSystemError(error: FileSystemError): void {
+}
+
+/**
+ * File system error display strategy
+ */
+class FileSystemErrorDisplay extends BaseErrorDisplay {
+  display(error: FileSystemError): void {
     this.displayMainError('❌', 'File System Error', error.message);
     if (error.path) {
       this.displayWarning('📁', `Path: ${error.path}`);
     }
     this.displayWarning('💡', 'Tip: Check file permissions and path');
   }
-  
-  /**
-   * Display NetworkError
-   */
-  private static displayNetworkError(error: NetworkError): void {
+}
+
+/**
+ * Network error display strategy
+ */
+class NetworkErrorDisplay extends BaseErrorDisplay {
+  display(error: NetworkError): void {
     this.displayMainError('❌', 'Network Error', error.message);
     if (error.statusCode) {
       this.displayWarning('🌐', `Status Code: ${error.statusCode}`);
     }
     this.displayWarning('💡', 'Tip: Check your internet connection and API endpoints');
   }
-  
-  /**
-   * Display SecurityError
-   */
-  private static displaySecurityError(error: SecurityError): void {
+}
+
+/**
+ * Security error display strategy
+ */
+class SecurityErrorDisplay extends BaseErrorDisplay {
+  display(error: SecurityError): void {
     this.displayMainError('🔒', 'Security Error', error.message);
     this.displayWarning('⚠️ ', `Violation Type: ${error.violationType}`);
     if (error.context) {
-      this.displayDebugInfo(`Context: ${error.context}`);
+      BaseErrorDisplay.displayDebugInfo(`Context: ${error.context}`);
     }
   }
-  
-  /**
-   * Display ValidationError
-   */
-  private static displayValidationError(error: ValidationError): void {
+}
+
+/**
+ * Validation error display strategy
+ */
+class ValidationErrorDisplay extends BaseErrorDisplay {
+  display(error: ValidationError): void {
     this.displayMainError('❌', 'Validation Error', error.message);
     if (error.field) {
       this.displayWarning('📝', `Field: ${error.field}`);
     }
     if (error.value) {
-      this.displayDebugInfo(`Value: ${JSON.stringify(error.value)}`);
+      BaseErrorDisplay.displayDebugInfo(`Value: ${JSON.stringify(error.value)}`);
     }
   }
-  
-  /**
-   * Display unknown error
-   */
-  private static displayUnknownError(error: Error): void {
+}
+
+/**
+ * Unknown error display strategy
+ */
+class UnknownErrorDisplay extends BaseErrorDisplay {
+  display(error: Error): void {
     console.error(chalk.red('❌ Unexpected Error:'), error);
     this.displayWarning('💡', 'Please report this issue: https://github.com/arkatom/ai-instructions/issues');
   }
+}
+
+export class ErrorHandler {
+  /**
+   * Error display strategies map
+   */
+  private static readonly ERROR_DISPLAY_STRATEGIES = new Map<string, ErrorDisplayStrategy>([
+    ['ConfigValidationError', new ConfigErrorDisplay()],
+    ['FileSystemError', new FileSystemErrorDisplay()],
+    ['NetworkError', new NetworkErrorDisplay()],
+    ['SecurityError', new SecurityErrorDisplay()],
+    ['ValidationError', new ValidationErrorDisplay()],
+    ['default', new UnknownErrorDisplay()]
+  ]);
   
+  /**
+   * Get appropriate error display strategy
+   */
+  private static getErrorDisplayStrategy(error: Error): ErrorDisplayStrategy {
+    const errorType = error.constructor.name;
+    return this.ERROR_DISPLAY_STRATEGIES.get(errorType) || 
+           this.ERROR_DISPLAY_STRATEGIES.get('default')!;
+  }
+  
+
   /**
    * Display generic debug info for errors
    */
   private static displayGenericDebugInfo(error: Error): void {
     if (!(error instanceof ApplicationError) || 
         (!('details' in error) && !('context' in error) && !('value' in error))) {
-      this.displayDebugInfo(error.stack || error.toString());
+      BaseErrorDisplay.displayDebugInfo(error.stack || error.toString());
     }
   }
   
@@ -120,19 +161,9 @@ export class ErrorHandler {
   static displayError(error: Error): number {
     const exitCode = getExitCode(error);
     
-    if (error instanceof ConfigValidationError) {
-      this.displayConfigError(error);
-    } else if (error instanceof FileSystemError) {
-      this.displayFileSystemError(error);
-    } else if (error instanceof NetworkError) {
-      this.displayNetworkError(error);
-    } else if (error instanceof SecurityError) {
-      this.displaySecurityError(error);
-    } else if (error instanceof ValidationError) {
-      this.displayValidationError(error);
-    } else {
-      this.displayUnknownError(error);
-    }
+    // Use strategy pattern to display error
+    const strategy = this.getErrorDisplayStrategy(error);
+    strategy.display(error);
     
     // Show debug info for all errors when DEBUG is set
     this.displayGenericDebugInfo(error);
@@ -163,7 +194,7 @@ export class ErrorHandler {
     
     // Log context in debug mode
     if (context) {
-      this.displayDebugInfo(context, 'Context');
+      BaseErrorDisplay.displayDebugInfo(context, 'Context');
     }
     
     // Exit if required
@@ -213,21 +244,37 @@ export class ErrorHandler {
    * Determine if an error is retryable
    */
   static isRetryableError(error: Error): boolean {
-    // Network errors are typically retryable
-    if (error instanceof NetworkError) {
-      return true;
+    return this.isNetworkErrorRetryable(error) ||
+           this.isFileSystemErrorRetryable(error) ||
+           this.hasRetryableNetworkPattern(error);
+  }
+
+  /**
+   * Check if network error is retryable
+   */
+  private static isNetworkErrorRetryable(error: Error): boolean {
+    return error instanceof NetworkError;
+  }
+
+  /**
+   * Check if file system error is retryable
+   */
+  private static isFileSystemErrorRetryable(error: Error): boolean {
+    if (!(error instanceof FileSystemError)) {
+      return false;
     }
     
-    // Some file system errors are retryable
-    if (error instanceof FileSystemError) {
-      const retryableMessages = ['ENOENT', 'EACCES', 'EMFILE', 'ENFILE'];
-      return retryableMessages.some(msg => error.message.includes(msg));
-    }
-    
-    // Generic network-related error messages
+    const retryableMessages = ['ENOENT', 'EACCES', 'EMFILE', 'ENFILE'];
+    return retryableMessages.some(msg => error.message.includes(msg));
+  }
+
+  /**
+   * Check if error message contains retryable network patterns
+   */
+  private static hasRetryableNetworkPattern(error: Error): boolean {
     const retryablePatterns = [
       'ETIMEDOUT',
-      'ECONNREFUSED',
+      'ECONNREFUSED', 
       'ENOTFOUND',
       'ENETUNREACH',
       'EAI_AGAIN',
@@ -235,8 +282,9 @@ export class ErrorHandler {
       'socket hang up'
     ];
     
+    const message = error.message.toLowerCase();
     return retryablePatterns.some(pattern => 
-      error.message.toLowerCase().includes(pattern.toLowerCase())
+      message.includes(pattern.toLowerCase())
     );
   }
   
@@ -262,6 +310,29 @@ export class ErrorHandler {
   }
   
   /**
+   * Extract message from error object
+   */
+  private static extractErrorMessage(errorObj: Record<string, unknown>): string {
+    return typeof errorObj.message === 'string' 
+      ? errorObj.message 
+      : 'Unknown error occurred';
+  }
+
+  /**
+   * Create error from object
+   */
+  private static createErrorFromObject(errorObj: Record<string, unknown>): Error {
+    const message = this.extractErrorMessage(errorObj);
+    const stack = typeof errorObj.stack === 'string' ? errorObj.stack : undefined;
+    
+    const newError = new Error(message);
+    if (stack) {
+      newError.stack = stack;
+    }
+    return newError;
+  }
+
+  /**
    * Type-safe conversion of unknown value to Error object
    */
   static normalizeToError(error: unknown): Error {
@@ -274,18 +345,7 @@ export class ErrorHandler {
     }
     
     if (error && typeof error === 'object') {
-      // Handle error-like objects
-      const errorObj = error as Record<string, unknown>;
-      const message = typeof errorObj.message === 'string' 
-        ? errorObj.message 
-        : 'Unknown error occurred';
-      const stack = typeof errorObj.stack === 'string' ? errorObj.stack : undefined;
-      
-      const newError = new Error(message);
-      if (stack) {
-        newError.stack = stack;
-      }
-      return newError;
+      return this.createErrorFromObject(error as Record<string, unknown>);
     }
     
     // Fallback for any other type

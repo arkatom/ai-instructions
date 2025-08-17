@@ -1,0 +1,17 @@
+name: code-reviewer
+category: quality
+description: Code review agent
+tags:
+  - quality
+  - review
+  - best-practices
+  - security
+relationships:
+  requires: []
+  enhances: []
+  collaborates_with:
+    - test-writer-fixer
+  conflicts_with: []
+source: claude-code
+version: 1.0.0
+author: Claude Team

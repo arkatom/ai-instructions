@@ -27,6 +27,7 @@ export interface InteractiveResponses {
   confirmGeneration: boolean;
 }
 
+
 export class InteractivePrompts {
   private templatesDir: string;
   private environmentService: EnvironmentService;
@@ -79,101 +80,134 @@ export class InteractivePrompts {
     existingConfig?: ProjectConfig | null,
     defaultOutputDir: string = this.environmentService.getCurrentWorkingDirectory()
   ): Promise<InteractiveResponses> {
-    const baseQuestions = [
+    const questions = this.buildQuestionList(existingConfig, defaultOutputDir);
+    const responses = await this.promptUserWithQuestions(questions);
+    
+    this.displayConfigurationSummary(responses);
+    const confirmation = await this.getGenerationConfirmation();
+    
+    return { 
+      ...responses,
+      confirmGeneration: confirmation
+    };
+  }
+
+  /**
+   * Build the complete list of questions for user prompts
+   */
+  private buildQuestionList(
+    existingConfig?: ProjectConfig | null,
+    defaultOutputDir: string = this.environmentService.getCurrentWorkingDirectory()
+  ): unknown[] {
+    const baseQuestions = this.createBaseQuestions(existingConfig, defaultOutputDir);
+    const agentQuestion = this.createAgentQuestion(existingConfig);
+    
+    return [...baseQuestions, agentQuestion];
+  }
+
+  /**
+   * Create base questions for project configuration
+   */
+  private createBaseQuestions(
+    existingConfig?: ProjectConfig | null,
+    defaultOutputDir: string = this.environmentService.getCurrentWorkingDirectory()
+  ): unknown[] {
+    return [
       // Project metadata
       {
         type: 'input',
         name: 'projectName',
         message: 'Project name:',
         default: existingConfig?.projectName || 'my-project',
-        validate: (input: string) => {
-          if (!input.trim()) {
-            return 'Project name cannot be empty';
-          }
-          if (/[<>|]/.test(input)) {
-            return 'Project name cannot contain forbidden characters (<, >, |)';
-          }
-          return true;
-        }
+        validate: PromptValidators.validateProjectName
       },
       {
         type: 'input',
         name: 'outputDirectory',
         message: 'Output directory:',
         default: existingConfig?.outputDirectory || defaultOutputDir,
-        validate: (input: string) => {
-          if (!input.trim()) {
-            return 'Output directory cannot be empty';
-          }
-          return true;
-        }
+        validate: PromptValidators.validateOutputDirectory
       },
-
-      // Tool selection
-      {
-        type: 'list',
-        name: 'tool',
-        message: 'Select your AI tool:',
-        choices: Object.entries(AVAILABLE_TOOLS).map(([value, config]) => ({
-          name: `${config.name} - ${config.description}`,
-          value,
-          short: config.name
-        })),
-        default: existingConfig?.tool || 'claude'
-      },
-
-      // Workflow selection
-      {
-        type: 'list',
-        name: 'workflow',
-        message: 'Select development workflow:',
-        choices: AVAILABLE_WORKFLOWS.map(option => ({
-          name: `${option.name} - ${option.description}`,
-          value: option.value,
-          short: option.name
-        })),
-        default: existingConfig?.workflow || 'github-flow'
-      },
-
-      // Methodologies selection (multiple)
-      {
-        type: 'checkbox',
-        name: 'methodologies',
-        message: 'Select methodologies: (Press space to select multiple)',
-        choices: AVAILABLE_METHODOLOGIES.map(option => ({
-          name: `${option.name} - ${option.description}`,
-          value: option.value,
-          checked: existingConfig?.methodologies?.includes(option.value) || option.value === 'github-idd'
-        })),
-        validate: (choices: string[]) => {
-          if (choices.length === 0) {
-            return 'Please select at least one methodology';
-          }
-          return true;
-        }
-      },
-
-      // Languages selection (multiple)
-      {
-        type: 'checkbox',
-        name: 'languages',
-        message: 'Select programming languages: (Press space to select multiple)',
-        choices: AVAILABLE_LANGUAGES.map(option => ({
-          name: `${option.name} - ${option.description}`,
-          value: option.value,
-          checked: existingConfig?.languages?.includes(option.value) || option.value === 'typescript'
-        })),
-        validate: (choices: string[]) => {
-          if (choices.length === 0) {
-            return 'Please select at least one language';
-          }
-          return true;
-        }
-      }
+      this.createToolSelectionQuestion(existingConfig),
+      this.createWorkflowSelectionQuestion(existingConfig),
+      this.createMethodologiesSelectionQuestion(existingConfig),
+      this.createLanguagesSelectionQuestion(existingConfig)
     ];
+  }
 
-    // Agent selection (Claude only) - properly typed with conditional question
-    const agentQuestion = {
+  /**
+   * Create tool selection question
+   */
+  private createToolSelectionQuestion(existingConfig?: ProjectConfig | null): unknown {
+    return {
+      type: 'list',
+      name: 'tool',
+      message: 'Select your AI tool:',
+      choices: Object.entries(AVAILABLE_TOOLS).map(([value, config]) => ({
+        name: `${config.name} - ${config.description}`,
+        value,
+        short: config.name
+      })),
+      default: existingConfig?.tool || 'claude'
+    };
+  }
+
+  /**
+   * Create workflow selection question
+   */
+  private createWorkflowSelectionQuestion(existingConfig?: ProjectConfig | null): unknown {
+    return {
+      type: 'list',
+      name: 'workflow',
+      message: 'Select development workflow:',
+      choices: AVAILABLE_WORKFLOWS.map(option => ({
+        name: `${option.name} - ${option.description}`,
+        value: option.value,
+        short: option.name
+      })),
+      default: existingConfig?.workflow || 'github-flow'
+    };
+  }
+
+  /**
+   * Create methodologies selection question
+   */
+  private createMethodologiesSelectionQuestion(existingConfig?: ProjectConfig | null): unknown {
+    return {
+      type: 'checkbox',
+      name: 'methodologies',
+      message: 'Select methodologies: (Press space to select multiple)',
+      choices: AVAILABLE_METHODOLOGIES.map(option => ({
+        name: `${option.name} - ${option.description}`,
+        value: option.value,
+        checked: existingConfig?.methodologies?.includes(option.value) || option.value === 'github-idd'
+      })),
+      validate: (choices: string[]) => PromptValidators.validateNonEmptyArray(choices, 'methodology')
+    };
+  }
+
+  /**
+   * Create languages selection question
+   */
+  private createLanguagesSelectionQuestion(existingConfig?: ProjectConfig | null): unknown {
+    return {
+      type: 'checkbox',
+      name: 'languages',
+      message: 'Select programming languages: (Press space to select multiple)',
+      choices: AVAILABLE_LANGUAGES.map(option => ({
+        name: `${option.name} - ${option.description}`,
+        value: option.value,
+        checked: existingConfig?.languages?.includes(option.value) || option.value === 'typescript'
+      })),
+      validate: (choices: string[]) => PromptValidators.validateNonEmptyArray(choices, 'language')
+    };
+  }
+
+  /**
+   * Create agent selection question (Claude only)
+   */
+  private createAgentQuestion(existingConfig?: ProjectConfig | null): unknown {
+    return {
       type: 'checkbox',
       name: 'agents',
       message: 'Select agents: (Press space to select multiple)',
@@ -193,49 +227,54 @@ export class InteractivePrompts {
         return true;
       }
     };
+  }
 
-    const questions = [...baseQuestions, agentQuestion];
-
-    // Use inquirer with type assertion - newer inquirer versions have complex generic types
-    // that are difficult to properly type without excessive complexity. We validate the response
-    // shape through runtime validation and the question structure ensures type safety.
+  /**
+   * Prompt user with questions using inquirer
+   */
+  private async promptUserWithQuestions(questions: unknown[]): Promise<InteractiveResponses> {
+    // Use inquirer with type assertion as in existing codebase
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const responses = await inquirer.prompt(questions as any) as InteractiveResponses;
+    const responses = await inquirer.prompt(questions as any);
+    return responses as InteractiveResponses;
+  }
 
-    // Show configuration summary
+  /**
+   * Display configuration summary to user
+   */
+  private displayConfigurationSummary(responses: InteractiveResponses): void {
     Logger.section('📋 Configuration Summary:');
+    
     const toolConfig = AVAILABLE_TOOLS[responses.tool];
     if (toolConfig) {
       Logger.item('Tool:', toolConfig.name);
     } else {
       Logger.item('Tool:', responses.tool);
     }
+    
     Logger.item('Workflow:', responses.workflow);
     Logger.item('Methodologies:', responses.methodologies.join(', '));
     Logger.item('Languages:', responses.languages.join(', '));
+    
     if (responses.agents && responses.agents.length > 0) {
       Logger.item('Agents:', responses.agents.join(', '));
     }
+    
     Logger.item('Output:', responses.outputDirectory);
+  }
 
-    // Confirmation
-    const { confirmGeneration } = await inquirer.prompt([{
+  /**
+   * Get confirmation from user to proceed with generation
+   */
+  private async getGenerationConfirmation(): Promise<boolean> {
+    const { confirmGeneration } = await inquirer.prompt<{ confirmGeneration: boolean }>([{
       type: 'confirm',
       name: 'confirmGeneration',
       message: 'Generate files with this configuration?',
       default: true
     }]);
-
-    return { 
-      tool: responses.tool,
-      workflow: responses.workflow,
-      methodologies: responses.methodologies,
-      languages: responses.languages,
-      ...(responses.agents && { agents: responses.agents }),
-      projectName: responses.projectName,
-      outputDirectory: responses.outputDirectory,
-      confirmGeneration 
-    };
+    
+    return confirmGeneration;
   }
 
   /**

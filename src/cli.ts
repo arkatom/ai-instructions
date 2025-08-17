@@ -9,8 +9,9 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CommandRegistry } from './cli/CommandRegistry';
 import { InitCommand } from './cli/commands/InitCommand';
+import { AgentsCommand } from './cli/commands/AgentsCommand';
 import { EnvironmentService } from './services/EnvironmentService';
-import { InitCommandArgs, CommanderInitOptions } from './cli/interfaces/CommandArgs';
+import { InitCommandArgs, CommanderInitOptions, AgentCommandArgs } from './cli/interfaces/CommandArgs';
 import { Logger } from './utils/logger';
 import { ErrorHandler } from './utils/error-handler';
 import { InteractivePrompts } from './init/prompts';
@@ -54,6 +55,10 @@ class CLICoordinator {
     const initCommand = new InitCommand();
     this.registry.register('init', initCommand);
 
+    // Register AgentsCommand
+    const agentsCommand = new AgentsCommand();
+    this.registry.register('agents', agentsCommand);
+
     // Setup init command
     this.program
       .command('init')
@@ -70,6 +75,69 @@ class CLICoordinator {
       .option('--no-backup', '🚨 Disable automatic backups (use with caution)')
       .action(async (options) => {
         await this.executeInitCommand(options);
+      });
+
+    // Setup agents command with subcommands
+    const agentsCmd = this.program
+      .command('agents')
+      .description('Agent deployment and management commands');
+
+    // agents list subcommand
+    agentsCmd
+      .command('list')
+      .description('List available agents')
+      .option('-c, --category <category>', 'filter by category')
+      .option('-f, --format <format>', 'output format (table, json, tree)', 'table')
+      .action(async (options) => {
+        await this.executeAgentsCommand('list', options);
+      });
+
+    // agents recommend subcommand
+    agentsCmd
+      .command('recommend')
+      .description('Recommend agents for your project')
+      .option('-c, --category <category>', 'filter by category')
+      .option('-f, --format <format>', 'output format (table, json, tree)', 'table')
+      .action(async (options) => {
+        await this.executeAgentsCommand('recommend', options);
+      });
+
+    // agents info subcommand
+    agentsCmd
+      .command('info <name>')
+      .description('Show detailed information about an agent')
+      .option('-f, --format <format>', 'output format (table, json, tree)', 'table')
+      .action(async (name, options) => {
+        await this.executeAgentsCommand('info', { ...options, name });
+      });
+
+    // agents deploy subcommand
+    agentsCmd
+      .command('deploy <agents...>')
+      .description('Deploy agents to your project')
+      .option('-o, --output <path>', 'output directory', './.claude/agents')
+      .option('--action <action>', 'deployment action')
+      .action(async (agents, options) => {
+        await this.executeAgentsCommand('deploy', { ...options, agents });
+      });
+
+    // agents deploy-all subcommand
+    agentsCmd
+      .command('deploy-all')
+      .description('Deploy all available agents to your project')
+      .option('-o, --output <path>', 'output directory', './.claude/agents')
+      .action(async (options) => {
+        await this.executeAgentsCommand('deploy-all', options);
+      });
+
+    // agents profile subcommand
+    agentsCmd
+      .command('profile <project>')
+      .description('Profile project and recommend agents')
+      .option('-f, --format <format>', 'output format (table, json, tree)', 'table')
+      .option('-v, --verbose', 'show detailed analysis')
+      .action(async (project, options) => {
+        await this.executeAgentsCommand('profile', { ...options, project });
       });
 
     // Setup help-interactive command
@@ -118,6 +186,40 @@ class CLICoordinator {
 
       const result = await command.execute(args);
       
+      if (!result.success) {
+        Logger.error(result.error || 'Command execution failed');
+        process.exit(1);
+      }
+
+    } catch (error) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      ErrorHandler.handleError(errorObj);
+    }
+  }
+
+  /**
+   * Execute agents command
+   */
+  private async executeAgentsCommand(
+    subcommand: string,
+    options: any
+  ): Promise<void> {
+    try {
+      const command = this.registry.get('agents');
+      if (!command) {
+        Logger.error('Agents command not found');
+        process.exit(1);
+      }
+
+      // Convert options to AgentCommandArgs
+      const args: AgentCommandArgs = {
+        command: 'agents',
+        subcommand: subcommand as 'list' | 'recommend' | 'deploy' | 'deploy-all' | 'info' | 'profile',
+        ...options
+      };
+
+      const result = await command.execute(args);
+
       if (!result.success) {
         Logger.error(result.error || 'Command execution failed');
         process.exit(1);

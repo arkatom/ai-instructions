@@ -3,6 +3,8 @@
  * Issue #35: Code Review - Make file structure configurable instead of hard-coded
  */
 
+// Configuration loading with extracted methods for clarity
+
 import { join } from 'path';
 import { readFile } from 'fs/promises';
 import { FileUtils } from '../utils/file-utils';
@@ -54,56 +56,118 @@ export class ConfigurationManager {
   static async loadConfigurableToolConfig(toolName: SupportedTool): Promise<ConfigurableToolConfig> {
     const cacheKey = `tool:${toolName}`;
     
-    if (this.CONFIG_CACHE.has(cacheKey)) {
-      return this.CONFIG_CACHE.get(cacheKey)!;
+    // Check cache first
+    const cached = this.getCachedToolConfig(cacheKey);
+    if (cached) {
+      return cached;
     }
-
-    const toolConfigPath = join(__dirname, '../../templates/configs/tools', `${toolName}.json`);
     
     try {
-      if (!await FileUtils.fileExists(toolConfigPath)) {
-        throw new ConfigurationNotFoundError('tool', toolName, toolConfigPath);
-      }
-      
-      let configContent: string;
-      try {
-        configContent = await readFile(toolConfigPath, 'utf-8');
-      } catch (error) {
-        throw new FileSystemError('read', toolConfigPath, ErrorHandler.normalizeToError(error));
-      }
-      
-      let parsedConfig: unknown;
-      try {
-        parsedConfig = JSON.parse(configContent);
-      } catch (error) {
-        const normalizedError = ErrorHandler.normalizeToError(error);
-        throw new Error(`Failed to parse tool configuration for ${toolName}: ${normalizedError.message}`);
-      }
-      
-      // Enhance basic tool config with configurable file structure
-      const enhancedConfig = this.enhanceToolConfigWithDefaults(parsedConfig as StrictToolConfiguration, toolName);
-      
-      // Validate the enhanced configuration
-      const validationErrors = this.validateConfigurableToolConfig(enhancedConfig);
-      if (validationErrors.length > 0) {
-        throw new ConfigurationValidationError('tool', toolName, validationErrors);
-      }
-      
-      // Cache and return
-      this.CONFIG_CACHE.set(cacheKey, enhancedConfig);
-      return enhancedConfig;
-      
+      const config = await this.loadAndProcessToolConfig(toolName);
+      this.CONFIG_CACHE.set(cacheKey, config);
+      return config;
     } catch (error) {
-      if (error instanceof ConfigurationNotFoundError || 
-          error instanceof ConfigurationValidationError ||
-          error instanceof FileSystemError ||
-          error instanceof TemplateParsingError) {
-        throw error;
-      }
-      
-      const normalizedError = ErrorHandler.normalizeToError(error);
-      throw new FileSystemError('load_configurable_tool_config', toolConfigPath, normalizedError);
+      return this.handleToolConfigError(error, toolName);
     }
+  }
+
+  /**
+   * Get cached tool configuration
+   */
+  private static getCachedToolConfig(cacheKey: string): ConfigurableToolConfig | null {
+    return this.CONFIG_CACHE.get(cacheKey) || null;
+  }
+
+  /**
+   * Load and process tool configuration from file
+   */
+  private static async loadAndProcessToolConfig(toolName: SupportedTool): Promise<ConfigurableToolConfig> {
+    const toolConfigPath = this.getToolConfigPath(toolName);
+    
+    // Verify file exists
+    await this.verifyConfigFileExists(toolConfigPath, toolName);
+    
+    // Load and parse config
+    const parsedConfig = await this.loadAndParseConfigFile(toolConfigPath, toolName);
+    
+    // Enhance and validate
+    const enhancedConfig = this.enhanceToolConfigWithDefaults(parsedConfig, toolName);
+    this.validateEnhancedConfig(enhancedConfig, toolName);
+    
+    return enhancedConfig;
+  }
+
+  /**
+   * Get tool configuration file path
+   */
+  private static getToolConfigPath(toolName: SupportedTool): string {
+    return join(__dirname, '../../templates/configs/tools', `${toolName}.json`);
+  }
+
+  /**
+   * Verify configuration file exists
+   */
+  private static async verifyConfigFileExists(toolConfigPath: string, toolName: SupportedTool): Promise<void> {
+    if (!await FileUtils.fileExists(toolConfigPath)) {
+      throw new ConfigurationNotFoundError('tool', toolName, toolConfigPath);
+    }
+  }
+
+  /**
+   * Load and parse configuration file
+   */
+  private static async loadAndParseConfigFile(toolConfigPath: string, toolName: SupportedTool): Promise<StrictToolConfiguration> {
+    const configContent = await this.readConfigFile(toolConfigPath);
+    return this.parseConfigContent(configContent, toolName);
+  }
+
+  /**
+   * Read configuration file content
+   */
+  private static async readConfigFile(toolConfigPath: string): Promise<string> {
+    try {
+      return await readFile(toolConfigPath, 'utf-8');
+    } catch (error) {
+      throw new FileSystemError('read', toolConfigPath, ErrorHandler.normalizeToError(error));
+    }
+  }
+
+  /**
+   * Parse configuration file content
+   */
+  private static parseConfigContent(content: string, toolName: SupportedTool): StrictToolConfiguration {
+    try {
+      return JSON.parse(content) as StrictToolConfiguration;
+    } catch (error) {
+      const normalizedError = ErrorHandler.normalizeToError(error);
+      throw new Error(`Failed to parse tool configuration for ${toolName}: ${normalizedError.message}`);
+    }
+  }
+
+  /**
+   * Validate enhanced configuration
+   */
+  private static validateEnhancedConfig(config: ConfigurableToolConfig, toolName: SupportedTool): void {
+    const validationErrors = this.validateConfigurableToolConfig(config);
+    if (validationErrors.length > 0) {
+      throw new ConfigurationValidationError('tool', toolName, validationErrors);
+    }
+  }
+
+  /**
+   * Handle tool configuration loading errors
+   */
+  private static handleToolConfigError(error: unknown, toolName: SupportedTool): never {
+    if (error instanceof ConfigurationNotFoundError || 
+        error instanceof ConfigurationValidationError ||
+        error instanceof FileSystemError ||
+        error instanceof TemplateParsingError) {
+      throw error;
+    }
+    
+    const toolConfigPath = this.getToolConfigPath(toolName);
+    const normalizedError = ErrorHandler.normalizeToError(error);
+    throw new FileSystemError('load_configurable_tool_config', toolConfigPath, normalizedError);
   }
 
   /**
@@ -112,61 +176,123 @@ export class ConfigurationManager {
   static async loadLanguageConfig(languageName: string): Promise<StrictLanguageConfiguration> {
     const cacheKey = `lang:${languageName}`;
     
-    if (this.LANG_CONFIG_CACHE.has(cacheKey)) {
-      return this.LANG_CONFIG_CACHE.get(cacheKey)!;
+    // Check cache first
+    const cached = this.getCachedLanguageConfig(cacheKey);
+    if (cached) {
+      return cached;
     }
-
-    const langConfigPath = join(__dirname, '../../templates/configs/languages', `${languageName}.json`);
     
     try {
-      if (!await FileUtils.fileExists(langConfigPath)) {
-        // Fallback to universal configuration for unknown languages
-        if (languageName !== 'universal') {
-          return this.loadLanguageConfig('universal');
-        }
-        throw new ConfigurationNotFoundError('language', languageName, langConfigPath);
-      }
-      
-      let configContent: string;
-      try {
-        configContent = await readFile(langConfigPath, 'utf-8');
-      } catch (error) {
-        throw new FileSystemError('read', langConfigPath, ErrorHandler.normalizeToError(error));
-      }
-      
-      let parsedConfig: unknown;
-      try {
-        parsedConfig = JSON.parse(configContent);
-      } catch (error) {
-        throw new TemplateParsingError(`language config ${languageName}.json`, ErrorHandler.normalizeToError(error));
-      }
-      
-      // Validate the configuration
-      if (!TypeGuards.isStrictLanguageConfiguration(parsedConfig)) {
-        throw new ConfigurationValidationError(
-          'language', 
-          languageName, 
-          ['Configuration does not match StrictLanguageConfiguration schema']
-        );
-      }
-      
-      const config = parsedConfig as StrictLanguageConfiguration;
-      
-      // Cache and return
+      const config = await this.loadAndProcessLanguageConfig(languageName);
       this.LANG_CONFIG_CACHE.set(cacheKey, config);
       return config;
-      
     } catch (error) {
-      if (error instanceof ConfigurationNotFoundError || 
-          error instanceof ConfigurationValidationError ||
-          error instanceof FileSystemError ||
-          error instanceof TemplateParsingError) {
-        throw error;
-      }
-      
-      const normalizedError = ErrorHandler.normalizeToError(error);
-      throw new FileSystemError('load_language_config', langConfigPath, normalizedError);
+      return this.handleLanguageConfigError(error, languageName);
     }
+  }
+
+  /**
+   * Get cached language configuration
+   */
+  private static getCachedLanguageConfig(cacheKey: string): StrictLanguageConfiguration | null {
+    return this.LANG_CONFIG_CACHE.get(cacheKey) || null;
+  }
+
+  /**
+   * Load and process language configuration
+   */
+  private static async loadAndProcessLanguageConfig(languageName: string): Promise<StrictLanguageConfiguration> {
+    const langConfigPath = this.getLanguageConfigPath(languageName);
+    
+    // Handle fallback to universal config
+    if (!await FileUtils.fileExists(langConfigPath)) {
+      return this.handleMissingLanguageConfig(languageName);
+    }
+    
+    // Load, parse and validate
+    const parsedConfig = await this.loadAndParseLanguageFile(langConfigPath, languageName);
+    this.validateLanguageConfig(parsedConfig, languageName);
+    
+    return parsedConfig as StrictLanguageConfiguration;
+  }
+
+  /**
+   * Get language configuration file path
+   */
+  private static getLanguageConfigPath(languageName: string): string {
+    return join(__dirname, '../../templates/configs/languages', `${languageName}.json`);
+  }
+
+  /**
+   * Handle missing language configuration with fallback
+   */
+  private static async handleMissingLanguageConfig(languageName: string): Promise<StrictLanguageConfiguration> {
+    // Fallback to universal configuration for unknown languages
+    if (languageName !== 'universal') {
+      return this.loadLanguageConfig('universal');
+    }
+    
+    const langConfigPath = this.getLanguageConfigPath(languageName);
+    throw new ConfigurationNotFoundError('language', languageName, langConfigPath);
+  }
+
+  /**
+   * Load and parse language configuration file
+   */
+  private static async loadAndParseLanguageFile(langConfigPath: string, languageName: string): Promise<unknown> {
+    const configContent = await this.readLanguageConfigFile(langConfigPath);
+    return this.parseLanguageConfigContent(configContent, languageName);
+  }
+
+  /**
+   * Read language configuration file
+   */
+  private static async readLanguageConfigFile(langConfigPath: string): Promise<string> {
+    try {
+      return await readFile(langConfigPath, 'utf-8');
+    } catch (error) {
+      throw new FileSystemError('read', langConfigPath, ErrorHandler.normalizeToError(error));
+    }
+  }
+
+  /**
+   * Parse language configuration content
+   */
+  private static parseLanguageConfigContent(content: string, languageName: string): unknown {
+    try {
+      return JSON.parse(content);
+    } catch (error) {
+      throw new TemplateParsingError(`language config ${languageName}.json`, ErrorHandler.normalizeToError(error));
+    }
+  }
+
+  /**
+   * Validate language configuration
+   */
+  private static validateLanguageConfig(parsedConfig: unknown, languageName: string): void {
+    if (!TypeGuards.isStrictLanguageConfiguration(parsedConfig)) {
+      throw new ConfigurationValidationError(
+        'language', 
+        languageName, 
+        ['Configuration does not match StrictLanguageConfiguration schema']
+      );
+    }
+  }
+
+  /**
+   * Handle language configuration loading errors
+   */
+  private static handleLanguageConfigError(error: unknown, languageName: string): never {
+    if (error instanceof ConfigurationNotFoundError || 
+        error instanceof ConfigurationValidationError ||
+        error instanceof FileSystemError ||
+        error instanceof TemplateParsingError) {
+      throw error;
+    }
+    
+    const langConfigPath = this.getLanguageConfigPath(languageName);
+    const normalizedError = ErrorHandler.normalizeToError(error);
+    throw new FileSystemError('load_language_config', langConfigPath, normalizedError);
   }
 
   /**
@@ -287,6 +413,43 @@ export class ConfigurationManager {
   }
 
   /**
+   * Validate file structure subdirectories
+   */
+  private static validateSubdirectories(subdirectories: unknown): string | null {
+    if (!Array.isArray(subdirectories)) {
+      return 'fileStructure.subdirectories must be an array';
+    }
+    if (!subdirectories.every(dir => typeof dir === 'string')) {
+      return 'fileStructure.subdirectories must be an array of strings';
+    }
+    return null;
+  }
+
+  /**
+   * Validate file structure fields
+   */
+  private static validateFileStructureFields(fs: FileStructureConfig): string[] {
+    const errors: string[] = [];
+    
+    if (typeof fs.outputDirectory !== 'string') {
+      errors.push('fileStructure.outputDirectory must be a string');
+    }
+    
+    if (fs.mainFileName !== undefined && typeof fs.mainFileName !== 'string') {
+      errors.push('fileStructure.mainFileName must be a string or undefined');
+    }
+    
+    const subdirError = this.validateSubdirectories(fs.subdirectories);
+    if (subdirError) errors.push(subdirError);
+    
+    if (typeof fs.includeInstructionsDirectory !== 'boolean') {
+      errors.push('fileStructure.includeInstructionsDirectory must be a boolean');
+    }
+    
+    return errors;
+  }
+
+  /**
    * Validate configurable tool configuration
    */
   private static validateConfigurableToolConfig(config: ConfigurableToolConfig): string[] {
@@ -301,25 +464,7 @@ export class ConfigurationManager {
     if (!config.fileStructure) {
       errors.push('fileStructure is required');
     } else {
-      const fs = config.fileStructure;
-      
-      if (typeof fs.outputDirectory !== 'string') {
-        errors.push('fileStructure.outputDirectory must be a string');
-      }
-      
-      if (fs.mainFileName !== undefined && typeof fs.mainFileName !== 'string') {
-        errors.push('fileStructure.mainFileName must be a string or undefined');
-      }
-      
-      if (!Array.isArray(fs.subdirectories)) {
-        errors.push('fileStructure.subdirectories must be an array');
-      } else if (!fs.subdirectories.every(dir => typeof dir === 'string')) {
-        errors.push('fileStructure.subdirectories must be an array of strings');
-      }
-      
-      if (typeof fs.includeInstructionsDirectory !== 'boolean') {
-        errors.push('fileStructure.includeInstructionsDirectory must be a boolean');
-      }
+      errors.push(...this.validateFileStructureFields(config.fileStructure));
     }
     
     return errors;
