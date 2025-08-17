@@ -17,6 +17,7 @@ import {
 } from '../../agents/recommendation-engine';
 import { DependencyResolver } from '../../agents/dependency-resolver';
 import { AgentMetadata, ProjectContext } from '../../agents/types';
+import type { AgentFileLocation } from '../../agents/agent-file-finder';
 import { Logger } from '../../utils/logger';
 import { SafeOperation, ErrorFormatter } from '../../utils/error-helpers';
 import { join } from 'path';
@@ -102,7 +103,7 @@ export class AgentsCommand implements Command {
     const errors: string[] = [];
 
     // Validate subcommand
-    const validSubcommands = ['list', 'recommend', 'deploy', 'info', 'profile'];
+    const validSubcommands = ['list', 'recommend', 'deploy', 'deploy-all', 'info', 'profile'];
     if (!agentArgs.subcommand || !validSubcommands.includes(agentArgs.subcommand)) {
       errors.push(`Invalid subcommand. Valid subcommands: ${validSubcommands.join(', ')}`);
     }
@@ -210,6 +211,8 @@ export class AgentsCommand implements Command {
           return await this.executeRecommendCommand(agentArgs);
         case 'deploy':
           return await this.executeDeployCommand(agentArgs);
+        case 'deploy-all':
+          return await this.executeDeployAllCommand(agentArgs);
         case 'info':
           return await this.executeInfoCommand(agentArgs);
         case 'profile':
@@ -411,18 +414,43 @@ export class AgentsCommand implements Command {
 
       // Deploy agent files
       const deployedFiles: string[] = [];
+      const isClaudeCodeDeployment = outputPath.includes('.claude/agents');
+      
       for (const agentName of deployedAgents) {
         try {
-          const metadata = agentMetadataList.find(m => m.name === agentName);
-          if (metadata) {
-            const outputFile = join(outputPath, `${agentName}.yaml`);
-            
-            // Write agent metadata to file atomically
-            const yaml = require('js-yaml');
-            const content = yaml.dump(metadata);
-            await fs.writeFile(outputFile, content, 'utf-8');
-            deployedFiles.push(outputFile);
+          // Find the source MD file with location information
+          const { findAgentFileWithLocation } = require('../../agents/agent-file-finder');
+          const { readFileSync } = require('fs');
+          const path = require('path');
+          const agentsDir = join(__dirname, '../../../templates/agents');
+          
+          const agentLocation = findAgentFileWithLocation(agentsDir, agentName);
+          
+          if (!agentLocation) {
+            Logger.warn(`Agent file not found: ${agentName}.md`);
+            continue;
           }
+          
+          // Read the source content
+          let content = readFileSync(agentLocation.fullPath, 'utf-8');
+          
+          // For Claude Code, strip frontmatter to save tokens
+          if (isClaudeCodeDeployment) {
+            const frontmatterRegex = /^---\n[\s\S]*?\n---\n\n?/;
+            content = content.replace(frontmatterRegex, '');
+          }
+          
+          // Preserve the directory structure when deploying
+          const outputFile = join(outputPath, agentLocation.relativePath);
+          const outputDir = path.dirname(outputFile);
+          
+          // Ensure the output directory exists
+          await fs.mkdir(outputDir, { recursive: true });
+          
+          // Write to output preserving structure
+          await fs.writeFile(outputFile, content, 'utf-8');
+          deployedFiles.push(outputFile);
+          
         } catch (error) {
           const formattedError = ErrorFormatter.formatError(error, `Deploy agent ${agentName}`);
           Logger.error(formattedError);
@@ -462,6 +490,49 @@ export class AgentsCommand implements Command {
       return {
         success: false,
         error: `Failed to deploy agents: ${errorMessage}`
+      };
+    }
+  }
+
+  /**
+   * Execute 'agents deploy-all' subcommand
+   */
+  private async executeDeployAllCommand(args: AgentCommandArgs): Promise<CommandResult> {
+    try {
+      // Get all available agents
+      const { readdirSync } = require('fs');
+      const { join } = require('path');
+      const path = require('path');
+      
+      const agentsDir = join(__dirname, '../../../templates/agents');
+      
+      // Use the new location-aware function to get all agents
+      const { findAllAgentFilesWithLocation, AgentFileLocation } = require('../../agents/agent-file-finder');
+      const agentLocations = findAllAgentFilesWithLocation(agentsDir);
+      const allAgents: string[] = agentLocations.map((loc: AgentFileLocation) => loc.agentName);
+      
+      if (allAgents.length === 0) {
+        return {
+          success: false,
+          error: 'No agents found in templates directory'
+        };
+      }
+      
+      // Deploy all agents
+      const deployArgs = {
+        ...args,
+        agents: allAgents
+      };
+      
+      Logger.info(`Deploying all ${allAgents.length} agents...`);
+      return await this.executeDeployCommand(deployArgs);
+      
+    } catch (error) {
+      const errorMessage = ErrorFormatter.formatError(error, 'Deploy all agents');
+      Logger.error(errorMessage);
+      return {
+        success: false,
+        error: errorMessage
       };
     }
   }

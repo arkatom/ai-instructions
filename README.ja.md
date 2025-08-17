@@ -49,6 +49,9 @@ ai-instructions init --lang ja
 # マスターオーケストレーターをデプロイ（他のエージェントを調整）
 ai-instructions agents deploy orchestrator
 
+# Claude Code用に90個のエージェントをすべて一度にデプロイ
+ai-instructions agents deploy-all
+
 # 品質重視のチームを構築
 ai-instructions agents deploy code-reviewer test-writer-fixer
 
@@ -115,11 +118,11 @@ your-project/
 
 **重要**：エージェントシステムはAIアシスタント用のメタデータとプロンプトを提供します。実際のエージェント機能はAIツールの能力に依存します：
 
-- **Claude Code**：組み込みのTaskツールを使用してエージェント機能にアクセス
-- **その他のツール**：エージェントのYAMLファイルは参照プロンプトとテンプレートとして機能
-- エージェントを「デプロイ」すると、そのメタデータが`./agents/`ディレクトリにインストールされます
-- このメタデータにはプロンプト、ツール要件、インタラクションパターンが含まれます
-- YAMLファイルからエージェントプロンプトをコピーして任意のAIアシスタントで使用できます
+- **Claude Code**：起動時に`.claude/agents/`ディレクトリからエージェントを自動読み込み
+- **その他のツール**：エージェントファイルは参照プロンプトとテンプレートとして機能
+- Claude Code用にエージェントを「デプロイ」すると、MDファイルが`.claude/agents/`に配置されます
+- トークン節約のため、Claude Codeではフロントマターが自動的に削除されます
+- `agents deploy-all`を使用して、一度に90個のエージェントをすべてデプロイ
 
 ### 一部紹介
 

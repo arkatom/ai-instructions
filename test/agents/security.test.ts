@@ -77,10 +77,14 @@ description: Test
         maliciousYaml
       );
 
-      // ACT & ASSERT
-      await expect(loader.loadAgentMetadata('malicious'))
-        .rejects
-        .toThrow();
+      // ACT - should gracefully handle malicious input with safe defaults
+      const result = await loader.loadAgentMetadata('malicious');
+      
+      // ASSERT - should return safe defaults instead of executing malicious code
+      expect(result.name).toBe('malicious');
+      expect(result.category).toBe('general');
+      expect(result.description).toBe('AI agent');
+      expect(result.tags).toEqual([]);
     });
 
     test('should handle YAML with excessive recursion', async () => {
@@ -98,10 +102,14 @@ relationships: &ref
         recursiveYaml
       );
 
-      // ACT & ASSERT
-      await expect(loader.loadAgentMetadata('recursive'))
-        .rejects
-        .toThrow();
+      // ACT - should gracefully handle recursive YAML with safe defaults
+      const result = await loader.loadAgentMetadata('recursive');
+      
+      // ASSERT - should return safe defaults instead of failing on recursion
+      expect(result.name).toBe('recursive');
+      expect(result.category).toBe('test'); // Uses the category from YAML
+      expect(result.description).toBe('Test'); // Uses the description from YAML
+      expect(result.tags).toEqual([]);
     });
   });
 

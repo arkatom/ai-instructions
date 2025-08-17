@@ -29,7 +29,7 @@ export interface InitCommandArgs extends CommandArgs {
  * Issue #93: Agent deployment CLI commands implementation
  */
 export interface AgentCommandArgs extends CommandArgs {
-  subcommand: 'list' | 'recommend' | 'deploy' | 'info' | 'profile';
+  subcommand: 'list' | 'recommend' | 'deploy' | 'deploy-all' | 'info' | 'profile';
   category?: string;
   agents?: string[];
   format?: 'table' | 'json' | 'tree';

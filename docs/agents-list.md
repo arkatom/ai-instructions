@@ -160,7 +160,9 @@ Some agents work better together:
 
 ## Notes
 
-- Agents are deployed as YAML metadata files in `./agents/` directory
+- For Claude Code: Agents are deployed as MD files to `./.claude/agents/` directory
+- For other tools: Agents can be deployed to `./agents/` directory
 - Use `agents list` to see all available agents
 - Use `agents info <name>` for detailed agent information
+- Use `agents deploy-all` to deploy all agents at once
 - The orchestrator can coordinate multiple agents automatically

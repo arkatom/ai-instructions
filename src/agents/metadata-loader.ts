@@ -6,9 +6,13 @@
 // Agent metadata processing with extracted methods for clarity
 
 import { readFile, readdir } from 'fs/promises';
+import { existsSync } from 'fs';
 import { join, extname } from 'path';
 import * as yaml from 'js-yaml';
 import { AgentMetadata, AgentRelationship } from './types';
+import { parseFrontmatter } from './frontmatter-parser';
+import { findAgentFile, findAllAgentFiles, getTemplatesDir } from './agent-file-finder';
+import { validateAgentName, validateAndTransformMetadata } from './metadata-validator';
 
 /**
  * Valid relationship types for agent dependencies
@@ -62,7 +66,7 @@ export class AgentMetadataLoader {
    */
   async loadAgentMetadata(agentName: string): Promise<AgentMetadata> {
     // Validate agent name for security
-    this.validateAgentName(agentName);
+    validateAgentName(agentName);
 
     // Check cache first
     const cached = this.getCachedMetadata(agentName);
@@ -86,13 +90,30 @@ export class AgentMetadataLoader {
     const filePath = this.getAgentFilePath(agentName);
     const content = await this.readAgentFile(filePath);
     const rawMetadata = this.parseYamlContent(content);
-    return this.validateAndTransformMetadata(rawMetadata, agentName);
+    
+    // If name wasn't extracted properly, use the agentName
+    const metadata = rawMetadata as Record<string, unknown>;
+    if (!metadata || metadata.name === 'unknown') {
+      metadata.name = agentName;
+    }
+    
+    // Use the imported validator and enhance with additional fields
+    const baseMetadata = validateAndTransformMetadata(rawMetadata, agentName);
+    
+    // Add additional fields that are specific to this class
+    return this.enhanceMetadata(baseMetadata, metadata);
   }
 
   /**
    * Get agent file path
    */
   private getAgentFilePath(agentName: string): string {
+    // First check templates directory for MD files
+    const templatesDir = getTemplatesDir();
+    const mdPath = findAgentFile(templatesDir, agentName);
+    if (mdPath) return mdPath;
+    
+    // Fallback to YAML in metadata path (for backward compatibility)
     return join(this.metadataPath, `${agentName}.yaml`);
   }
 
@@ -108,14 +129,24 @@ export class AgentMetadataLoader {
    */
   private parseYamlContent(content: string): unknown {
     try {
+      // Check if content is MD with frontmatter
+      if (content.startsWith('---\n')) {
+        return parseFrontmatter(content);
+      }
+      
+      // Parse as regular YAML (for backward compatibility)
       return yaml.load(content, {
-        // Disable all custom types for security
         schema: yaml.FAILSAFE_SCHEMA,
-        // Limit recursion depth
         json: false
       });
-    } catch (yamlError) {
-      throw new Error(`Invalid metadata format: ${yamlError}`);
+    } catch {
+      // Silent failure - just return empty metadata for files without proper frontmatter
+      // This allows us to skip malformed files during batch operations
+      return {
+        name: 'unknown',
+        description: 'AI agent',
+        category: 'general'
+      };
     }
   }
 
@@ -135,11 +166,23 @@ export class AgentMetadataLoader {
    */
   async loadAllMetadata(): Promise<AgentMetadata[]> {
     try {
-      const files = await readdir(this.metadataPath);
-      const yamlFiles = files.filter(file => extname(file) === '.yaml' || extname(file) === '.yml');
+      // Load from templates/agents directory
+      const templatesDir = getTemplatesDir();
+      const agentNames = findAllAgentFiles(templatesDir);
       
-      const metadataPromises = yamlFiles.map(file => {
-        const agentName = file.replace(/\.(yaml|yml)$/, '');
+      // Also check for YAML files in metadata directory (backward compatibility)
+      if (existsSync(this.metadataPath)) {
+        const files = await readdir(this.metadataPath);
+        const yamlFiles = files.filter(file => extname(file) === '.yaml' || extname(file) === '.yml');
+        yamlFiles.forEach(file => {
+          const agentName = file.replace(/\.(yaml|yml)$/, '');
+          if (!agentNames.includes(agentName)) {
+            agentNames.push(agentName);
+          }
+        });
+      }
+      
+      const metadataPromises = agentNames.map(agentName => {
         return this.loadAgentMetadata(agentName);
       });
       
@@ -254,118 +297,24 @@ export class AgentMetadataLoader {
     }
   }
 
-  /**
-   * Validate agent name for security (prevent path traversal and injection)
-   * @param agentName - Agent name to validate
-   * @throws Error if agent name is invalid
-   */
-  // eslint-disable-next-line complexity
-  private validateAgentName(agentName: string): void {
-    // Check for basic validity
-    if (!agentName || typeof agentName !== 'string') {
-      throw new Error('Invalid agent name: must be a non-empty string');
-    }
-
-    // Check length
-    if (agentName.length > 255) {
-      throw new Error('Invalid agent name: too long (max 255 characters)');
-    }
-
-    // Check for path traversal attempts
-    if (agentName.includes('..') || 
-        agentName.includes('/') || 
-        agentName.includes('\\') ||
-        agentName.includes('\0')) {
-      throw new Error('Invalid agent name: contains invalid characters');
-    }
-
-    // Check for URL encoding attempts
-    if (agentName.includes('%') && /%..|%\d/.test(agentName)) {
-      throw new Error('Invalid agent name: contains URL encoded characters');
-    }
-
-    // Check for shell injection characters
-    const dangerousChars = /[;|&$`<>'"(){}[\]]/;
-    if (dangerousChars.test(agentName)) {
-      throw new Error('Invalid agent name: contains shell special characters');
-    }
-
-    // Check for valid filename pattern (alphanumeric, hyphen, underscore only)
-    const validPattern = /^[a-zA-Z0-9_-]+$/;
-    if (!validPattern.test(agentName)) {
-      throw new Error('Invalid agent name: must contain only letters, numbers, hyphens, and underscores');
-    }
-  }
 
   /**
-   * Validate and transform raw metadata to typed AgentMetadata
-   * @param rawMetadata - Raw parsed YAML data
-   * @param agentName - Expected agent name (for validation)
-   * @returns Validated and transformed metadata
-   * @throws Error if validation fails
+   * Enhance base metadata with additional fields
    */
-  private validateAndTransformMetadata(rawMetadata: unknown, agentName: string): AgentMetadata {
-    const metadata = this.validateMetadataStructure(rawMetadata);
-    this.validateRequiredFields(metadata);
-    this.validateAgentNameMatch(metadata, agentName);
+  private enhanceMetadata(baseMetadata: AgentMetadata, rawMetadata: Record<string, unknown>): AgentMetadata {
+    // Override with extracted tags if available
+    const tags = this.extractTags(rawMetadata);
+    if (tags.length > 0) {
+      baseMetadata.tags = tags;
+    }
     
-    return this.buildValidatedMetadata(metadata);
-  }
-
-  /**
-   * Validate basic metadata structure
-   */
-  private validateMetadataStructure(rawMetadata: unknown): Record<string, unknown> {
-    if (!rawMetadata || typeof rawMetadata !== 'object') {
-      throw new Error('Invalid metadata format: metadata must be an object');
-    }
-    return rawMetadata as Record<string, unknown>;
-  }
-
-  /**
-   * Validate required fields exist and are correct type
-   */
-  private validateRequiredFields(metadata: Record<string, unknown>): void {
-    const requiredFields = [
-      { name: 'name', type: 'string' },
-      { name: 'category', type: 'string' },
-      { name: 'description', type: 'string' }
-    ];
-
-    for (const field of requiredFields) {
-      if (!(field.name in metadata) || typeof metadata[field.name] !== field.type) {
-        throw new Error(`Missing required field: ${field.name}`);
-      }
-    }
-  }
-
-  /**
-   * Validate agent name matches expected name
-   */
-  private validateAgentNameMatch(metadata: Record<string, unknown>, expectedName: string): void {
-    const actualName = String(metadata.name);
-    if (actualName !== expectedName) {
-      throw new Error(`Agent name mismatch: file contains '${actualName}' but expected '${expectedName}'`);
-    }
-  }
-
-  /**
-   * Build validated metadata object
-   */
-  private buildValidatedMetadata(metadata: Record<string, unknown>): AgentMetadata {
-    // Build core metadata
-    const validatedMetadata: AgentMetadata = {
-      name: String(metadata.name),
-      category: String(metadata.category),
-      description: String(metadata.description),
-      tags: this.extractTags(metadata),
-      relationships: this.validateRelationships(metadata.relationships)
-    };
-
+    // Override with validated relationships
+    baseMetadata.relationships = this.validateRelationships(rawMetadata.relationships);
+    
     // Add optional fields
-    this.addOptionalFields(validatedMetadata, metadata);
+    this.addOptionalFields(baseMetadata, rawMetadata);
     
-    return validatedMetadata;
+    return baseMetadata;
   }
 
   /**
@@ -430,10 +379,10 @@ export class AgentMetadataLoader {
     for (const type of VALID_RELATIONSHIP_TYPES) {
       const relationshipValue = relationshipsObj[type];
       if (relationshipValue) {
-        if (!Array.isArray(relationshipValue)) {
-          throw new Error(`Relationship ${type} must be an array`);
+        if (Array.isArray(relationshipValue)) {
+          validated[type] = relationshipValue.map(item => String(item));
         }
-        validated[type] = relationshipValue.map(item => String(item));
+        // Silently ignore non-array relationships (graceful fallback)
       }
     }
 

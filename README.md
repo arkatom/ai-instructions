@@ -49,6 +49,9 @@ Want an AI that writes tests? Or reviews code? Or even tells programming jokes? 
 # Deploy the master orchestrator (coordinates other agents)
 ai-instructions agents deploy orchestrator
 
+# Deploy ALL 90 agents at once for Claude Code
+ai-instructions agents deploy-all
+
 # Build a quality-focused team
 ai-instructions agents deploy code-reviewer test-writer-fixer
 
@@ -115,11 +118,11 @@ your-project/
 
 **Important**: The agent system provides metadata and prompts for AI assistants. The actual agent functionality depends on your AI tool's capabilities:
 
-- **Claude Code**: Uses the built-in Task tool to access agent capabilities
-- **Other tools**: Agent YAML files serve as reference prompts and templates
-- When you "deploy" an agent, you're installing its metadata to `./agents/` directory
-- This metadata includes prompts, tool requirements, and interaction patterns
-- You can copy agent prompts from the YAML files to use with any AI assistant
+- **Claude Code**: Automatically reads agents from `.claude/agents/` directory on startup
+- **Other tools**: Agent files serve as reference prompts and templates
+- When you "deploy" an agent for Claude Code, MD files are placed in `.claude/agents/`
+- Frontmatter is automatically stripped for Claude Code to save tokens
+- Use `agents deploy-all` to deploy all 90 agents at once
 
 ### 一部紹介
 

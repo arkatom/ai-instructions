@@ -115,10 +115,19 @@ class CLICoordinator {
     agentsCmd
       .command('deploy <agents...>')
       .description('Deploy agents to your project')
-      .option('-o, --output <path>', 'output directory', './agents')
+      .option('-o, --output <path>', 'output directory', './.claude/agents')
       .option('--action <action>', 'deployment action')
       .action(async (agents, options) => {
         await this.executeAgentsCommand('deploy', { ...options, agents });
+      });
+
+    // agents deploy-all subcommand
+    agentsCmd
+      .command('deploy-all')
+      .description('Deploy all available agents to your project')
+      .option('-o, --output <path>', 'output directory', './.claude/agents')
+      .action(async (options) => {
+        await this.executeAgentsCommand('deploy-all', options);
       });
 
     // agents profile subcommand
@@ -205,7 +214,7 @@ class CLICoordinator {
       // Convert options to AgentCommandArgs
       const args: AgentCommandArgs = {
         command: 'agents',
-        subcommand: subcommand as 'list' | 'recommend' | 'deploy' | 'info' | 'profile',
+        subcommand: subcommand as 'list' | 'recommend' | 'deploy' | 'deploy-all' | 'info' | 'profile',
         ...options
       };
 

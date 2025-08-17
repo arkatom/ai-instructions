@@ -160,7 +160,9 @@ ai-instructions agents recommend
 
 ## 注記
 
-- エージェントは`./agents/`ディレクトリにYAMLメタデータファイルとしてデプロイされます
+- Claude Code用：エージェントは`./.claude/agents/`ディレクトリにMDファイルとしてデプロイされます
+- その他のツール用：エージェントは`./agents/`ディレクトリにデプロイできます
 - `agents list`を使用してすべての利用可能なエージェントを表示
 - `agents info <name>`でエージェントの詳細情報を取得
+- `agents deploy-all`を使用してすべてのエージェントを一度にデプロイ
 - オーケストレーターは複数のエージェントを自動的に調整できます
