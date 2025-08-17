@@ -1,703 +1,243 @@
 # ai-instructions
 
-🤖 **Professional CLI tool to scaffold AI development instructions for ClaudeCode, Cursor, GitHub Copilot and more**
+CLI tool for scaffolding AI development instructions and deploying specialized agents
 
 **English** | [日本語](./README.ja.md)
 
 [![NPM Version](https://img.shields.io/npm/v/@arkatom/ai-instructions)](https://www.npmjs.com/package/@arkatom/ai-instructions)
-[![Tests](https://img.shields.io/badge/tests-110%20passing-brightgreen)](./test)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Semantic Versioning](https://img.shields.io/badge/semver-2.0.0-blue)](https://semver.org/)
 
-## 📋 Overview
+## What it does
 
-`ai-instructions` streamlines the setup of AI-driven development environments by generating comprehensive instruction templates and configuration files. Perfect for teams and individual developers who want to standardize their AI assistant interactions across projects.
+`ai-instructions` helps you work with AI coding assistants by providing:
+- Complete instruction templates for Claude Code, Cursor, GitHub Copilot, and Cline
+- 90 specialized agents for different development tasks (orchestrator, code-reviewer, rapid-prototyper, even a joker for team morale!)
+- Multi-language support (English, Japanese, Chinese)
+- Smart file conflict handling when updating existing projects
 
-### ✨ Key Benefits
-
-- **🚀 Instant Setup**: Generate complete instruction sets in seconds
-- **🛠️ Multi-Tool Support**: Claude Code, GitHub Copilot, Cursor AI IDE, and Cline AI support
-- **📚 Comprehensive Templates**: Full collection of development methodology guides (TDD, Git workflow, etc.)
-- **🌐 Multi-language Support**: English, Japanese, and Chinese template support
-- **🛡️ Advanced File Safety**: 5 intelligent conflict resolution strategies with smart merging
-- **⚙️ Highly Configurable**: Customizable project names and output directories
-- **🔒 Validated Input**: Built-in validation for project names and paths
-- **🧪 Battle-tested**: 110 comprehensive tests ensuring reliability
-- **🔄 Format Conversion**: Convert between Claude, Cursor, GitHub Copilot, and Windsurf formats
-
-## 🛡️ Advanced File Safety System (v0.5.0)
-
-**🚀 NEW: Intelligent conflict resolution with 5 resolution strategies**
-
-### 🔒 Safe Usage Patterns
+## Installation
 
 ```bash
-# ✅ RECOMMENDED: Interactive conflict resolution (default)
-ai-instructions init --project-name "My Project"
-
-# ✅ SAFE: Automatic backup creation
-ai-instructions init --conflict-resolution backup --project-name "My Project"
-
-# ✅ SMART: Merge existing + template content intelligently
-ai-instructions init --conflict-resolution merge --project-name "My Project"
-
-# ✅ PREVIEW: See what files would be created/modified
-ai-instructions init --preview
-
-# ⚠️ SKIP: Skip conflicting files (non-destructive)
-ai-instructions init --conflict-resolution skip --project-name "My Project"
-
-# 🚨 DANGEROUS: Force overwrite (use with extreme caution)
-ai-instructions init --force --conflict-resolution overwrite
-```
-
-### 🛡️ Conflict Resolution Strategies
-
-When existing files are detected, you can choose from 5 intelligent strategies:
-
-| Strategy | Behavior | Use Case | Data Safety |
-|----------|----------|----------|-------------|
-| `backup` | Creates timestamped backup, writes new file | **Default** - Safest option | 🟢 High |
-| `merge` | Intelligently merges existing + template content | Update existing instructions | 🟢 High |
-| `interactive` | Prompts for choice per conflict | Full control over each file | 🟢 High |
-| `skip` | Skips conflicting files, creates non-conflicting ones | Partial update scenarios | 🟢 High |
-| `overwrite` | Overwrites without backup | **Dangerous** - Only with --force | 🔴 None |
-
-### 🔧 Advanced CLI Options (v0.5.0)
-
-```bash
-# Conflict resolution strategy
-ai-instructions init --conflict-resolution <backup|merge|interactive|skip|overwrite>
-
-# Disable interactive prompts (batch mode)
-ai-instructions init --no-interactive
-
-# Disable automatic backups (use with caution)
-ai-instructions init --no-backup
-
-# Preview mode - see what would happen
-ai-instructions init --preview
-```
-
-### 🧠 Intelligent Content Merging
-
-For markdown files, the merge strategy uses smart content analysis:
-- **Headers**: Preserves unique sections from both files
-- **Content blocks**: Avoids duplication
-- **Metadata**: Maintains existing project-specific content
-- **Templates**: Integrates new template content seamlessly
-
-### 📁 Backup System
-
-When using `backup` or `merge` strategies:
-- Creates timestamped backups: `filename.backup.YYYYMMDD_HHMMSS.ext`
-- Handles multiple backups automatically
-- Never overwrites existing backups
-
-> **💡 Pro Tip**: Use `--conflict-resolution merge` to update existing instruction files while preserving your customizations!
-
-## 🏗️ Architecture & Dependency Management
-
-### System Architecture
-
-```mermaid
-graph TB
-    subgraph "CLI Layer"
-        CLI[cli.ts]
-    end
-
-    subgraph "Generator Layer"
-        Factory[GeneratorFactory]
-        Base[BaseGenerator]
-        Claude[ClaudeGenerator]
-        Cursor[CursorGenerator]
-        Copilot[CopilotGenerator]
-        Cline[ClineGenerator]
-        Windsurf[WindsurfGenerator]
-    end
-
-    subgraph "Core Services"
-        Config[ConfigurationManager]
-        SharedProc[SharedTemplateProcessor]
-        Parallel[ParallelGeneratorOperations]
-        Errors[Error Classes]
-        Types[Type Definitions]
-    end
-
-    subgraph "Converter Layer"
-        ConvFactory[ConverterFactory]
-        FormatConv[Format Converters]
-    end
-
-    subgraph "Utilities"
-        FileUtils[FileUtils]
-        ConflictHandler[FileConflictHandler]
-        MergeHandler[SmartMergeHandler]
-    end
-
-    CLI --> Factory
-    Factory --> Base
-    Base --> Claude
-    Base --> Cursor
-    Base --> Copilot
-    Base --> Cline
-    Base --> Windsurf
-
-    Base --> Config
-    Base --> SharedProc
-    Base --> Errors
-
-    SharedProc --> Config
-    SharedProc --> Parallel
-    SharedProc --> Types
-
-    Config --> Types
-    Config --> Errors
-
-    Parallel --> FileUtils
-
-    Claude --> ConvFactory
-    ConvFactory --> FormatConv
-
-    FileUtils --> ConflictHandler
-    ConflictHandler --> MergeHandler
-```
-
-### Dependency Flow
-
-```mermaid
-graph LR
-    subgraph "No Dependencies"
-        Types[types.ts]
-        Errors[errors.ts]
-    end
-
-    subgraph "Low-Level Dependencies"
-        FileUtils[file-utils.ts]
-        MergeHandler[smart-merge-handler.ts]
-    end
-
-    subgraph "Mid-Level Dependencies"
-        Config[config-manager.ts]
-        ConflictHandler[file-conflict-handler.ts]
-        Parallel[parallel-generator.ts]
-    end
-
-    subgraph "High-Level Dependencies"
-        SharedProc[shared-processor.ts]
-        Base[base.ts]
-    end
-
-    subgraph "Top-Level Components"
-        Generators[Specific Generators]
-        Converters[Format Converters]
-        CLI[cli.ts]
-    end
-
-    Types --> Config
-    Types --> SharedProc
-    Types --> Base
-
-    Errors --> Config
-    Errors --> SharedProc
-    Errors --> Base
-    Errors --> Parallel
-
-    FileUtils --> ConflictHandler
-    FileUtils --> Parallel
-
-    MergeHandler --> ConflictHandler
-
-    Config --> SharedProc
-    Config --> Base
-
-    ConflictHandler --> Base
-
-    Parallel --> SharedProc
-
-    SharedProc --> Base
-
-    Base --> Generators
-    Base --> Converters
-
-    Generators --> CLI
-    Converters --> CLI
-```
-
-### Module Responsibilities
-
-| Module | Purpose | Dependencies | Dependents |
-|--------|---------|--------------|------------|
-| **types.ts** | Type definitions & guards | None | All modules |
-| **errors.ts** | Error class hierarchy | None | Core services |
-| **config-manager.ts** | Configuration loading & caching | types, errors | Generators, SharedProc |
-| **parallel-generator.ts** | Parallel file operations | errors, FileUtils | SharedProc |
-| **shared-processor.ts** | Template processing logic | types, config, parallel | Generators |
-| **base.ts** | Abstract generator base | All core services | Specific generators |
-| **file-utils.ts** | File operations | None | Multiple modules |
-| **file-conflict-handler.ts** | Conflict resolution | FileUtils, MergeHandler | Base generator |
-
-### Circular Dependency Prevention
-
-This project uses **ESLint with eslint-plugin-import** to automatically detect and prevent circular dependencies:
-
-```javascript
-// eslint.config.js
-'import/no-cycle': ['error', {
-  maxDepth: Infinity,
-  ignoreExternal: true
-}]
-```
-
-**Benefits:**
-- ✅ Build-time detection of circular imports
-- ✅ Prevents runtime errors from dependency cycles
-- ✅ Enforces clean architecture principles
-- ✅ Integrated into CI/CD pipeline
-
-### Directory Structure
-
-```
-src/
-├── generators/           # Generator implementations
-│   ├── base.ts          # Abstract base class
-│   ├── claude.ts        # Claude-specific generator
-│   ├── cursor.ts        # Cursor-specific generator
-│   ├── cline.ts         # Cline-specific generator
-│   ├── copilot.ts       # GitHub Copilot generator
-│   ├── windsurf.ts      # Windsurf generator
-│   ├── factory.ts       # Generator factory
-│   ├── config-manager.ts    # Configuration management
-│   ├── errors.ts        # Error definitions
-│   ├── parallel-generator.ts # Parallel operations
-│   ├── shared-processor.ts   # Shared processing
-│   └── types.ts         # Type definitions
-├── converters/          # Format converters
-│   ├── index.ts         # Converter exports
-│   ├── format-converter.ts   # Base converter
-│   ├── cursor-converter.ts   # Cursor format
-│   ├── copilot-converter.ts  # Copilot format
-│   └── windsurf-converter.ts # Windsurf format
-├── utils/               # Utility functions
-│   ├── file-utils.ts    # File operations
-│   ├── file-conflict-handler.ts # Conflict resolution
-│   └── smart-merge-handler.ts   # Content merging
-└── cli.ts               # CLI entry point
-```
-
-## 📦 Installation
-
-### Global Installation (Recommended)
-
-```bash
+# Global install (recommended)
 npm install -g @arkatom/ai-instructions
-```
 
-### Local Project Installation
-
-```bash
-npm install --save-dev @arkatom/ai-instructions
-```
-
-### Usage without Installation
-
-```bash
+# Or use directly
 npx @arkatom/ai-instructions init
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
-### Basic Usage
+### 1. Generate instruction templates
 
 ```bash
+# Generate comprehensive AI instructions for your project
 ai-instructions init
+
+# With custom project name
+ai-instructions init --project-name "my-awesome-app"
+
+# For Japanese projects
+ai-instructions init --lang ja
 ```
 
-This creates a complete set of AI development instructions in your current directory.
+This creates a structured set of instructions that guide AI assistants to follow your development standards.
 
-### Check Current Status
+### 2. Deploy specialized agents (90 available!)
+
+Want an AI that writes tests? Or reviews code? Or even tells programming jokes? We've got you covered:
 
 ```bash
-# Check AI instruction files in current directory
-ai-instructions status
+# Deploy the master orchestrator (coordinates other agents)
+ai-instructions agents deploy orchestrator
 
-# Check specific directory
-ai-instructions status --directory ./my-project
+# Build a quality-focused team
+ai-instructions agents deploy code-reviewer test-writer-fixer
+
+# For rapid development
+ai-instructions agents deploy rapid-prototyper frontend-developer
+
+# Need some fun?
+ai-instructions agents deploy joker whimsy-injector
+
+# Create custom agents dynamically!
+ai-instructions agents deploy agent-generator
 ```
 
-### Interactive Help Guide
+See [full agent list](./docs/agents-list.md) | [日本語版](./docs/agents-list.ja.md)
 
-```bash
-# Launch interactive setup guide with examples
-ai-instructions help-interactive
-```
+## Generated Files
 
-### Custom Project Setup
+When you run `init`, here's what you get:
 
-```bash
-ai-instructions init --project-name "my-awesome-project" --output ./my-project
-```
-
-### Multi-Tool Support
-
-Generate instructions for different AI development tools:
-
-```bash
-# Generate Claude Code instructions (default)
-ai-instructions init --tool claude
-
-# Generate GitHub Copilot instructions
-ai-instructions init --tool github-copilot --project-name "my-project"
-
-# Generate Cursor AI IDE instructions
-ai-instructions init --tool cursor --project-name "my-project"
-
-# Generate Cline AI instructions
-ai-instructions init --tool cline --project-name "my-project"
-```
-
-### Format Conversion (New in v0.3.0)
-
-Generate Claude templates and convert to other formats:
-
-```bash
-# Convert to Cursor MDC format with short option
-ai-instructions init -f cursor --project-name "my-project"
-
-# Convert to GitHub Copilot 2024 standard
-ai-instructions init --output-format copilot --project-name "my-project"
-
-# Convert to Windsurf pair programming rules
-ai-instructions init --output-format windsurf --project-name "my-project"
-
-# Maintain original Claude format (default)
-ai-instructions init --output-format claude --project-name "my-project"
-```
-
-### Multi-Language Templates
-
-Generate templates in different languages:
-
-```bash
-# English templates (default)
-ai-instructions init --lang en --project-name "my-project"
-
-# Japanese templates
-ai-instructions init --lang ja --project-name "プロジェクト名"
-
-# Chinese templates
-ai-instructions init --lang ch --project-name "项目名称"
-
-# Combined: Japanese Cursor format
-ai-instructions init -f cursor --lang ja --project-name "カーソルプロジェクト"
-```
-
-### Safe Updates and Migrations (v0.5.0)
-
-```bash
-# Update existing project instructions with intelligent merging
-ai-instructions init --conflict-resolution merge --project-name "existing-project"
-
-# Backup existing files before updating
-ai-instructions init --conflict-resolution backup --project-name "existing-project"
-
-# Interactive updates - choose per file
-ai-instructions init --conflict-resolution interactive --project-name "existing-project"
-
-# Non-destructive partial update
-ai-instructions init --conflict-resolution skip --project-name "existing-project"
-
-# Batch mode without prompts (CI/CD safe)
-ai-instructions init --no-interactive --conflict-resolution backup
-```
-
-### Real-world Examples
-
-```bash
-# Setup for a React project
-ai-instructions init --project-name "react-dashboard" --output ./projects/dashboard
-
-# Setup for a Japanese project
-ai-instructions init --project-name "プロジェクト名" --output ./日本語プロジェクト
-
-# Setup with spaces in name
-ai-instructions init --project-name "My Enterprise App" --output ./enterprise
-```
-
-## 📁 Generated File Structure
-
-The file structure varies depending on the AI tool you select:
-
-### Claude Code (Default)
+### Claude Code (default)
 ```
 your-project/
-├── CLAUDE.md                    # Main ClaudeCode instructions
-└── instructions/                # Comprehensive development guides
-    ├── base.md                  # Core development rules (MUST READ)
-    ├── deep-think.md           # Deep thinking methodology
-    ├── memory.md               # Memory management instructions
-    ├── KentBeck-tdd-rules.md   # Test-Driven Development rules
-    ├── commit-rules.md         # Git commit conventions
-    ├── pr-rules.md             # Pull request guidelines
-    ├── git.md                  # Git workflow instructions
-    ├── develop.md              # Development process guide
-    ├── command.md              # Shell command execution rules
-    └── memo/
-        └── index.md            # Project memo template
+├── CLAUDE.md                    # Main instructions file
+└── instructions/                # Comprehensive guides (included in ALL formats)
+    ├── core/                    # Core development rules
+    │   ├── base.md             # Fundamental principles
+    │   └── deep-think.md       # Quality-first methodology
+    ├── workflows/              # Git, GitHub workflows
+    ├── methodologies/          # TDD, Scrum, etc.
+    └── patterns/               # Language-specific patterns
 ```
 
-### GitHub Copilot (`--tool github-copilot` or `--output-format copilot`)
+### GitHub Copilot
 ```
 your-project/
-└── .github/
-    └── copilot-instructions.md  # GitHub Copilot 2024 standard format
+├── .github/
+│   └── copilot-instructions.md # GitHub Copilot 2024 standard
+└── instructions/                # Same comprehensive guides
 ```
 
-### Cursor AI IDE (`--tool cursor` or `--output-format cursor`)
-```
-your-project/
-└── .cursor/
-    └── rules/
-        └── main.mdc            # Cursor AI rules with YAML front matter
-```
-
-### Windsurf AI (`--output-format windsurf`)
+### Cursor
 ```
 your-project/
-└── .windsurfrules              # Windsurf pair programming rules
+├── .cursor/
+│   └── rules/
+│       └── main.mdc            # Cursor-specific format
+└── instructions/                # Same comprehensive guides
 ```
 
-### Cline AI (`--tool cline`)
+### Cline
 ```
 your-project/
-├── .clinerules/                # Cline AI rule directory
-│   ├── 01-coding.md           # Core development rules
-│   └── 02-documentation.md    # Documentation standards
-└── instructions/              # Comprehensive development guides
-    ├── base.md                # Core development rules (MUST READ)
-    ├── deep-think.md         # Deep thinking methodology
-    ├── memory.md             # Memory management instructions
-    └── ... (13 additional files)
+├── .clinerules/                # Cline-specific rules
+│   ├── 01-coding.md
+│   └── 02-documentation.md
+└── instructions/                # Same comprehensive guides
 ```
 
-### File Descriptions
+**Note**: The `instructions/` directory with all development guides is generated for ALL tools, providing consistent development standards across different AI assistants.
 
-| File | Purpose | Key Content |
-|------|---------|-------------|
-| `CLAUDE.md` | Main entry point for AI assistants | Project-specific instructions with {{projectName}} replaced |
-| `base.md` | Core development principles | Fundamental rules that must be followed |
-| `deep-think.md` | Thinking methodology | Quality-first approach and analytical thinking |
-| `memory.md` | Memory management | How to store and retrieve project information |
-| `KentBeck-tdd-rules.md` | TDD methodology | Kent Beck's Test-Driven Development principles |
-| `commit-rules.md` | Git commit standards | Semantic commit message format with domain tags |
-| `pr-rules.md` | Pull request rules | PR creation guidelines and review process |
+## Agent System Details
 
-## ⚙️ Configuration Options
+### How agents work
 
-### Available Commands
+**Important**: The agent system provides metadata and prompts for AI assistants. The actual agent functionality depends on your AI tool's capabilities:
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `init` | Initialize AI development instructions | `ai-instructions init` |
-| `status` | Show current configuration status | `ai-instructions status` |
-| `help-interactive` | Launch interactive help guide | `ai-instructions help-interactive` |
-| `help` | Display help for a command | `ai-instructions help init` |
+- **Claude Code**: Uses the built-in Task tool to access agent capabilities
+- **Other tools**: Agent YAML files serve as reference prompts and templates
+- When you "deploy" an agent, you're installing its metadata to `./agents/` directory
+- This metadata includes prompts, tool requirements, and interaction patterns
+- You can copy agent prompts from the YAML files to use with any AI assistant
 
-### Command Line Options
+### 一部紹介
 
-| Option | Alias | Description | Default | Example |
-|--------|-------|-------------|---------|---------|
-| `--lang` | `-l` | Template language (en, ja, ch) | `en` | `--lang ja` |
-| `--output-format` | `-f` | Output format (claude, cursor, copilot, windsurf) | `claude` | `-f cursor` |
-| `--output` | `-o` | Output directory | Current directory | `--output ./my-project` |
-| `--project-name` | `-n` | Project name for templates | `my-project` | `--project-name "My App"` |
-| `--tool` | `-t` | AI tool type (legacy, use --output-format) | `claude` | `--tool cursor` |
-| `--conflict-resolution` | | 🛡️ Conflict resolution strategy (backup, merge, interactive, skip, overwrite) | `backup` | `--conflict-resolution merge` |
-| `--no-interactive` | | 🤖 Disable interactive conflict resolution | `false` | `--no-interactive` |
-| `--no-backup` | | 🚨 Disable automatic backups (use with caution) | `false` | `--no-backup` |
-| `--force` | | ⚠️ Force overwrite existing files (DANGEROUS) | `false` | `--force` |
-| `--preview` | | 🔍 Preview files that would be created/modified | `false` | `--preview` |
-| `--version` | | Show version number | | |
-| `--help` | | Display help information | | |
+- **orchestrator** - The master conductor, manages multi-agent workflows
+- **rapid-prototyper** - Build MVPs in hours, not days
+- **code-reviewer** - Your strict but fair code quality guardian
+- **agent-generator** - Creates new custom agents on demand
+- **joker** - Keeps team morale high with programming humor
+- **whimsy-injector** - Adds delightful touches to your UI
 
-### Project Name Validation
-
-The CLI validates project names to ensure filesystem compatibility:
-
-- ✅ **Allowed**: Letters, numbers, spaces, hyphens, underscores, Unicode characters
-- ❌ **Forbidden**: `<`, `>`, `|` characters
-- ❌ **Invalid**: Empty strings or whitespace-only names
-
-### Examples of Valid Project Names
+### Agent commands
 
 ```bash
-ai-instructions init --project-name "My Project"           # ✅ Spaces
-ai-instructions init --project-name "my-awesome_project-v2" # ✅ Hyphens & underscores
-ai-instructions init --project-name "プロジェクト名"          # ✅ Unicode/Japanese
-ai-instructions init --project-name "Project123"           # ✅ Numbers
+# See all 90 available agents
+ai-instructions agents list
+
+# Get detailed info about any agent
+ai-instructions agents info orchestrator
+
+# Get recommendations based on your project
+ai-instructions agents recommend
+
+# Analyze your project and suggest agents
+ai-instructions agents profile ./my-project
 ```
 
-### Output Format Validation
+## Real-world Usage Examples
 
-The CLI validates output formats to ensure compatibility:
+### Starting a new TikTok-viral app
+```bash
+# Set up the project
+ai-instructions init --project-name "viral-video-app"
 
-- ✅ **Supported Formats**: `claude`, `cursor`, `copilot`, `windsurf`
-- ✅ **Case Sensitive**: Format names must be lowercase
-- ❌ **Invalid**: `CLAUDE`, `Cursor`, `GitHub-Copilot`
+# Deploy specialized agents for your needs
+ai-instructions agents deploy \
+  trend-researcher \
+  tiktok-strategist \
+  mobile-app-builder \
+  app-store-optimizer
+```
 
-### Language Code Validation
+### Building an enterprise application
+```bash
+# Initialize with proper structure
+ai-instructions init --project-name "enterprise-dashboard"
 
-- ✅ **Supported Languages**: `en` (English), `ja` (Japanese), `ch` (Chinese)
-- ✅ **Case Sensitive**: Language codes must be lowercase
-- ❌ **Invalid**: `EN`, `JA`, `fr`, `es`
+# Deploy enterprise-focused agents
+ai-instructions agents deploy \
+  orchestrator \
+  backend-architect \
+  security-auditor \
+  technical-writer
+```
 
-## 🔄 Format Conversion Benefits
+### Quick prototype for a hackathon
+```bash
+# Fast setup
+ai-instructions init --project-name "hackathon-project" --conflict-resolution skip
 
-### Why Use Format Conversion?
+# Deploy speed-focused agents
+ai-instructions agents deploy rapid-prototyper frontend-developer
+```
 
-1. **🎆 Single Source of Truth**: Maintain comprehensive Claude templates
-2. **🔧 Tool-Specific Optimization**: Each format optimized for its AI tool
-3. **🗏 Multi-Tool Workflows**: Switch between AI tools seamlessly
-4. **🌐 Consistent Standards**: Apply same development practices across tools
+## File Safety Options
 
-### Format-Specific Features
-
-| Format | File Extension | Key Features |
-|--------|----------------|---------------|
-| `claude` | `.md` | Full instruction hierarchy, TDD rules, comprehensive guides |
-| `cursor` | `.mdc` | YAML front matter, MDC format, Cursor-optimized prompts |
-| `copilot` | `.md` | GitHub 2024 standard, repository-focused instructions |
-| `windsurf` | `.windsurfrules` | Pair programming focus, collaborative development rules |
-| `cline` | `.md` | Multiple specialized files in .clinerules directory |
-
-## 🛠️ Development
-
-### Prerequisites
-
-- Node.js 16+
-- npm 7+
-- TypeScript 5.0+
-
-### Setup Development Environment
+When updating existing projects:
 
 ```bash
-# Clone the repository
+# Smart merge (recommended) - keeps your changes + adds new content
+ai-instructions init --conflict-resolution merge
+
+# Create backups before updating
+ai-instructions init --conflict-resolution backup
+
+# Preview what will happen
+ai-instructions init --preview
+```
+
+## CLI Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--lang` | Language (en, ja, ch) | `en` |
+| `--output` | Output directory | Current dir |
+| `--project-name` | Your project name | `my-project` |
+| `--tool` | AI tool type | `claude` |
+| `--conflict-resolution` | How to handle existing files | `backup` |
+| `--preview` | Preview changes without writing | `false` |
+
+## Development
+
+```bash
+# Clone and install
 git clone https://github.com/arkatom/ai-instructions.git
 cd ai-instructions
-
-# Install dependencies
 npm install
 
-# Run tests
+# Run tests (780+ tests!)
 npm test
 
-# Build the project
+# Build
 npm run build
 
-# Test CLI locally
-npm run cli init --help
+# Test locally
+npm run dev init
 ```
 
-### Running Tests
+## Why use this?
 
-```bash
-# Run all tests (8 test suites, 110 tests)
-npm test
+- **Save hours**: Stop writing the same instructions for every project
+- **Consistency**: Your AI assistant follows YOUR standards
+- **90 specialized agents**: Like having a full development team
+- **Battle-tested**: Used in production, with comprehensive test coverage
 
-# Run tests in watch mode
-npm run test:watch
+## License
 
-# Run tests with coverage
-npm run test:coverage
-```
-
-### Test Coverage
-
-Our comprehensive test suite includes:
-
-- **Basic CLI functionality** (version, help, commands) - 41 tests
-- **Format conversion system** (Claude → Cursor/Copilot/Windsurf) - 16 tests
-- **Multi-language support** (English, Japanese, Chinese templates) - 21 tests
-- **Multi-tool generators** (Claude, GitHub Copilot, Cursor) - 17 tests
-- **Error handling** (invalid inputs, filesystem errors, validation) - 8 tests
-- **Edge cases** (Unicode names, very long names, empty strings) - 7 tests
-
-**Key Test Categories:**
-- **CLI Output Format Support**: 12 comprehensive tests for --output-format/-f option
-- **Multi-Language Templates**: Tests for en/ja/ch language generation
-- **GitHub Copilot 2024 Standard**: Tests for new .github/copilot-instructions.md path
-- **Content verification**: Generated file structure and content validation
-- **Integration testing**: End-to-end CLI workflows with format conversion
-
-### Build and Distribution
-
-```bash
-# Build TypeScript to JavaScript
-npm run build
-
-# Create distribution package
-npm pack
-
-# Publish to npm (maintainers only)
-npm publish
-```
-
-## 📌 Versioning
-
-This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (SemVer). Version numbers follow the format `MAJOR.MINOR.PATCH`:
-
-- **MAJOR**: Incompatible API changes or breaking changes
-- **MINOR**: New functionality in a backwards compatible manner
-- **PATCH**: Backwards compatible bug fixes
-
-For example:
-- `0.3.0` → `0.3.1`: Bug fixes or minor improvements
-- `0.3.1` → `0.4.0`: New features or enhancements
-- `0.4.0` → `1.0.0`: Breaking changes or major redesign
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](./CONTRIBUTING.md) for details.
-
-### Development Workflow
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Follow TDD** principles - write tests first
-4. **Implement** your changes with proper TypeScript types
-5. **Test** thoroughly (`npm test`)
-6. **Commit** using our [commit conventions](./instructions/commit-rules.md)
-7. **Submit** a pull request
-
-### Code Quality Standards
-
-- **TDD Required**: All new features must have tests
-- **TypeScript**: Strict type checking enabled
-- **ESLint**: Code style enforcement
-- **100% Test Coverage**: For new features
-- **Documentation**: Update README for new features
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/arkatom/ai-instructions/issues)
-- **Documentation**: This README and generated instruction files
-- **Examples**: See the [examples](./examples) directory
-
-## 🙏 Acknowledgments
-
-- **Kent Beck** for the foundational Test-Driven Development methodology
-  - *"Test-Driven Development: By Example"* (2003) - The seminal work that defined TDD
-  - *"Tidy First?"* (2023) - Modern approach to structural vs behavioral changes
-  - The three rules of TDD that guide our development process
-- **Martin Fowler** for documenting and evangelizing TDD practices
-- **ClaudeCode team** for inspiration on AI-assisted development workflows
-- **Open source community** for the excellent tools and libraries that make this possible
+MIT
 
 ---
 
-**Made with ❤️ for AI-assisted development workflows**
+[GitHub](https://github.com/arkatom/ai-instructions) | [npm](https://www.npmjs.com/package/@arkatom/ai-instructions) | [Issues](https://github.com/arkatom/ai-instructions/issues)
