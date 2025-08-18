@@ -367,7 +367,7 @@ describe('InteractiveAgentSelector', () => {
       const mockPrompt = mockedInquirer.prompt;
       mockPrompt.mockRejectedValueOnce(new Error('Prompt error'));
 
-      await expect(selector.showMainMenu()).rejects.toThrow('Prompt error');
+      await expect(selector.showMainMenu()).rejects.toThrow('Menu selection failed');
     });
 
     it('should handle empty agent list', async () => {

@@ -31,7 +31,19 @@ export class DisplayHelpers {
       return category;
     }
     
-    const colorFn = (chalk as any)[color] || chalk.gray;
+    // Type-safe color mapping
+    const validColors = {
+      'green': chalk.green,
+      'yellow': chalk.yellow,
+      'blue': chalk.blue,
+      'magenta': chalk.magenta,
+      'cyan': chalk.cyan,
+      'white': chalk.white,
+      'red': chalk.red,
+      'gray': chalk.gray
+    } as const;
+    
+    const colorFn = validColors[color as keyof typeof validColors] || chalk.gray;
     return colorFn(category);
   }
 

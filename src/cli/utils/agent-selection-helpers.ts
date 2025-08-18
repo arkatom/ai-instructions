@@ -42,16 +42,21 @@ export class AgentSelectionHelpers {
     message: string,
     config: InteractiveSelectorConfig
   ): Promise<SelectionResult> {
-    const { agents: selectedNames } = await inquirer.prompt([{
-      type: 'checkbox',
-      name: 'agents',
-      message,
-      choices: agentChoices,
-      pageSize: config.pageSize
-    }]);
+    try {
+      const { agents: selectedNames } = await inquirer.prompt([{
+        type: 'checkbox',
+        name: 'agents',
+        message,
+        choices: agentChoices,
+        pageSize: config.pageSize
+      }]);
 
-    const selectedAgents = allAgents.filter(a => selectedNames.includes(a.name));
-    return SelectionHelpers.createSelectionResult(selectedAgents, mode);
+      const selectedAgents = allAgents.filter(a => selectedNames.includes(a.name));
+      return SelectionHelpers.createSelectionResult(selectedAgents, mode);
+    } catch (error) {
+      // User cancelled or error occurred
+      return SelectionHelpers.createCancelledResult(mode);
+    }
   }
 
   /**
@@ -64,29 +69,39 @@ export class AgentSelectionHelpers {
     message: string,
     config: InteractiveSelectorConfig
   ): Promise<SelectionResult> {
-    const { agent: selectedName } = await inquirer.prompt([{
-      type: 'list',
-      name: 'agent',
-      message,
-      choices: agentChoices,
-      pageSize: config.pageSize
-    }]);
+    try {
+      const { agent: selectedName } = await inquirer.prompt([{
+        type: 'list',
+        name: 'agent',
+        message,
+        choices: agentChoices,
+        pageSize: config.pageSize
+      }]);
 
-    const selectedAgent = allAgents.find(a => a.name === selectedName);
-    return SelectionHelpers.createSelectionResult(selectedAgent ? [selectedAgent] : [], mode);
+      const selectedAgent = allAgents.find(a => a.name === selectedName);
+      return SelectionHelpers.createSelectionResult(selectedAgent ? [selectedAgent] : [], mode);
+    } catch (error) {
+      // User cancelled or error occurred
+      return SelectionHelpers.createCancelledResult(mode);
+    }
   }
 
   /**
    * Get search query from user
    */
   static async getSearchQuery(): Promise<string> {
-    const { query } = await inquirer.prompt([{
-      type: 'input',
-      name: 'query',
-      message: 'Enter search query:',
-      validate: (input: string) => input.length > 0 || 'Please enter a search query'
-    }]);
-    return query;
+    try {
+      const { query } = await inquirer.prompt([{
+        type: 'input',
+        name: 'query',
+        message: 'Enter search query:',
+        validate: (input: string) => input.length > 0 || 'Please enter a search query'
+      }]);
+      return query;
+    } catch (error) {
+      // User cancelled (Ctrl+C) or other error
+      throw new Error('Search cancelled');
+    }
   }
 
   /**
@@ -104,17 +119,22 @@ export class AgentSelectionHelpers {
       value: stat.category
     }));
 
-    const { category } = await inquirer.prompt([{
-      type: 'list',
-      name: 'category',
-      message: 'Select a category:',
-      choices: [
-        ...categoryChoices,
-        { name: '← Back', value: '_back' }
-      ],
-      pageSize: config.pageSize
-    }]);
+    try {
+      const { category } = await inquirer.prompt([{
+        type: 'list',
+        name: 'category',
+        message: 'Select a category:',
+        choices: [
+          ...categoryChoices,
+          { name: '← Back', value: '_back' }
+        ],
+        pageSize: config.pageSize
+      }]);
 
-    return category;
+      return category;
+    } catch (error) {
+      // User cancelled, treat as 'back'
+      return '_back';
+    }
   }
 }

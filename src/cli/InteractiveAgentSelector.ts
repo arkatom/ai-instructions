@@ -25,9 +25,33 @@ import { AgentSelectionHelpers } from './utils/agent-selection-helpers';
  */
 export class InteractiveAgentSelector implements IInteractiveAgentSelector {
   private config: InteractiveSelectorConfig;
+  private readonly MIN_PAGE_SIZE = 5;
+  private readonly MAX_PAGE_SIZE = 50;
+  private readonly DEFAULT_MENU_PAGE_SIZE = 10;
 
   constructor(config: InteractiveSelectorConfig) {
-    this.config = config;
+    // Validate and set config
+    this.config = {
+      ...config,
+      pageSize: this.validatePageSize(config.pageSize)
+    };
+  }
+
+  /**
+   * Validate page size is within acceptable range
+   */
+  private validatePageSize(pageSize: number): number {
+    if (pageSize < this.MIN_PAGE_SIZE) {
+      Logger.warn(`Page size ${pageSize} is too small, using minimum ${this.MIN_PAGE_SIZE}`);
+      return this.MIN_PAGE_SIZE;
+    }
+    
+    if (pageSize > this.MAX_PAGE_SIZE) {
+      Logger.warn(`Page size ${pageSize} is too large, using maximum ${this.MAX_PAGE_SIZE}`);
+      return this.MAX_PAGE_SIZE;
+    }
+    
+    return pageSize;
   }
 
   /**
@@ -42,19 +66,28 @@ export class InteractiveAgentSelector implements IInteractiveAgentSelector {
       { name: '❌ Exit', value: 'exit', short: 'Exit' }
     ];
 
-    const { mode } = await inquirer.prompt([{
-      type: 'list',
-      name: 'mode',
-      message: 'Select viewing mode:',
-      choices,
-      pageSize: 10
-    }]);
+    try {
+      const { mode } = await inquirer.prompt([{
+        type: 'list',
+        name: 'mode',
+        message: 'Select viewing mode:',
+        choices,
+        pageSize: this.DEFAULT_MENU_PAGE_SIZE
+      }]);
 
-    if (mode === 'exit') {
-      throw new Error('User cancelled');
+      if (mode === 'exit') {
+        throw new Error('User cancelled');
+      }
+
+      return mode as SelectionMode;
+    } catch (error) {
+      // Handle prompt cancellation (Ctrl+C) or other errors
+      if (error instanceof Error && error.message === 'User cancelled') {
+        throw error;
+      }
+      Logger.error('Failed to show main menu', error);
+      throw new Error('Menu selection failed');
     }
-
-    return mode as SelectionMode;
   }
 
   /**
@@ -165,7 +198,7 @@ export class InteractiveAgentSelector implements IInteractiveAgentSelector {
    */
   async showAgentDetails(agent: AgentMetadata): Promise<void> {
     const details = DisplayHelpers.formatAgentDetails(agent, this.config.enableColors);
-    Logger.raw(details);
+    Logger.info(details);
   }
 
   /**
