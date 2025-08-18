@@ -202,24 +202,30 @@ function fetchUserData(id) {
 ## ESモジュール
 
 ### Import/Export
-モダンなモジュール構文。
+モダンなモジュール構文 - 常に名前付きエクスポートを使用。
 
 ```javascript
-// 名前付きエクスポート
+// ✅ 良い例 - 名前付きエクスポートのみ
 export const API_URL = 'https://api.example.com';
 export function fetchData() { /* ... */ }
 export class User { /* ... */ }
+export class App { /* ... */ }
 
-// デフォルトエクスポート
-export default class App { /* ... */ }
+// ❌ 悪い例 - デフォルトエクスポート（禁止）
+// export default class App { /* ... */ }
 
-// インポート
-import App from './App';
+// 名前付きエクスポートをインポート
+import { App } from './App';
 import { API_URL, fetchData } from './api';
 import * as utils from './utils';
 
 // 動的インポート
 const module = await import('./heavy-module');
+
+// クリーンなインポートのためのbarrel exports
+export { UserService } from './UserService';
+export { AuthService } from './AuthService';
+export { validateEmail, validatePhone } from './validators';
 ```
 
 ## Map、Set、WeakMap
