@@ -1,242 +1,359 @@
 # Clean Architecture
 
-## Core Principles
+クリーンアーキテクチャの原則と実装パターン。
 
-### Dependency Rule
-Dependencies must point inward. Nothing in an inner circle can know anything about outer circles.
+## アーキテクチャの原則
 
-```typescript
-// Good - Inner layer defines interface
-// Domain Layer (inner)
-interface UserRepository {
-  findById(id: string): Promise<User>;
-  save(user: User): Promise<void>;
-}
+### 依存性の方向
+```
+[External] → [Interface Adapters] → [Use Cases] → [Entities]
+    ←              ←                     ←
 
-// Infrastructure Layer (outer)
-class PostgresUserRepository implements UserRepository {
-  async findById(id: string): Promise<User> {
-    // PostgreSQL specific implementation
-  }
-}
-
-// Bad - Domain depends on infrastructure
-class User {
-  constructor(private db: PostgreSQLConnection) {} // Wrong!
-}
+外側から内側への依存のみ許可
+内側は外側を知らない
 ```
 
-## Layer Structure
-
-### 1. Entities (Domain)
-Business rules that don't change when external things change.
-
+### レイヤー構造
 ```typescript
-// Good - Pure business logic
-class Order {
-  private items: OrderItem[] = [];
-  
-  addItem(product: Product, quantity: number): void {
-    if (quantity <= 0) {
-      throw new Error('Quantity must be positive');
-    }
-    this.items.push(new OrderItem(product, quantity));
-  }
-  
-  calculateTotal(): number {
-    return this.items.reduce((sum, item) => sum + item.getSubtotal(), 0);
-  }
-}
-```
-
-### 2. Use Cases (Application)
-Application-specific business rules. Orchestrates data flow between entities.
-
-```typescript
-// Good - Use case orchestration
-class CreateOrderUseCase {
+// 1. Entities (Enterprise Business Rules)
+// ビジネスの核心ロジック
+export class User {
   constructor(
-    private orderRepo: OrderRepository,
-    private productRepo: ProductRepository,
-    private emailService: EmailService
+    public readonly id: string,
+    public email: string,
+    public hashedPassword: string
   ) {}
   
-  async execute(request: CreateOrderRequest): Promise<CreateOrderResponse> {
-    const products = await this.productRepo.findByIds(request.productIds);
-    
-    const order = new Order(request.customerId);
-    for (const item of request.items) {
-      const product = products.find(p => p.id === item.productId);
-      order.addItem(product, item.quantity);
+  changeEmail(newEmail: string): void {
+    if (!this.isValidEmail(newEmail)) {
+      throw new Error('Invalid email format');
     }
-    
-    await this.orderRepo.save(order);
-    await this.emailService.sendOrderConfirmation(order);
-    
-    return { orderId: order.id, total: order.calculateTotal() };
+    this.email = newEmail;
+  }
+  
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 }
-```
 
-### 3. Interface Adapters
-Convert data between use cases and external agencies.
-
-```typescript
-// Good - Controller adapter
-class OrderController {
-  constructor(private createOrderUseCase: CreateOrderUseCase) {}
+// 2. Use Cases (Application Business Rules)
+// アプリケーション固有のビジネスルール
+export class CreateUserUseCase {
+  constructor(
+    private userRepository: IUserRepository,
+    private emailService: IEmailService,
+    private passwordHasher: IPasswordHasher
+  ) {}
   
-  async createOrder(req: Request, res: Response): Promise<void> {
-    try {
-      const request = this.mapToUseCaseRequest(req.body);
-      const response = await this.createOrderUseCase.execute(request);
-      res.json(this.mapToHttpResponse(response));
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  }
-  
-  private mapToUseCaseRequest(body: any): CreateOrderRequest {
-    // Map HTTP request to use case request
+  async execute(request: CreateUserRequest): Promise<CreateUserResponse> {
+    const hashedPassword = await this.passwordHasher.hash(request.password);
+    
+    const user = new User(
+      generateId(),
+      request.email,
+      hashedPassword
+    );
+    
+    await this.userRepository.save(user);
+    await this.emailService.sendWelcome(user.email);
+    
+    return {
+      id: user.id,
+      email: user.email
+    };
   }
 }
-```
 
-### 4. Frameworks & Drivers
-External details like databases, web frameworks, UI.
-
-```typescript
-// Good - Infrastructure implementation
-class ExpressServer {
-  private app: Express;
+// 3. Interface Adapters
+// 外部とのインターフェース
+export class UserController {
+  constructor(private createUserUseCase: CreateUserUseCase) {}
   
-  constructor(private orderController: OrderController) {
-    this.app = express();
-    this.setupRoutes();
+  async createUser(req: Request, res: Response): Promise<void> {
+    const request: CreateUserRequest = {
+      email: req.body.email,
+      password: req.body.password
+    };
+    
+    const response = await this.createUserUseCase.execute(request);
+    
+    res.status(201).json(response);
   }
-  
-  private setupRoutes(): void {
-    this.app.post('/orders', (req, res) => 
-      this.orderController.createOrder(req, res)
+}
+
+// 4. Frameworks & Drivers
+// 具体的な実装
+export class PostgresUserRepository implements IUserRepository {
+  async save(user: User): Promise<void> {
+    await db.query(
+      'INSERT INTO users (id, email, password) VALUES ($1, $2, $3)',
+      [user.id, user.email, user.hashedPassword]
     );
   }
   
-  start(port: number): void {
-    this.app.listen(port);
+  async findById(id: string): Promise<User | null> {
+    const result = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (result.rows.length === 0) return null;
+    
+    const row = result.rows[0];
+    return new User(row.id, row.email, row.password);
   }
 }
 ```
 
-## Dependency Injection
+## 依存性逆転の原則
 
-### Constructor Injection
-Wire dependencies from outside-in.
-
+### インターフェース定義
 ```typescript
-// Good - Dependencies injected from outer layers
-// Composition root (main)
-const database = new PostgreSQLDatabase(config.db);
-const orderRepo = new PostgresOrderRepository(database);
-const productRepo = new PostgresProductRepository(database);
-const emailService = new SendGridEmailService(config.sendgrid);
-
-const createOrderUseCase = new CreateOrderUseCase(
-  orderRepo,
-  productRepo,
-  emailService
-);
-
-const orderController = new OrderController(createOrderUseCase);
-const server = new ExpressServer(orderController);
-server.start(3000);
-```
-
-## Testing Strategy
-
-### Test Each Layer Independently
-```typescript
-// Domain layer test - no external dependencies
-describe('Order', () => {
-  it('should calculate total correctly', () => {
-    const order = new Order('customer123');
-    const product = new Product('prod1', 'Widget', 10.00);
-    order.addItem(product, 2);
-    
-    expect(order.calculateTotal()).toBe(20.00);
-  });
-});
-
-// Use case test - mock repositories
-describe('CreateOrderUseCase', () => {
-  it('should create order and send email', async () => {
-    const mockOrderRepo = { save: jest.fn() };
-    const mockEmailService = { sendOrderConfirmation: jest.fn() };
-    
-    const useCase = new CreateOrderUseCase(
-      mockOrderRepo,
-      mockProductRepo,
-      mockEmailService
-    );
-    
-    await useCase.execute(request);
-    
-    expect(mockOrderRepo.save).toHaveBeenCalled();
-    expect(mockEmailService.sendOrderConfirmation).toHaveBeenCalled();
-  });
-});
-```
-
-## Common Patterns
-
-### Repository Pattern
-Abstracts data persistence.
-
-```typescript
-// Domain defines interface
-interface Repository<T> {
-  findById(id: string): Promise<T>;
-  findAll(): Promise<T[]>;
-  save(entity: T): Promise<void>;
+// domain/repositories/IUserRepository.ts
+export interface IUserRepository {
+  save(user: User): Promise<void>;
+  findById(id: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
   delete(id: string): Promise<void>;
 }
 
-// Infrastructure implements
-class MongoUserRepository implements Repository<User> {
-  // MongoDB specific implementation
-}
-```
-
-### Presenter Pattern
-Formats use case output.
-
-```typescript
-interface Presenter<T> {
-  present(data: T): void;
+// domain/services/IEmailService.ts
+export interface IEmailService {
+  sendWelcome(email: string): Promise<void>;
+  sendPasswordReset(email: string, token: string): Promise<void>;
 }
 
-class JsonOrderPresenter implements Presenter<Order> {
-  present(order: Order): string {
-    return JSON.stringify({
-      id: order.id,
-      total: order.calculateTotal(),
-      items: order.items.map(item => ({
-        product: item.product.name,
-        quantity: item.quantity
-      }))
-    });
+// infrastructure/repositories/UserRepository.ts
+import { IUserRepository } from '../../domain/repositories/IUserRepository';
+
+export class UserRepository implements IUserRepository {
+  // 具体的な実装
+  async save(user: User): Promise<void> {
+    // MongoDB, PostgreSQL, etc.
   }
 }
 ```
 
-## Best Practices Checklist
+### 依存性注入
+```typescript
+// infrastructure/container.ts
+import { Container } from 'inversify';
 
-- [ ] Dependencies point inward only
-- [ ] Domain entities have no external dependencies
-- [ ] Use cases orchestrate but don't implement business logic
-- [ ] Interfaces defined in inner layers, implemented in outer
-- [ ] Database/framework details isolated to outer layer
-- [ ] Each layer is independently testable
-- [ ] Use dependency injection for wiring
-- [ ] Keep frameworks at arm's length
-- [ ] Defer decisions about databases, frameworks
-- [ ] Test business rules without UI, database, or external services
+const container = new Container();
+
+// インターフェースと実装のバインディング
+container.bind<IUserRepository>('IUserRepository').to(PostgresUserRepository);
+container.bind<IEmailService>('IEmailService').to(SendGridEmailService);
+container.bind<IPasswordHasher>('IPasswordHasher').to(BcryptPasswordHasher);
+
+// Use Case
+container.bind<CreateUserUseCase>(CreateUserUseCase).toSelf();
+
+// Controller
+container.bind<UserController>(UserController).toSelf();
+
+export { container };
+```
+
+## ディレクトリ構造
+
+### 推奨構造
+```
+src/
+├── domain/              # エンティティとビジネスルール
+│   ├── entities/
+│   │   ├── User.ts
+│   │   └── Order.ts
+│   ├── value-objects/
+│   │   ├── Email.ts
+│   │   └── Money.ts
+│   └── repositories/    # インターフェース定義
+│       └── IUserRepository.ts
+│
+├── application/         # ユースケース
+│   ├── use-cases/
+│   │   ├── CreateUserUseCase.ts
+│   │   └── AuthenticateUserUseCase.ts
+│   └── services/       # アプリケーションサービス
+│       └── IEmailService.ts
+│
+├── infrastructure/     # 外部システムとの統合
+│   ├── repositories/   # Repository実装
+│   │   └── PostgresUserRepository.ts
+│   ├── services/      # サービス実装
+│   │   └── SendGridEmailService.ts
+│   └── config/
+│       └── database.ts
+│
+└── presentation/      # UI層
+    ├── controllers/
+    │   └── UserController.ts
+    ├── middlewares/
+    └── routes/
+```
+
+## データフロー
+
+### リクエストからレスポンスまで
+```typescript
+// 1. Route定義
+router.post('/users', userController.create);
+
+// 2. Controller
+class UserController {
+  async create(req: Request, res: Response) {
+    // リクエストをUse Case用のDTOに変換
+    const createUserDto: CreateUserDto = {
+      email: req.body.email,
+      password: req.body.password,
+      name: req.body.name
+    };
+    
+    // Use Case実行
+    const result = await this.createUserUseCase.execute(createUserDto);
+    
+    // レスポンス用のViewModelに変換
+    const viewModel = UserViewModel.fromDomain(result);
+    
+    res.json(viewModel);
+  }
+}
+
+// 3. Use Case
+class CreateUserUseCase {
+  async execute(dto: CreateUserDto): Promise<User> {
+    // ビジネスルール検証
+    const existingUser = await this.userRepo.findByEmail(dto.email);
+    if (existingUser) {
+      throw new EmailAlreadyExistsError();
+    }
+    
+    // エンティティ作成
+    const user = User.create({
+      email: new Email(dto.email),
+      password: await Password.create(dto.password),
+      name: dto.name
+    });
+    
+    // 永続化
+    await this.userRepo.save(user);
+    
+    // イベント発行
+    await this.eventBus.publish(new UserCreatedEvent(user));
+    
+    return user;
+  }
+}
+```
+
+## テスト戦略
+
+### ユニットテスト
+```typescript
+// domain/entities/User.test.ts
+describe('User Entity', () => {
+  test('creates user with valid data', () => {
+    const user = User.create({
+      email: new Email('test@example.com'),
+      password: Password.fromHash('hashed'),
+      name: 'Test User'
+    });
+    
+    expect(user.email.value).toBe('test@example.com');
+  });
+  
+  test('throws error for invalid email', () => {
+    expect(() => {
+      User.create({
+        email: new Email('invalid'),
+        password: Password.fromHash('hashed'),
+        name: 'Test'
+      });
+    }).toThrow('Invalid email format');
+  });
+});
+
+// application/use-cases/CreateUserUseCase.test.ts
+describe('CreateUserUseCase', () => {
+  let useCase: CreateUserUseCase;
+  let mockUserRepo: jest.Mocked<IUserRepository>;
+  let mockEmailService: jest.Mocked<IEmailService>;
+  
+  beforeEach(() => {
+    mockUserRepo = createMockUserRepository();
+    mockEmailService = createMockEmailService();
+    useCase = new CreateUserUseCase(mockUserRepo, mockEmailService);
+  });
+  
+  test('creates user successfully', async () => {
+    mockUserRepo.findByEmail.mockResolvedValue(null);
+    
+    const result = await useCase.execute({
+      email: 'new@example.com',
+      password: 'SecurePass123!',
+      name: 'New User'
+    });
+    
+    expect(result).toBeDefined();
+    expect(mockUserRepo.save).toHaveBeenCalled();
+    expect(mockEmailService.sendWelcome).toHaveBeenCalled();
+  });
+});
+```
+
+## 実装のヒント
+
+### Value Objects
+```typescript
+// 不変で自己検証するValue Object
+export class Email {
+  private readonly _value: string;
+  
+  constructor(value: string) {
+    if (!this.isValid(value)) {
+      throw new Error('Invalid email format');
+    }
+    this._value = value.toLowerCase();
+  }
+  
+  get value(): string {
+    return this._value;
+  }
+  
+  equals(other: Email): boolean {
+    return this._value === other._value;
+  }
+  
+  private isValid(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+}
+```
+
+### Domain Events
+```typescript
+// domain/events/UserCreatedEvent.ts
+export class UserCreatedEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly email: string,
+    public readonly occurredAt: Date = new Date()
+  ) {}
+}
+
+// application/event-handlers/SendWelcomeEmailHandler.ts
+export class SendWelcomeEmailHandler {
+  constructor(private emailService: IEmailService) {}
+  
+  async handle(event: UserCreatedEvent): Promise<void> {
+    await this.emailService.sendWelcome(event.email);
+  }
+}
+```
+
+## チェックリスト
+- [ ] 依存性の方向が内向き
+- [ ] ビジネスロジックがドメイン層に集約
+- [ ] Use Caseが単一責任
+- [ ] インターフェースで抽象化
+- [ ] 依存性注入使用
+- [ ] Value Objects活用
+- [ ] ドメインイベント実装
+- [ ] 各層が独立してテスト可能
+- [ ] フレームワーク非依存

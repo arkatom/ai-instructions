@@ -1,10 +1,10 @@
-# Event-Driven Architecture
+# Event-Driven アーキテクチャ
 
-Event-driven system design patterns.
+イベント駆動システムの設計パターン。
 
-## Event Design
+## イベント設計
 
-### Event Structure
+### イベント構造
 ```typescript
 interface DomainEvent {
   id: string;
@@ -20,6 +20,7 @@ interface DomainEvent {
   };
 }
 
+// 具体的なイベント
 class OrderCreatedEvent implements DomainEvent {
   type = 'ORDER_CREATED';
   constructor(
@@ -65,8 +66,9 @@ class EventBus {
 }
 ```
 
-### Message Broker Integration
+### Message Broker統合
 ```typescript
+// Kafka Producer
 const { Kafka } = require('kafkajs');
 
 class KafkaEventPublisher {
@@ -92,6 +94,7 @@ class KafkaEventPublisher {
   }
 }
 
+// Kafka Consumer
 class KafkaEventConsumer {
   async subscribe(topics: string[], handler: EventHandler) {
     const consumer = this.kafka.consumer({ groupId: 'app-group' });
@@ -115,6 +118,7 @@ class EventStore {
   private events: DomainEvent[] = [];
   
   async append(event: DomainEvent) {
+    // イベントの永続化
     await this.db.events.create({
       data: {
         id: event.id,
@@ -146,7 +150,7 @@ class EventStore {
 }
 ```
 
-### Aggregate Reconstruction
+### Aggregate再構築
 ```typescript
 class Order {
   private id: string;
@@ -177,6 +181,12 @@ class Order {
         break;
     }
   }
+  
+  addItem(item: OrderItem) {
+    const event = new OrderItemAddedEvent(this.id, item);
+    this.apply(event);
+    this.uncommittedEvents.push(event);
+  }
 }
 ```
 
@@ -191,8 +201,12 @@ class CommandHandler {
   ) {}
   
   async handle(command: CreateOrderCommand) {
+    // ビジネスロジック実行
     const order = Order.create(command);
+    
+    // イベント永続化
     await this.eventStore.append(order.getUncommittedEvents());
+    
     return order.id;
   }
 }
@@ -223,13 +237,56 @@ class ReadModelProjection {
     }
   }
 }
+
+// Query Handler
+class QueryHandler {
+  async getOrders(customerId: string) {
+    return this.db.orderReadModel.findMany({
+      where: { customerId }
+    });
+  }
+}
 ```
 
-## Checklist
-- [ ] Event design clarified
-- [ ] Event Bus implemented
-- [ ] Message broker selected
-- [ ] Event Sourcing considered
-- [ ] CQRS implemented
-- [ ] Eventual consistency handled
-- [ ] Event ordering guaranteed
+## Eventual Consistency
+
+### Saga実装
+```typescript
+class OrderSaga {
+  constructor(private eventBus: EventBus) {
+    eventBus.subscribe('ORDER_CREATED', this.handleOrderCreated);
+    eventBus.subscribe('PAYMENT_PROCESSED', this.handlePaymentProcessed);
+    eventBus.subscribe('PAYMENT_FAILED', this.handlePaymentFailed);
+  }
+  
+  handleOrderCreated = async (event: OrderCreatedEvent) => {
+    // 支払い処理開始
+    await this.eventBus.publish(
+      new ProcessPaymentCommand(event.payload)
+    );
+  };
+  
+  handlePaymentProcessed = async (event: PaymentProcessedEvent) => {
+    // 注文確定
+    await this.eventBus.publish(
+      new ConfirmOrderCommand(event.orderId)
+    );
+  };
+  
+  handlePaymentFailed = async (event: PaymentFailedEvent) => {
+    // 注文キャンセル
+    await this.eventBus.publish(
+      new CancelOrderCommand(event.orderId)
+    );
+  };
+}
+```
+
+## チェックリスト
+- [ ] イベント設計明確化
+- [ ] Event Bus実装
+- [ ] メッセージブローカー選定
+- [ ] Event Sourcing検討
+- [ ] CQRS実装
+- [ ] 結果整合性対策
+- [ ] イベント順序保証

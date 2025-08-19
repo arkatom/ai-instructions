@@ -357,11 +357,7 @@ describe('CLI Deep Content Verification', () => {
       'instructions/methodologies/scrum.md',
       'instructions/methodologies/github-idd.md',
       'instructions/methodologies/implementation-analysis.md',
-      'instructions/workflows/github-flow.md',
       'instructions/workflows/git-complete.md',
-      'instructions/patterns/general/README.md',
-      'instructions/patterns/typescript/README.md',
-      'instructions/patterns/python/README.md',
       'instructions/note.md',
       'instructions/anytime.md'
     ];
@@ -789,11 +785,7 @@ describe('CLI Output Format Support', () => {
         'instructions/methodologies/scrum.md',
         'instructions/methodologies/tdd.md',
         'instructions/methodologies/implementation-analysis.md',
-        'instructions/patterns/general/README.md',
-        'instructions/patterns/python/README.md',
-        'instructions/patterns/typescript/README.md',
-        'instructions/workflows/github-flow.md',
-        'instructions/workflows/git-complete.md',
+                'instructions/workflows/git-complete.md',
         'instructions/note.md',
         'instructions/anytime.md'
       ] },

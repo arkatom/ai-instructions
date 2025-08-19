@@ -1,9 +1,9 @@
-# Node.js Backend Patterns
+# Node.jsバックエンドパターン
 
-## Project Structure
+## プロジェクト構造
 
-### Modular Architecture
-Organize code by feature, not by file type.
+### モジュラーアーキテクチャ
+ファイルタイプではなく機能別にコードを整理。
 
 ```
 src/
@@ -25,13 +25,13 @@ src/
 └── app.ts
 ```
 
-## Middleware Patterns
+## ミドルウェアパターン
 
-### Error Handling Middleware
-Centralized error handling.
+### エラーハンドリングミドルウェア
+集中エラー処理。
 
 ```typescript
-// Good
+// 良い例
 class AppError extends Error {
   constructor(
     public statusCode: number,
@@ -50,35 +50,35 @@ const errorHandler = (err: Error, req: Request, res: Response, next: NextFunctio
     });
   }
   
-  // Log unexpected errors
-  console.error('ERROR 💥', err);
+  // 予期しないエラーをログ
+  console.error('エラー 💥', err);
   res.status(500).json({
     status: 'error',
-    message: 'Something went wrong'
+    message: '問題が発生しました'
   });
 };
 
-// Usage
+// 使用例
 app.use(errorHandler);
 ```
 
-### Async Handler Wrapper
-Avoid try-catch in every route.
+### 非同期ハンドラーラッパー
+各ルートでtry-catchを避ける。
 
 ```typescript
-// Good
+// 良い例
 const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// Usage
+// 使用例
 router.get('/users/:id', asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
-  if (!user) throw new AppError(404, 'User not found');
+  if (!user) throw new AppError(404, 'ユーザーが見つかりません');
   res.json(user);
 }));
 
-// Bad - repetitive try-catch
+// 悪い例 - 繰り返しのtry-catch
 router.get('/users/:id', async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
@@ -89,13 +89,13 @@ router.get('/users/:id', async (req, res, next) => {
 });
 ```
 
-## Authentication & Security
+## 認証とセキュリティ
 
-### JWT with Refresh Tokens
-Secure token management.
+### リフレッシュトークン付きJWT
+安全なトークン管理。
 
 ```typescript
-// Good
+// 良い例
 class AuthService {
   generateTokens(userId: string) {
     const accessToken = jwt.sign(
@@ -117,7 +117,7 @@ class AuthService {
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     const tokens = this.generateTokens(decoded.userId);
     
-    // Store new refresh token in database
+    // 新しいリフレッシュトークンをデータベースに保存
     await RefreshToken.create({
       token: tokens.refreshToken,
       userId: decoded.userId
@@ -128,11 +128,11 @@ class AuthService {
 }
 ```
 
-### Security Headers
-Use helmet for security headers.
+### セキュリティヘッダー
+helmetを使用してセキュリティヘッダーを設定。
 
 ```typescript
-// Good
+// 良い例
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
@@ -143,20 +143,20 @@ app.use(cors({
 }));
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 100 // 各IPを15分あたり100リクエストに制限
 });
 
 app.use('/api', limiter);
 ```
 
-## Database Patterns
+## データベースパターン
 
-### Connection Pool Management
-Efficient database connections.
+### コネクションプール管理
+効率的なデータベース接続。
 
 ```typescript
-// Good - Single connection pool
+// 良い例 - 単一コネクションプール
 import { Pool } from 'pg';
 
 class Database {
@@ -178,17 +178,17 @@ class Database {
     const start = Date.now();
     const res = await this.pool.query(text, params);
     const duration = Date.now() - start;
-    console.log('Query executed', { text, duration, rows: res.rowCount });
+    console.log('クエリ実行', { text, duration, rows: res.rowCount });
     return res;
   }
 }
 ```
 
-### Repository Pattern
-Abstract database operations.
+### リポジトリパターン
+データベース操作を抽象化。
 
 ```typescript
-// Good
+// 良い例
 interface Repository<T> {
   findById(id: string): Promise<T | null>;
   findAll(filters?: any): Promise<T[]>;
@@ -216,13 +216,13 @@ class UserRepository implements Repository<User> {
 }
 ```
 
-## Validation
+## バリデーション
 
-### Schema Validation
-Use Joi or Zod for input validation.
+### スキーマバリデーション
+入力検証にJoiまたはZodを使用。
 
 ```typescript
-// Good - Zod validation
+// 良い例 - Zodバリデーション
 import { z } from 'zod';
 
 const createUserSchema = z.object({
@@ -244,20 +244,20 @@ const validateRequest = (schema: z.ZodSchema) => {
   };
 };
 
-// Usage
+// 使用例
 router.post('/users', 
   validateRequest(createUserSchema),
   asyncHandler(userController.create)
 );
 ```
 
-## Logging
+## ロギング
 
-### Structured Logging
-Use Winston or Pino for production logging.
+### 構造化ロギング
+本番環境ではWinstonまたはPinoを使用。
 
 ```typescript
-// Good
+// 良い例
 import winston from 'winston';
 
 const logger = winston.createLogger({
@@ -276,10 +276,10 @@ if (process.env.NODE_ENV !== 'production') {
   }));
 }
 
-// Usage with request context
+// リクエストコンテキストと共に使用
 app.use((req, res, next) => {
   req.requestId = crypto.randomUUID();
-  logger.info('Request received', {
+  logger.info('リクエスト受信', {
     requestId: req.requestId,
     method: req.method,
     url: req.url
@@ -288,17 +288,17 @@ app.use((req, res, next) => {
 });
 ```
 
-## Best Practices Checklist
+## ベストプラクティスチェックリスト
 
-- [ ] Use environment variables for configuration
-- [ ] Implement graceful shutdown
-- [ ] Use compression middleware
-- [ ] Implement health check endpoints
-- [ ] Use process manager (PM2) in production
-- [ ] Implement request validation
-- [ ] Use async/await instead of callbacks
-- [ ] Handle unhandled promise rejections
-- [ ] Use connection pooling for databases
-- [ ] Implement proper logging
-- [ ] Use rate limiting
-- [ ] Sanitize user inputs
+- [ ] 設定には環境変数を使用
+- [ ] グレースフルシャットダウンを実装
+- [ ] 圧縮ミドルウェアを使用
+- [ ] ヘルスチェックエンドポイントを実装
+- [ ] 本番環境ではプロセスマネージャー（PM2）を使用
+- [ ] リクエストバリデーションを実装
+- [ ] コールバックの代わりにasync/awaitを使用
+- [ ] 未処理のプロミス拒否を処理
+- [ ] データベースにはコネクションプーリングを使用
+- [ ] 適切なロギングを実装
+- [ ] レート制限を使用
+- [ ] ユーザー入力をサニタイズ

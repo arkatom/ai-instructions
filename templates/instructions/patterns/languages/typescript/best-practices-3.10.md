@@ -1,46 +1,11 @@
-# TypeScript 3.10+ Functional Programming Best Practices
+# TypeScript 3.10+ ベストプラクティス
 
-Purely functional programming patterns leveraging TypeScript 3.10 through 4.9 features with absolute functional programming compliance.
+TypeScript 3.10から4.9までの機能を活用した型安全プログラミングパターン。
 
-## 🚨 FUNCTIONAL PROGRAMMING MANDATE
+## 型安全性優先
 
-**ABSOLUTE REQUIREMENTS - NO EXCEPTIONS:**
-- All functions MUST be arrow functions
-- Functional programming is MANDATORY, not optional
-- Immutability is REQUIRED for all data structures
-- Pure functions with no side effects are MANDATORY
-- Composition over inheritance is ABSOLUTE
-
-## ❌ ABSOLUTELY FORBIDDEN
-
-The following practices are **COMPLETELY BANNED** and will result in immediate rejection:
-
-- ❌ **Function declarations** (`function name() {}`) - Use arrow functions ONLY
-- ❌ **`any` type** - Use `unknown` or proper typing
-- ❌ **Type assertions** (`as Type`) - Use type guards instead
-- ❌ **Classes** - Use functional factories with closures
-- ❌ **Mutable state** - Use immutable data structures
-- ❌ **Side effects in functions** - Keep functions pure
-- ❌ **Object-oriented patterns** - Use functional patterns only
-
-## 🔧 FUNCTIONAL PRINCIPLES
-
-### 1. Immutability First
-All data must be immutable. Never mutate existing data.
-
-### 2. Pure Functions Only
-Functions must be pure - same input always produces same output, no side effects.
-
-### 3. Function Composition
-Build complex operations by composing simple functions.
-
-### 4. Higher-Order Functions
-Use functions that take or return other functions.
-
-## Type Safety Priority
-
-### Strict Mode Configuration
-Ensure maximum type safety with functional patterns.
+### Strictモード設定
+最大限の型安全性を確保。
 
 ```typescript
 // tsconfig.json
@@ -58,58 +23,58 @@ Ensure maximum type safety with functional patterns.
 }
 ```
 
-### Functional Interface vs Type Usage
-Appropriate usage patterns with functional approach.
+### Interface vs Type
+適切な使い分けパターン。
 
 ```typescript
-// ✅ Prefer interfaces for immutable object structures
+// ✅ オブジェクト構造にはinterfaceを優先
 interface User {
-  readonly id: string;
-  readonly email: string;
-  readonly profile?: UserProfile;
+  id: string;
+  email: string;
+  profile?: UserProfile;
 }
 
 interface UserProfile {
-  readonly name: string;
-  readonly avatar?: string;
+  name: string;
+  avatar?: string;
 }
 
-// Functional interface extension
+// インターフェース拡張
 interface AdminUser extends User {
-  readonly permissions: readonly string[];
+  permissions: string[];
 }
 
-// ✅ Use type for unions, primitives, computed types
+// ✅ ユニオン、プリミティブ、計算型にtype使用
 type Status = 'pending' | 'active' | 'deleted';
 type ID = string | number;
-type UserWithStatus = User & { readonly status: Status };
+type UserWithStatus = User & { status: Status };
 ```
 
-## Functional Union Types and Type Guards
+## Union型と型ガード（3.10+構文）
 
-### Functional Union Type Utilization
-Improved Union types with pure functional patterns.
+### Union型の活用
+TypeScript 3.10+で導入された改良されたUnion型。
 
 ```typescript
-// ✅ Functional type safety with Union types
+// ✅ Union型での型安全性
 type Result<T> = 
-  | { readonly success: true; readonly data: T }
-  | { readonly success: false; readonly error: string };
+  | { success: true; data: T }
+  | { success: false; error: string };
 
-const handleResult = <T>(result: Result<T>): T => {
+function handleResult<T>(result: Result<T>): T | never {
   if (result.success) {
-    return result.data; // TypeScript recognizes data exists
+    return result.data; // TypeScriptはdataの存在を認識
   }
-  throw new Error(result.error); // TypeScript recognizes error exists
-};
+  throw new Error(result.error); // TypeScriptはerrorの存在を認識
+}
 
-// Functional discriminated unions
+// 判別可能ユニオン
 type Shape = 
-  | { readonly kind: 'circle'; readonly radius: number }
-  | { readonly kind: 'square'; readonly size: number }
-  | { readonly kind: 'rectangle'; readonly width: number; readonly height: number };
+  | { kind: 'circle'; radius: number }
+  | { kind: 'square'; size: number }
+  | { kind: 'rectangle'; width: number; height: number };
 
-const getArea = (shape: Shape): number => {
+function getArea(shape: Shape): number {
   switch (shape.kind) {
     case 'circle':
       return Math.PI * shape.radius ** 2;
@@ -117,18 +82,15 @@ const getArea = (shape: Shape): number => {
       return shape.size ** 2;
     case 'rectangle':
       return shape.width * shape.height;
-    default:
-      const _exhaustiveCheck: never = shape;
-      throw new Error(`Unhandled shape: ${_exhaustiveCheck}`);
   }
-};
+}
 ```
 
-### Functional Type Guard Patterns
-Type narrowing and runtime safety with pure functions.
+### Type Guardパターン
+型の絞り込みとランタイム安全性。
 
 ```typescript
-// ✅ Functional type guards
+// ✅ アロー関数によるtype guard
 const isString = (value: unknown): value is string => {
   return typeof value === 'string';
 };
@@ -139,118 +101,115 @@ const isUser = (value: unknown): value is User => {
     value !== null &&
     'id' in value &&
     'email' in value &&
-    isString((value as Record<string, unknown>).id) &&
-    isString((value as Record<string, unknown>).email)
+    isString((value as any).id) &&
+    isString((value as any).email)
   );
 };
 
-// Functional usage example
-const processUserData = (data: unknown): string => {
+// 使用例
+function processUserData(data: unknown): string {
   if (isUser(data)) {
-    return data.email; // Type-safe access
+    return data.email; // 型安全なアクセス
   }
-  throw new Error('Invalid user data');
-};
+  throw new Error('無効なユーザーデータ');
+}
 
-// Functional assertion functions (TS 3.7+)
-const assertIsUser = (value: unknown): asserts value is User => {
+// Assertion Functions（TS 3.7+）
+function assertIsUser(value: unknown): asserts value is User {
   if (!isUser(value)) {
-    throw new Error('Not user data');
+    throw new Error('ユーザーデータではありません');
   }
-};
+}
 
-const handleUserData = (data: unknown): void => {
+function handleUserData(data: unknown): void {
   assertIsUser(data);
-  console.log(data.email); // Type is confirmed after assertion
-};
+  console.log(data.email); // assertionの後は型が確定
+}
 ```
 
-## Functional Generics and Constraints
+## Generics and Constraints
 
-### Functional Generic Constraint Patterns
-Balance between flexibility and type safety with functional approach.
+### ジェネリック制約パターン
+柔軟性と型安全性のバランス。
 
 ```typescript
-// ✅ Functional keyof constraints
-const getProperty = <T, K extends keyof T>(obj: T, key: K): T[K] => {
+// ✅ keyof制約
+function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
   return obj[key];
-};
+}
 
 const user: User = { id: '1', email: 'test@example.com' };
-const email = getProperty(user, 'email'); // Type: string
+const email = getProperty(user, 'email'); // 型: string
 
-// Functional conditional type constraints
+// 条件付き型制約
 type NonNullable<T> = T extends null | undefined ? never : T;
 
-const processNonNull = <T>(value: NonNullable<T>): T => {
+function processNonNull<T>(value: NonNullable<T>): T {
   return value;
-};
+}
 
-// Functional mapped type utilization
+// マップ型の活用
 type Partial<T> = {
-  readonly [P in keyof T]?: T[P];
+  [P in keyof T]?: T[P];
 };
 
 type Required<T> = {
-  readonly [P in keyof T]-?: T[P];
+  [P in keyof T]-?: T[P];
 };
 
 type UserUpdate = Partial<User>;
 type RequiredUser = Required<User>;
 ```
 
-### Functional Utility Types
-Effective use of built-in utility types with functional patterns.
+### Utility Types
+組み込みユーティリティ型の効果的活用。
 
 ```typescript
 interface User {
-  readonly id: string;
-  readonly email: string;
-  readonly password: string;
-  readonly profile: UserProfile;
+  id: string;
+  email: string;
+  password: string;
+  profile: UserProfile;
 }
 
-// ✅ Functional utility type patterns
+// ✅ 有用なユーティリティ型パターン
 type PublicUser = Omit<User, 'password'>;
 type UserCredentials = Pick<User, 'email' | 'password'>;
 type UserUpdate = Partial<Omit<User, 'id'>>;
 
-// Functional Record type for type-safe maps
+// Record型での型安全なマップ
 type UserStatus = 'active' | 'inactive' | 'pending';
-type StatusConfig = Record<UserStatus, { readonly color: string; readonly label: string }>;
+type StatusConfig = Record<UserStatus, { color: string; label: string }>;
 
 const statusConfig: StatusConfig = {
-  active: { color: 'green', label: 'Active' },
-  inactive: { color: 'gray', label: 'Inactive' },
-  pending: { color: 'orange', label: 'Pending' }
-} as const;
+  active: { color: 'green', label: 'アクティブ' },
+  inactive: { color: 'gray', label: '非アクティブ' },
+  pending: { color: 'orange', label: '保留中' }
+};
 
-// Functional user factory
-const createUser = (email: string, name: string): User => ({
-  id: generateId(),
-  email,
-  password: '',
-  profile: { name }
-});
+// ReturnType, Parameters の活用
+function createUser(email: string, name: string): User {
+  return { id: generateId(), email, password: '', profile: { name } };
+}
 
 type CreateUserParams = Parameters<typeof createUser>; // [string, string]
 type UserCreationResult = ReturnType<typeof createUser>; // User
 ```
 
-## Functional Const Assertions (TS 3.4+)
+## Const Assertions（TS 3.4+）
 
-### Functional Literal Type Preservation
-Preserve types precisely with const assertion in functional patterns.
+### リテラル型の保持
+const assertionで型を正確に保持。
 
 ```typescript
-// ✅ Functional const assertion patterns
+// ✅ const assertion パターン
 const config = {
   api: 'https://api.example.com',
   timeout: 5000,
   retries: 3
 } as const;
 
-// Type: {
+// 型: {
 //   readonly api: "https://api.example.com";
 //   readonly timeout: 5000;
 //   readonly retries: 3;
@@ -259,67 +218,58 @@ const config = {
 const colors = ['red', 'green', 'blue'] as const;
 type Color = typeof colors[number]; // 'red' | 'green' | 'blue'
 
-// Functional const assertion in functions
-const getConfig = () => {
+// 関数でのconst assertion
+function getConfig() {
   return {
     environment: 'production',
     version: '1.0.0'
   } as const;
-};
+}
 
 type Config = ReturnType<typeof getConfig>;
-// Type: { readonly environment: "production"; readonly version: "1.0.0"; }
+// 型: { readonly environment: "production"; readonly version: "1.0.0"; }
 ```
 
-## Functional Template Literal Types (TS 4.1+)
+## Template Literal Types（TS 4.1+）
 
-### Functional String Literal Type Manipulation
-Type-safe string manipulation with template literal types using functional patterns.
+### 文字列リテラル型の操作
+テンプレートリテラル型による型安全な文字列操作。
 
 ```typescript
-// ✅ Functional Template Literal Types
+// ✅ Template Literal Types
 type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 type APIEndpoint = `/api/${string}`;
 type HTTPRequest = `${HTTPMethod} ${APIEndpoint}`;
 
-// Examples: 'GET /api/users', 'POST /api/posts', etc.
+// 例: 'GET /api/users', 'POST /api/posts' など
 
-// Functional dynamic property names
+// 動的プロパティ名
 type EventName = 'click' | 'hover' | 'focus';
 type EventHandlers = {
-  readonly [K in EventName as `on${Capitalize<K>}`]: (event: Event) => void;
+  [K in EventName as `on${Capitalize<K>}`]: (event: Event) => void;
 };
 
-// Result: { onClick: ..., onHover: ..., onFocus: ... }
+// 結果: { onClick: ..., onHover: ..., onFocus: ... }
 
-// Functional CSS-in-JS type-safe patterns
+// CSS-in-JS型安全パターン
 type CSSProperty = 'margin' | 'padding' | 'border';
 type CSSDirection = 'top' | 'right' | 'bottom' | 'left';
 type DirectionalCSS = `${CSSProperty}-${CSSDirection}`;
 
-const createStyles = (): Record<DirectionalCSS, string> => ({
+const styles: Record<DirectionalCSS, string> = {
   'margin-top': '10px',
   'margin-right': '5px',
-  'margin-bottom': '10px',
-  'margin-left': '5px',
-  'padding-top': '8px',
-  'padding-right': '8px',
-  'padding-bottom': '8px',
-  'padding-left': '8px',
-  'border-top': '1px solid',
-  'border-right': '1px solid',
-  'border-bottom': '1px solid',
-  'border-left': '1px solid'
-});
+  // ... 他のプロパティ
+} as any; // 簡略化
 ```
 
-## Functional Function Patterns
+## 関数型パターン
 
 ### Arrow Function Priority
-Exclusively use arrow functions for all function definitions.
+アロー関数を優先した関数定義。
 
 ```typescript
-// ✅ Functional arrow function patterns
+// ✅ アロー関数パターン
 const calculateDiscount = (price: number, rate: number): number => {
   return price * (1 - rate);
 };
@@ -327,16 +277,16 @@ const calculateDiscount = (price: number, rate: number): number => {
 const asyncFetchUser = async (id: string): Promise<User> => {
   const response = await fetch(`/api/users/${id}`);
   if (!response.ok) {
-    throw new Error(`Failed to fetch user ${id}`);
+    throw new Error(`ユーザー${id}の取得に失敗`);
   }
   return response.json();
 };
 
-// Functional higher-order function patterns
-const withLogging = <T extends readonly unknown[], R>(
+// 高階関数パターン
+const withLogging = <T extends any[], R>(
   fn: (...args: T) => R
 ) => (...args: T): R => {
-  console.log(`Calling function with args:`, args);
+  console.log(`Calling ${fn.name} with args:`, args);
   const result = fn(...args);
   console.log(`Result:`, result);
   return result;
@@ -345,171 +295,114 @@ const withLogging = <T extends readonly unknown[], R>(
 const loggedCalculateDiscount = withLogging(calculateDiscount);
 ```
 
-## Functional Error Handling
+## エラーハンドリング
 
-### Functional Type-Safe Error Handling
-Custom exceptions and type guards using functional patterns.
+### 型安全なエラー処理
+カスタム例外と型ガードの活用。
 
 ```typescript
-// ✅ Functional error handling
-type ValidationError = {
-  readonly type: 'ValidationError';
-  readonly field: string;
-  readonly message: string;
-};
+// ✅ 型安全なエラー処理
+class ValidationError extends Error {
+  constructor(public field: string, message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
 
-type NetworkError = {
-  readonly type: 'NetworkError';
-  readonly status: number;
-  readonly message: string;
-};
+class NetworkError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
 
-const createValidationError = (field: string, message: string): ValidationError => ({
-  type: 'ValidationError',
-  field,
-  message
-});
-
-const createNetworkError = (status: number, message: string): NetworkError => ({
-  type: 'NetworkError',
-  status,
-  message
-});
-
-// Functional error type guards
+// エラー型ガード
 const isValidationError = (error: unknown): error is ValidationError => {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'type' in error &&
-    (error as Record<string, unknown>).type === 'ValidationError'
-  );
+  return error instanceof ValidationError;
 };
 
 const isNetworkError = (error: unknown): error is NetworkError => {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'type' in error &&
-    (error as Record<string, unknown>).type === 'NetworkError'
-  );
+  return error instanceof NetworkError;
 };
 
-// Functional Result type pattern
+// 結果型パターン
 type Result<T, E = Error> = 
-  | { readonly success: true; readonly data: T }
-  | { readonly success: false; readonly error: E };
+  | { success: true; data: T }
+  | { success: false; error: E };
 
-const safeAsyncOperation = async (id: string): Promise<Result<User, ValidationError | NetworkError>> => {
+const safeAsyncOperation = async (id: string): Promise<Result<User>> => {
   try {
     const user = await fetchUser(id);
     return { success: true, data: user };
   } catch (error) {
-    if (error instanceof Error) {
-      return { 
-        success: false, 
-        error: createNetworkError(500, error.message)
-      };
-    }
     return { 
       success: false, 
-      error: createNetworkError(500, 'Unknown error')
+      error: error instanceof Error ? error : new Error('Unknown error')
     };
   }
 };
 ```
 
-## Functional Module Patterns
+## モジュールパターン
 
-### Named Exports Priority (Functional Rules)
-Prefer named exports as principle, allow default exports exceptionally.
+### Named Exports優先（現実的ルール）
+原則的にnamed exports、例外的にdefault exports。
 
 ```typescript
-// ✅ Principle: Functional named exports
+// ✅ 原則: Named exports
 export const UserService = {
-  create: (data: UserData): Promise<User> => createUserImpl(data),
-  update: (id: string, data: Partial<UserData>): Promise<User> => updateUserImpl(id, data),
-  delete: (id: string): Promise<void> => deleteUserImpl(id)
+  create: (data: UserData): Promise<User> => { /* ... */ },
+  update: (id: string, data: Partial<UserData>): Promise<User> => { /* ... */ },
+  delete: (id: string): Promise<void> => { /* ... */ }
 };
 
 export const validateEmail = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
-// ✅ Exception 1: Main entry points (App components, etc.)
-const Application = (config: AppConfig) => {
-  const start = (): void => {
-    // Implementation
-  };
-  
-  return { start };
-};
+// ✅ 例外1: メインエントリーポイント（Appコンポーネントなど）
+export default class Application {
+  constructor(private config: AppConfig) {}
+  start(): void { /* ... */ }
+}
 
-export default Application;
-
-// ✅ Exception 2: Single responsibility modules
+// ✅ 例外2: 単一責任モジュール
 // math-utils.ts
-const calculate = (operation: string, a: number, b: number): number => {
-  // Single primary functionality
-  switch (operation) {
-    case 'add': return a + b;
-    case 'subtract': return a - b;
-    case 'multiply': return a * b;
-    case 'divide': return a / b;
-    default: throw new Error(`Unknown operation: ${operation}`);
-  }
-};
+export default function calculate(operation: string, a: number, b: number): number {
+  // 単一の主要機能
+}
 
-export default calculate;
-
-// ✅ Functional barrel exports pattern
+// ✅ Barrel exports パターン
 // index.ts
 export { UserService } from './UserService';
 export { validateEmail, validatePassword } from './validators';
 export type { User, UserData } from './types';
 ```
 
-## TypeScript 3.10-4.9 Functional Programming Checklist
+## TypeScript 3.10-4.9 ベストプラクティスチェックリスト
 
-### Mandatory Functional Type Safety
-- [ ] Enable all strict mode settings
-- [ ] Complete elimination of `any` type usage (FORBIDDEN)
-- [ ] Zero type assertions (`as`) - use functional type guards only
-- [ ] Properly distinguish interface vs type usage
-- [ ] Use functional discriminated union patterns
+### 型安全性
+- [ ] Strictモード全設定有効化
+- [ ] Type assertion完全禁止（type guard使用）
+- [ ] `any`型使用禁止（`unknown`使用）
+- [ ] インターフェース・type適切使い分け
+- [ ] Union型で判別可能パターン使用
 
-### Functional Modern Features
-- [ ] Preserve literal types with functional const assertions
-- [ ] Manipulate string types with functional template literal types
-- [ ] Transform types with functional utility types
-- [ ] Define flexible types with functional conditional types
-- [ ] Manipulate object types with functional mapped types
+### モダン機能
+- [ ] Const assertionでリテラル型保持
+- [ ] Template literal typesで文字列型操作
+- [ ] Utility typesで型変換
+- [ ] Conditional typesで柔軟な型定義
+- [ ] Mapped typesでオブジェクト型操作
 
-### Pure Functional Functions & Modules
-- [ ] Complete elimination of function declarations (FORBIDDEN)
-- [ ] ALL functions are arrow functions (MANDATORY)
-- [ ] Prefer named exports, exceptional default exports
-- [ ] Ensure runtime safety with functional type guards
-- [ ] Balance flexibility and safety with functional generic constraints
+### 関数・モジュール
+- [ ] Function宣言禁止（アロー関数使用）
+- [ ] Named exports原則、例外的default exports
+- [ ] 型ガードでランタイム安全性確保
+- [ ] ジェネリック制約で柔軟性と安全性両立
 
-### Functional Code Quality
-- [ ] Add type annotations to ALL functions
-- [ ] Use functional error factories and type guards
-- [ ] Handle errors with functional Result patterns
-- [ ] Use ESLint TypeScript rules for functional programming
-- [ ] Ensure all data structures are immutable
-- [ ] Maintain pure functions with no side effects
-
-### Functional Performance
-- [ ] Design immutable types for optimal tree shaking
-- [ ] Use functional lazy evaluation patterns
-- [ ] Optimize through functional composition
-- [ ] Leverage const assertions for compile-time optimization
-
-### Functional Architecture
-- [ ] Replace all classes with functional factories
-- [ ] Use higher-order functions instead of inheritance
-- [ ] Implement functional dependency injection
-- [ ] Design purely functional modules and exports
-
-**Appropriate Score: 1/10** - This represents the absolute dedication to functional programming with zero tolerance for imperative or object-oriented patterns.
+### コード品質
+- [ ] すべての関数に型アノテーション
+- [ ] エラーに適切な型付け
+- [ ] 非同期処理でエラーハンドリング
+- [ ] ESLint TypeScript rulesの使用

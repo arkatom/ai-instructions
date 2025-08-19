@@ -1,10 +1,10 @@
-# FastAPI Patterns
+# FastAPI パターン
 
-High-performance async API patterns with FastAPI.
+高性能な非同期APIのためのFastAPIパターン。
 
-## Application Structure
+## 基本構造
 
-### Basic Setup
+### アプリケーション構成
 ```python
 from fastapi import FastAPI, Depends
 from pydantic import BaseModel
@@ -15,7 +15,7 @@ app = FastAPI(
     docs_url="/api/docs"
 )
 
-# Pydantic Models
+# Pydanticモデル
 class UserCreate(BaseModel):
     email: str
     name: str
@@ -28,15 +28,15 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Endpoints
+# エンドポイント
 @app.post("/users", response_model=UserResponse)
 async def create_user(user: UserCreate):
     return await user_service.create(user)
 ```
 
-## Dependency Injection
+## 依存性注入
 
-### Database Connection
+### データベース接続
 ```python
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,7 +49,7 @@ async def get_db() -> AsyncSession:
             await session.rollback()
             raise
 
-# Usage
+# 使用
 @app.get("/users/{user_id}")
 async def get_user(
     user_id: int,
@@ -58,7 +58,7 @@ async def get_user(
     return await user_repository.get(db, user_id)
 ```
 
-### Authentication
+### 認証
 ```python
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -73,15 +73,15 @@ async def get_current_user(
         raise HTTPException(status_code=401)
     return user
 
-# Protected endpoint
+# 保護されたエンドポイント
 @app.get("/profile")
 async def get_profile(user: User = Depends(get_current_user)):
     return user
 ```
 
-## Error Handling
+## エラーハンドリング
 
-### Custom Exceptions
+### カスタム例外
 ```python
 from fastapi import HTTPException
 
@@ -92,7 +92,7 @@ class UserNotFound(HTTPException):
             detail=f"User {user_id} not found"
         )
 
-# Exception handler
+# 例外ハンドラー
 @app.exception_handler(ValueError)
 async def value_error_handler(request, exc):
     return JSONResponse(
@@ -101,9 +101,9 @@ async def value_error_handler(request, exc):
     )
 ```
 
-## Validation
+## バリデーション
 
-### Pydantic Validators
+### Pydanticバリデーター
 ```python
 from pydantic import validator, EmailStr
 from typing import Optional
@@ -126,13 +126,14 @@ class UserModel(BaseModel):
         return v
 ```
 
-## Async Processing
+## 非同期処理
 
-### Background Tasks
+### バックグラウンドタスク
 ```python
 from fastapi import BackgroundTasks
 
 async def send_email(email: str, message: str):
+    # メール送信処理
     await email_service.send(email, message)
 
 @app.post("/notify")
@@ -144,12 +145,13 @@ async def notify_user(
     return {"message": "Notification queued"}
 ```
 
-### Concurrent Processing
+### 並行処理
 ```python
 import asyncio
 
 @app.get("/aggregate")
 async def get_aggregated_data():
+    # 並行実行
     results = await asyncio.gather(
         fetch_users(),
         fetch_orders(),
@@ -162,9 +164,9 @@ async def get_aggregated_data():
     }
 ```
 
-## Middleware
+## ミドルウェア
 
-### CORS Configuration
+### CORS設定
 ```python
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -177,7 +179,7 @@ app.add_middleware(
 )
 ```
 
-### Custom Middleware
+### カスタムミドルウェア
 ```python
 @app.middleware("http")
 async def add_process_time(request, call_next):
@@ -188,9 +190,9 @@ async def add_process_time(request, call_next):
     return response
 ```
 
-## Testing
+## テスト
 
-### Async Tests
+### 非同期テスト
 ```python
 import pytest
 from httpx import AsyncClient
@@ -206,11 +208,11 @@ async def test_create_user():
         assert response.json()["email"] == "test@example.com"
 ```
 
-## Checklist
-- [ ] Pydantic models defined
-- [ ] Dependency injection used
-- [ ] Error handling implemented
-- [ ] Validation configured
-- [ ] Async processing optimized
-- [ ] Middleware configured
-- [ ] Tests created
+## チェックリスト
+- [ ] Pydanticモデル定義
+- [ ] 依存性注入活用
+- [ ] 適切なエラーハンドリング
+- [ ] バリデーション実装
+- [ ] 非同期処理最適化
+- [ ] ミドルウェア設定
+- [ ] テスト作成

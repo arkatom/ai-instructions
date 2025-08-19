@@ -1,18 +1,18 @@
-# Agile/Scrum Patterns
+# Agile/Scrum パターン
 
-Agile development and Scrum framework patterns.
+アジャイル開発とスクラムフレームワークのパターン。
 
-## Scrum Framework
+## スクラムフレームワーク
 
-### Sprint Structure
+### スプリント構造
 ```yaml
 sprint:
-  duration: 2 weeks
+  duration: 2週間
   ceremonies:
     - sprint_planning: Day 1
-    - daily_standup: Daily 15min
-    - sprint_review: Last day
-    - retrospective: Last day
+    - daily_standup: 毎日15分
+    - sprint_review: 最終日
+    - retrospective: 最終日
   
   artifacts:
     - product_backlog
@@ -20,55 +20,55 @@ sprint:
     - increment
 ```
 
-### Roles and Responsibilities
+### ロールと責任
 ```yaml
 roles:
   product_owner:
-    - Product backlog management
-    - Priority decisions
-    - Stakeholder coordination
+    - プロダクトバックログ管理
+    - 優先順位決定
+    - ステークホルダー調整
   
   scrum_master:
-    - Process facilitation
-    - Impediment removal
-    - Team support
+    - プロセス促進
+    - 障害除去
+    - チーム支援
   
   development_team:
-    - Self-organizing
-    - Cross-functional
-    - Delivery responsibility
+    - 自己組織化
+    - クロスファンクショナル
+    - 実装責任
 ```
 
-## Backlog Management
+## バックログ管理
 
-### User Stories
+### ユーザーストーリー
 ```markdown
-# Template
+# テンプレート
 As a [role]
 I want [feature]
 So that [benefit]
 
-# Acceptance Criteria
-Given [precondition]
-When [action]
-Then [expected result]
+# 受け入れ条件
+Given [前提条件]
+When [アクション]
+Then [期待結果]
 
-# Example
-As a user
-I want to login with social media
-So that I can quickly create an account
+# 例
+As a ユーザー
+I want ソーシャルログインを使いたい
+So that 簡単にアカウント作成できる
 
-Given I'm on the login page
-When I click Google login
-Then I can login with my Google account
+Given ログインページにアクセス
+When Googleログインボタンをクリック
+Then Googleアカウントでログインできる
 ```
 
-### Story Point Estimation
+### ストーリーポイント見積もり
 ```typescript
-// Fibonacci sequence
+// フィボナッチ数列
 const storyPoints = [1, 2, 3, 5, 8, 13, 21];
 
-// Estimation criteria
+// 見積もり基準
 interface EstimationCriteria {
   complexity: 'low' | 'medium' | 'high';
   effort: 'small' | 'medium' | 'large';
@@ -76,7 +76,7 @@ interface EstimationCriteria {
   dependencies: number;
 }
 
-// Planning poker
+// プランニングポーカー
 const estimate = (criteria: EstimationCriteria): number => {
   let points = 1;
   
@@ -85,28 +85,29 @@ const estimate = (criteria: EstimationCriteria): number => {
   if (criteria.risk === 'high') points += 3;
   if (criteria.dependencies > 2) points += 3;
   
+  // 最も近いフィボナッチ数
   return storyPoints.find(p => p >= points) || 21;
 };
 ```
 
-## Sprint Execution
+## スプリント実行
 
-### Daily Standup
+### デイリースタンドアップ
 ```markdown
-## Three Questions
-1. What did I do yesterday?
-2. What will I do today?
-3. Are there any impediments?
+## 3つの質問
+1. 昨日何をしたか？
+2. 今日何をするか？
+3. 障害はあるか？
 
-## Anti-patterns to Avoid
-- ❌ Status reporting meeting
-- ❌ Problem-solving session
-- ❌ Exceeding 15 minutes
-- ✅ Synchronization and transparency
-- ✅ Early impediment detection
+## アンチパターン回避
+- ❌ ステータス報告会にしない
+- ❌ 問題解決の場にしない
+- ❌ 15分を超えない
+- ✅ 同期と透明性確保
+- ✅ 障害の早期発見
 ```
 
-### Burndown Chart
+### バーンダウンチャート
 ```typescript
 interface BurndownData {
   day: number;
@@ -135,33 +136,33 @@ const calculateBurndown = (
 
 ## Definition of Done
 
-### DoD Checklist
+### DoD チェックリスト
 ```yaml
 definition_of_done:
   code:
-    - Feature implemented
-    - Code reviewed
-    - Refactored
+    - 機能実装完了
+    - コードレビュー済み
+    - リファクタリング完了
   
   testing:
-    - Unit tests created
-    - Integration tests passed
-    - Acceptance tests passed
+    - ユニットテスト作成
+    - 統合テスト実行
+    - 受け入れテスト合格
   
   documentation:
-    - API docs updated
-    - User manual updated
-    - CHANGELOG updated
+    - APIドキュメント更新
+    - ユーザーマニュアル更新
+    - CHANGELOG記載
   
   deployment:
-    - Staged deployment
-    - Performance tested
-    - Security checked
+    - ステージング環境デプロイ
+    - パフォーマンステスト合格
+    - セキュリティチェック完了
 ```
 
-## Velocity Tracking
+## ベロシティ追跡
 
-### Velocity Calculation
+### ベロシティ計算
 ```typescript
 class VelocityTracker {
   private sprintVelocities: number[] = [];
@@ -182,25 +183,53 @@ class VelocityTracker {
 }
 ```
 
-## Retrospective
+## レトロスペクティブ
 
-### Retrospective Format
+### 振り返りフォーマット
 ```markdown
 ## Start - Stop - Continue
-- Start: Things to start doing
-- Stop: Things to stop doing
-- Continue: Things to keep doing
+- Start: 始めるべきこと
+- Stop: やめるべきこと
+- Continue: 続けるべきこと
 
 ## 4Ls
-- Liked: What went well
-- Learned: What was learned
-- Lacked: What was missing
-- Longed for: What is desired
+- Liked: 良かったこと
+- Learned: 学んだこと
+- Lacked: 不足していたこと
+- Longed for: 望むこと
 ```
 
-## Kanban Integration
+### アクションアイテム
+```typescript
+interface ActionItem {
+  id: string;
+  description: string;
+  owner: string;
+  dueDate: Date;
+  status: 'pending' | 'in-progress' | 'completed';
+}
 
-### WIP Limits
+class RetrospectiveActions {
+  private actions: ActionItem[] = [];
+  
+  addAction(action: Omit<ActionItem, 'id' | 'status'>) {
+    this.actions.push({
+      ...action,
+      id: generateId(),
+      status: 'pending'
+    });
+  }
+  
+  trackProgress(): void {
+    const completed = this.actions.filter(a => a.status === 'completed');
+    console.log(`Progress: ${completed.length}/${this.actions.length}`);
+  }
+}
+```
+
+## カンバンとの統合
+
+### WIP制限
 ```typescript
 interface KanbanColumn {
   name: string;
@@ -220,11 +249,11 @@ const kanbanBoard: KanbanColumn[] = [
 ];
 ```
 
-## Checklist
-- [ ] Sprint planning conducted
-- [ ] Daily standups held
-- [ ] Backlog prioritized
-- [ ] DoD clarified
-- [ ] Velocity tracked
-- [ ] Retrospectives conducted
-- [ ] Continuous improvement
+## チェックリスト
+- [ ] スプリント計画実施
+- [ ] デイリースタンドアップ
+- [ ] バックログ優先順位付け
+- [ ] DoD明確化
+- [ ] ベロシティ追跡
+- [ ] レトロスペクティブ実施
+- [ ] 継続的改善

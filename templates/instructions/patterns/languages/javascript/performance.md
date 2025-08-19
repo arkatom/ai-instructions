@@ -1,12 +1,12 @@
-# JavaScript Performance Optimization
+# JavaScriptパフォーマンス最適化
 
-## Code Optimization
+## コード最適化
 
-### Avoid Memory Leaks
-Prevent memory issues by proper cleanup.
+### メモリリークの回避
+適切なクリーンアップでメモリ問題を防止。
 
 ```javascript
-// Good
+// 良い例
 class EventManager {
   constructor() {
     this.listeners = new WeakMap();
@@ -25,21 +25,21 @@ class EventManager {
   }
   
   cleanup() {
-    // WeakMap allows garbage collection
+    // WeakMapはガベージコレクションを許可
   }
 }
 
-// Bad - memory leak
+// 悪い例 - メモリリーク
 const handlers = [];
 element.addEventListener('click', handler);
-handlers.push(handler); // Never cleaned up
+handlers.push(handler); // クリーンアップされない
 ```
 
-### Debounce and Throttle
-Control function execution frequency.
+### デバウンスとスロットル
+関数実行頻度を制御。
 
 ```javascript
-// Good - Debounce for search input
+// 良い例 - 検索入力のデバウンス
 const debounce = (fn, delay) => {
   let timeoutId;
   return (...args) => {
@@ -53,7 +53,7 @@ const search = debounce(async (query) => {
   displayResults(results);
 }, 300);
 
-// Throttle for scroll events
+// スクロールイベントのスロットル
 const throttle = (fn, limit) => {
   let inThrottle;
   return (...args) => {
@@ -70,13 +70,13 @@ const handleScroll = throttle(() => {
 }, 100);
 ```
 
-## React Performance
+## Reactパフォーマンス
 
-### Memoization
-Prevent unnecessary re-renders and recalculations.
+### メモ化
+不要な再レンダリングと再計算を防止。
 
 ```javascript
-// Good
+// 良い例
 import { memo, useMemo, useCallback } from 'react';
 
 const ExpensiveList = memo(({ items, onItemClick }) => {
@@ -94,7 +94,7 @@ const ExpensiveList = memo(({ items, onItemClick }) => {
   ));
 });
 
-// Bad - recreates on every render
+// 悪い例 - 毎回再作成
 const ExpensiveList = ({ items, onItemClick }) => {
   const sortedItems = items.sort((a, b) => b.priority - a.priority);
   
@@ -108,11 +108,11 @@ const ExpensiveList = ({ items, onItemClick }) => {
 };
 ```
 
-### Virtualization
-Render only visible items for large lists.
+### 仮想化
+大規模リストで表示項目のみレンダリング。
 
 ```javascript
-// Good - React Window
+// 良い例 - React Window
 import { FixedSizeList } from 'react-window';
 
 const VirtualList = ({ items }) => {
@@ -134,7 +134,7 @@ const VirtualList = ({ items }) => {
   );
 };
 
-// Bad - rendering 10000 items
+// 悪い例 - 10000項目をレンダリング
 const List = ({ items }) => (
   <div>
     {items.map(item => <Item key={item.id} {...item} />)}
@@ -142,16 +142,16 @@ const List = ({ items }) => (
 );
 ```
 
-## Bundle Optimization
+## バンドル最適化
 
-### Code Splitting
-Load code only when needed.
+### コード分割
+必要な時のみコードを読み込み。
 
 ```javascript
-// Good - Dynamic imports
+// 良い例 - 動的インポート
 const loadHeavyComponent = () => import('./HeavyComponent');
 
-// Route-based splitting
+// ルートベースの分割
 const routes = [
   {
     path: '/dashboard',
@@ -163,25 +163,25 @@ const routes = [
   }
 ];
 
-// Conditional loading
+// 条件付き読み込み
 if (userWantsAdvancedFeatures) {
   const { AdvancedEditor } = await import('./AdvancedEditor');
   renderEditor(AdvancedEditor);
 }
 ```
 
-### Tree Shaking
-Remove unused code from bundles.
+### ツリーシェイキング
+未使用コードをバンドルから削除。
 
 ```javascript
-// Good - Named exports for tree shaking
+// 良い例 - ツリーシェイキング用の名前付きエクスポート
 export { formatDate } from './formatters';
 export { validateEmail } from './validators';
 
-// Import only what's needed
+// 必要なものだけインポート
 import { formatDate } from './utils';
 
-// Bad - Default export of everything
+// 悪い例 - すべてのデフォルトエクスポート
 export default {
   formatDate,
   formatTime,
@@ -189,16 +189,16 @@ export default {
   validatePhone
 };
 
-import utils from './utils'; // Imports everything
+import utils from './utils'; // すべてインポート
 ```
 
-## Async Operations
+## 非同期操作
 
-### Batch API Calls
-Reduce network overhead.
+### APIコールのバッチ処理
+ネットワークオーバーヘッドを削減。
 
 ```javascript
-// Good - Batch requests
+// 良い例 - バッチリクエスト
 class BatchLoader {
   constructor(batchFn, delay = 10) {
     this.batchFn = batchFn;
@@ -233,11 +233,11 @@ class BatchLoader {
 const userLoader = new BatchLoader(ids => fetchUsers(ids));
 ```
 
-### Request Cancellation
-Cancel outdated requests.
+### リクエストキャンセル
+古いリクエストをキャンセル。
 
 ```javascript
-// Good
+// 良い例
 const fetchWithCancel = (url) => {
   const controller = new AbortController();
   
@@ -249,7 +249,7 @@ const fetchWithCancel = (url) => {
   return promise;
 };
 
-// Usage in React
+// Reactでの使用
 useEffect(() => {
   const request = fetchWithCancel('/api/data');
   
@@ -263,13 +263,13 @@ useEffect(() => {
 }, []);
 ```
 
-## Caching Strategies
+## キャッシュ戦略
 
-### Memoization Cache
-Cache expensive computations.
+### メモ化キャッシュ
+高コストな計算をキャッシュ。
 
 ```javascript
-// Good
+// 良い例
 const memoize = (fn) => {
   const cache = new Map();
   
@@ -283,7 +283,7 @@ const memoize = (fn) => {
     const result = fn(...args);
     cache.set(key, result);
     
-    // LRU cache - limit size
+    // LRUキャッシュ - サイズ制限
     if (cache.size > 100) {
       const firstKey = cache.keys().next().value;
       cache.delete(firstKey);
@@ -294,34 +294,34 @@ const memoize = (fn) => {
 };
 
 const expensiveCalculation = memoize((n) => {
-  // Complex calculation
+  // 複雑な計算
   return fibonacci(n);
 });
 ```
 
-### Service Worker Cache
-Cache assets and API responses.
+### Service Workerキャッシュ
+アセットとAPIレスポンスをキャッシュ。
 
 ```javascript
-// Good - Cache strategy
+// 良い例 - キャッシュ戦略
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response => {
-      // Cache hit - return response
+      // キャッシュヒット - レスポンスを返す
       if (response) {
         return response;
       }
       
-      // Clone the request
+      // リクエストをクローン
       const fetchRequest = event.request.clone();
       
       return fetch(fetchRequest).then(response => {
-        // Check valid response
+        // 有効なレスポンスを確認
         if (!response || response.status !== 200) {
           return response;
         }
         
-        // Clone the response
+        // レスポンスをクローン
         const responseToCache = response.clone();
         
         caches.open('v1').then(cache => {
@@ -335,13 +335,13 @@ self.addEventListener('fetch', event => {
 });
 ```
 
-## DOM Optimization
+## DOM最適化
 
-### Batch DOM Updates
-Minimize reflows and repaints.
+### DOM更新のバッチ処理
+リフローとリペイントを最小化。
 
 ```javascript
-// Good - Document fragment
+// 良い例 - ドキュメントフラグメント
 const fragment = document.createDocumentFragment();
 items.forEach(item => {
   const li = document.createElement('li');
@@ -350,7 +350,7 @@ items.forEach(item => {
 });
 list.appendChild(fragment);
 
-// Use requestAnimationFrame
+// requestAnimationFrameを使用
 const updatePositions = () => {
   requestAnimationFrame(() => {
     elements.forEach(el => {
@@ -359,21 +359,21 @@ const updatePositions = () => {
   });
 };
 
-// Bad - Multiple reflows
+// 悪い例 - 複数のリフロー
 items.forEach(item => {
   const li = document.createElement('li');
   li.textContent = item.name;
-  list.appendChild(li); // Triggers reflow each time
+  list.appendChild(li); // 毎回リフローをトリガー
 });
 ```
 
 ## Web Workers
 
-### Offload Heavy Computations
-Run expensive operations in background.
+### 重い計算をオフロード
+バックグラウンドで高コストな操作を実行。
 
 ```javascript
-// Good - Worker for heavy processing
+// 良い例 - 重い処理用のWorker
 // worker.js
 self.addEventListener('message', (e) => {
   const { data, type } = e.data;
@@ -396,17 +396,17 @@ worker.addEventListener('message', (e) => {
 });
 ```
 
-## Best Practices Checklist
+## ベストプラクティスチェックリスト
 
-- [ ] Use production builds (minified, optimized)
-- [ ] Enable gzip/brotli compression
-- [ ] Implement lazy loading for images and components
-- [ ] Use CDN for static assets
-- [ ] Optimize images (WebP, responsive sizes)
-- [ ] Minimize bundle size with tree shaking
-- [ ] Implement code splitting
-- [ ] Cache API responses appropriately
-- [ ] Debounce/throttle expensive operations
-- [ ] Use Web Workers for heavy computations
-- [ ] Monitor performance with Lighthouse
-- [ ] Set performance budgets
+- [ ] プロダクションビルドを使用（圧縮、最適化）
+- [ ] gzip/brotli圧縮を有効化
+- [ ] 画像とコンポーネントの遅延読み込みを実装
+- [ ] 静的アセットにCDNを使用
+- [ ] 画像を最適化（WebP、レスポンシブサイズ）
+- [ ] ツリーシェイキングでバンドルサイズを最小化
+- [ ] コード分割を実装
+- [ ] APIレスポンスを適切にキャッシュ
+- [ ] 高コストな操作をデバウンス/スロットル
+- [ ] 重い計算にはWeb Workersを使用
+- [ ] Lighthouseでパフォーマンスを監視
+- [ ] パフォーマンス予算を設定

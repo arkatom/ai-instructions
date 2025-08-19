@@ -1,39 +1,39 @@
-# JavaScript Testing Patterns
+# JavaScriptテストパターン
 
-## Unit Testing with Jest
+## Jestによるユニットテスト
 
-### Basic Test Structure
-Organize tests clearly and consistently.
+### 基本的なテスト構造
+テストを明確かつ一貫して整理。
 
 ```javascript
-// Good
+// 良い例
 describe('Calculator', () => {
   describe('add', () => {
-    it('should add two positive numbers', () => {
+    it('正の数を2つ加算する', () => {
       expect(add(2, 3)).toBe(5);
     });
     
-    it('should handle negative numbers', () => {
+    it('負の数を処理する', () => {
       expect(add(-1, -1)).toBe(-2);
     });
     
-    it('should return NaN for non-numeric inputs', () => {
+    it('数値以外の入力にはNaNを返す', () => {
       expect(add('a', 'b')).toBeNaN();
     });
   });
 });
 
-// Test naming: should + expected behavior + condition
-it('should throw error when dividing by zero', () => {
-  expect(() => divide(10, 0)).toThrow('Division by zero');
+// テスト命名: should + 期待される動作 + 条件
+it('ゼロ除算でエラーをスローする', () => {
+  expect(() => divide(10, 0)).toThrow('ゼロ除算');
 });
 ```
 
-### Mocking
-Isolate units and control dependencies.
+### モック
+ユニットを分離し依存関係を制御。
 
 ```javascript
-// Good - Mock external dependencies
+// 良い例 - 外部依存をモック
 jest.mock('./api');
 import { fetchUser } from './api';
 
@@ -42,7 +42,7 @@ describe('UserService', () => {
     jest.clearAllMocks();
   });
   
-  it('should fetch and transform user data', async () => {
+  it('ユーザーデータを取得して変換する', async () => {
     const mockUser = { id: 1, name: 'Alice' };
     fetchUser.mockResolvedValue(mockUser);
     
@@ -57,30 +57,30 @@ describe('UserService', () => {
   });
 });
 
-// Spy on existing methods
+// 既存メソッドをスパイ
 const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 ```
 
-## React Testing
+## Reactテスト
 
-### Component Testing
-Test components with React Testing Library.
+### コンポーネントテスト
+React Testing Libraryでコンポーネントをテスト。
 
 ```javascript
-// Good - Test user behavior, not implementation
+// 良い例 - 実装ではなくユーザー動作をテスト
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 describe('LoginForm', () => {
-  it('should submit form with valid credentials', async () => {
+  it('有効な認証情報でフォームを送信する', async () => {
     const handleSubmit = jest.fn();
     render(<LoginForm onSubmit={handleSubmit} />);
     
     const user = userEvent.setup();
     
-    await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'password123');
-    await user.click(screen.getByRole('button', { name: /login/i }));
+    await user.type(screen.getByLabelText(/メール/i), 'user@example.com');
+    await user.type(screen.getByLabelText(/パスワード/i), 'password123');
+    await user.click(screen.getByRole('button', { name: /ログイン/i }));
     
     await waitFor(() => {
       expect(handleSubmit).toHaveBeenCalledWith({
@@ -90,26 +90,26 @@ describe('LoginForm', () => {
     });
   });
   
-  it('should show error for invalid email', async () => {
+  it('無効なメールでエラーを表示する', async () => {
     render(<LoginForm />);
     
-    const emailInput = screen.getByLabelText(/email/i);
+    const emailInput = screen.getByLabelText(/メール/i);
     fireEvent.blur(emailInput);
     
-    expect(await screen.findByText(/invalid email/i)).toBeInTheDocument();
+    expect(await screen.findByText(/無効なメール/i)).toBeInTheDocument();
   });
 });
 ```
 
-### Custom Hooks Testing
-Test hooks in isolation.
+### カスタムフックテスト
+フックを単独でテスト。
 
 ```javascript
-// Good
+// 良い例
 import { renderHook, act } from '@testing-library/react';
 
 describe('useCounter', () => {
-  it('should increment counter', () => {
+  it('カウンターをインクリメントする', () => {
     const { result } = renderHook(() => useCounter());
     
     expect(result.current.count).toBe(0);
@@ -121,7 +121,7 @@ describe('useCounter', () => {
     expect(result.current.count).toBe(1);
   });
   
-  it('should reset to initial value', () => {
+  it('初期値にリセットする', () => {
     const { result } = renderHook(() => useCounter(10));
     
     act(() => {
@@ -134,19 +134,19 @@ describe('useCounter', () => {
 });
 ```
 
-## API Testing
+## APIテスト
 
-### Mocking HTTP Requests
-Test API calls without real network requests.
+### HTTPリクエストのモック
+実際のネットワークリクエストなしでAPIコールをテスト。
 
 ```javascript
-// Good - MSW for API mocking
+// 良い例 - MSWでAPIモック
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 
 const server = setupServer(
   rest.get('/api/users/:id', (req, res, ctx) => {
-    return res(ctx.json({ id: req.params.id, name: 'Test User' }));
+    return res(ctx.json({ id: req.params.id, name: 'テストユーザー' }));
   }),
   
   rest.post('/api/users', (req, res, ctx) => {
@@ -158,19 +158,19 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-it('should fetch user data', async () => {
+it('ユーザーデータを取得する', async () => {
   const user = await fetchUser(1);
-  expect(user).toEqual({ id: '1', name: 'Test User' });
+  expect(user).toEqual({ id: '1', name: 'テストユーザー' });
 });
 ```
 
-## Integration Testing
+## 統合テスト
 
-### Database Testing
-Test with real database interactions.
+### データベーステスト
+実際のデータベース操作でテスト。
 
 ```javascript
-// Good - Use test database
+// 良い例 - テストデータベースを使用
 describe('UserRepository', () => {
   let db;
   
@@ -186,7 +186,7 @@ describe('UserRepository', () => {
     await db.clean();
   });
   
-  it('should create and retrieve user', async () => {
+  it('ユーザーを作成して取得する', async () => {
     const repo = new UserRepository(db);
     
     const created = await repo.create({
@@ -204,17 +204,17 @@ describe('UserRepository', () => {
 });
 ```
 
-## E2E Testing
+## E2Eテスト
 
-### Playwright/Cypress Tests
-Test complete user flows.
+### Playwright/Cypressテスト
+完全なユーザーフローをテスト。
 
 ```javascript
-// Good - Playwright example
+// 良い例 - Playwrightの例
 import { test, expect } from '@playwright/test';
 
-test.describe('User Registration', () => {
-  test('should complete registration flow', async ({ page }) => {
+test.describe('ユーザー登録', () => {
+  test('登録フローを完了する', async ({ page }) => {
     await page.goto('/register');
     
     await page.fill('[name="email"]', 'newuser@example.com');
@@ -224,27 +224,27 @@ test.describe('User Registration', () => {
     await page.click('button[type="submit"]');
     
     await expect(page).toHaveURL('/dashboard');
-    await expect(page.locator('h1')).toContainText('Welcome');
+    await expect(page.locator('h1')).toContainText('ようこそ');
   });
   
-  test('should handle validation errors', async ({ page }) => {
+  test('バリデーションエラーを処理する', async ({ page }) => {
     await page.goto('/register');
     
     await page.fill('[name="email"]', 'invalid-email');
     await page.click('button[type="submit"]');
     
-    await expect(page.locator('.error')).toContainText('Invalid email');
+    await expect(page.locator('.error')).toContainText('無効なメール');
   });
 });
 ```
 
-## Test Utilities
+## テストユーティリティ
 
-### Test Data Factories
-Generate consistent test data.
+### テストデータファクトリー
+一貫したテストデータを生成。
 
 ```javascript
-// Good
+// 良い例
 const createUser = (overrides = {}) => ({
   id: faker.datatype.uuid(),
   name: faker.name.fullName(),
@@ -261,60 +261,60 @@ const createPost = (overrides = {}) => ({
   ...overrides
 });
 
-// Usage
-it('should display user posts', () => {
+// 使用例
+it('ユーザーの投稿を表示する', () => {
   const user = createUser();
   const posts = Array.from({ length: 5 }, () => 
     createPost({ authorId: user.id })
   );
   
-  // Test logic...
+  // テストロジック...
 });
 ```
 
-### Custom Matchers
-Create domain-specific assertions.
+### カスタムマッチャー
+ドメイン固有のアサーションを作成。
 
 ```javascript
-// Good
+// 良い例
 expect.extend({
   toBeWithinRange(received, floor, ceiling) {
     const pass = received >= floor && received <= ceiling;
     return {
       pass,
       message: () => 
-        `expected ${received} to be within range ${floor} - ${ceiling}`
+        `${received}が範囲${floor} - ${ceiling}内にあることを期待`
     };
   }
 });
 
-// Usage
-it('should generate random number in range', () => {
+// 使用例
+it('範囲内の乱数を生成する', () => {
   const result = randomInRange(1, 10);
   expect(result).toBeWithinRange(1, 10);
 });
 ```
 
-## Performance Testing
+## パフォーマンステスト
 
-### Benchmark Tests
-Measure and assert performance.
+### ベンチマークテスト
+パフォーマンスを測定してアサート。
 
 ```javascript
-// Good
-describe('Performance', () => {
-  it('should process large dataset within time limit', () => {
+// 良い例
+describe('パフォーマンス', () => {
+  it('時間制限内に大規模データセットを処理する', () => {
     const largeArray = Array.from({ length: 10000 }, (_, i) => i);
     
     const start = performance.now();
     const result = processArray(largeArray);
     const duration = performance.now() - start;
     
-    expect(duration).toBeLessThan(100); // 100ms limit
+    expect(duration).toBeLessThan(100); // 100ms制限
     expect(result).toHaveLength(10000);
   });
   
-  it('should not exceed memory limit', () => {
+  it('メモリ制限を超えない', () => {
     const initialMemory = process.memoryUsage().heapUsed;
     
     processLargeData();
@@ -322,22 +322,22 @@ describe('Performance', () => {
     const finalMemory = process.memoryUsage().heapUsed;
     const memoryIncrease = (finalMemory - initialMemory) / 1024 / 1024;
     
-    expect(memoryIncrease).toBeLessThan(50); // 50MB limit
+    expect(memoryIncrease).toBeLessThan(50); // 50MB制限
   });
 });
 ```
 
-## Best Practices Checklist
+## ベストプラクティスチェックリスト
 
-- [ ] Write tests before or alongside code (TDD/BDD)
-- [ ] Test behavior, not implementation details
-- [ ] Use descriptive test names
-- [ ] Keep tests independent and isolated
-- [ ] Mock external dependencies
-- [ ] Use test data factories
-- [ ] Clean up after tests (teardown)
-- [ ] Test edge cases and error scenarios
-- [ ] Maintain high code coverage (80%+)
-- [ ] Run tests in CI/CD pipeline
-- [ ] Use snapshot testing sparingly
-- [ ] Keep tests fast and deterministic
+- [ ] コードの前または並行してテストを書く（TDD/BDD）
+- [ ] 実装詳細ではなく動作をテスト
+- [ ] 説明的なテスト名を使用
+- [ ] テストを独立して分離
+- [ ] 外部依存をモック
+- [ ] テストデータファクトリーを使用
+- [ ] テスト後のクリーンアップ（teardown）
+- [ ] エッジケースとエラーシナリオをテスト
+- [ ] 高いコードカバレッジを維持（80%以上）
+- [ ] CI/CDパイプラインでテストを実行
+- [ ] スナップショットテストは控えめに使用
+- [ ] テストを高速で決定的に保つ

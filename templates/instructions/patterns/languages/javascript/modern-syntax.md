@@ -1,69 +1,69 @@
-# JavaScript Modern Syntax
+# JavaScriptモダン構文
 
-## Destructuring
+## 分割代入
 
-### Object Destructuring
-Extract values from objects concisely.
+### オブジェクト分割代入
+オブジェクトから値を簡潔に抽出。
 
 ```javascript
-// Good
-const { name, age, city = 'Unknown' } = user;
+// 良い例
+const { name, age, city = '不明' } = user;
 
-// Nested destructuring
+// ネストした分割代入
 const { address: { street, zip } } = user;
 
-// Rename variables
+// 変数名の変更
 const { name: userName, age: userAge } = user;
 
-// Bad
+// 悪い例
 const name = user.name;
 const age = user.age;
-const city = user.city || 'Unknown';
+const city = user.city || '不明';
 ```
 
-### Array Destructuring
-Extract values from arrays.
+### 配列分割代入
+配列から値を抽出。
 
 ```javascript
-// Good
+// 良い例
 const [first, second, ...rest] = numbers;
 
-// Skip elements
+// 要素をスキップ
 const [, , third] = numbers;
 
-// Swap variables
+// 変数の入れ替え
 [a, b] = [b, a];
 
-// Default values
+// デフォルト値
 const [x = 0, y = 0] = coordinates || [];
 ```
 
-## Spread and Rest
+## スプレッドとレスト
 
-### Spread Operator
-Expand iterables into individual elements.
+### スプレッド演算子
+反復可能オブジェクトを個別の要素に展開。
 
 ```javascript
-// Good - Array operations
+// 良い例 - 配列操作
 const combined = [...arr1, ...arr2];
 const copy = [...original];
 const max = Math.max(...numbers);
 
-// Object operations
+// オブジェクト操作
 const merged = { ...defaults, ...userConfig };
 const clone = { ...original };
-const updated = { ...user, name: 'New Name' };
+const updated = { ...user, name: '新しい名前' };
 
-// Bad
+// 悪い例
 const combined = arr1.concat(arr2);
 const merged = Object.assign({}, defaults, userConfig);
 ```
 
-### Rest Parameters
-Collect remaining elements.
+### レストパラメータ
+残りの要素を収集。
 
 ```javascript
-// Good
+// 良い例
 function sum(...numbers) {
   return numbers.reduce((a, b) => a + b, 0);
 }
@@ -73,22 +73,22 @@ function logInfo(message, ...details) {
   details.forEach(detail => console.log('  -', detail));
 }
 
-// Bad
+// 悪い例
 function sum() {
   return Array.from(arguments).reduce((a, b) => a + b, 0);
 }
 ```
 
-## Template Literals
+## テンプレートリテラル
 
-### String Interpolation
-Build strings dynamically.
+### 文字列補間
+動的に文字列を構築。
 
 ```javascript
-// Good
-const message = `Hello, ${name}! You have ${count} new messages.`;
+// 良い例
+const message = `こんにちは、${name}さん！${count}件の新着メッセージがあります。`;
 
-// Multi-line strings
+// 複数行文字列
 const html = `
   <div class="card">
     <h2>${title}</h2>
@@ -96,88 +96,88 @@ const html = `
   </div>
 `;
 
-// Tagged templates
+// タグ付きテンプレート
 const sql = SQL`SELECT * FROM users WHERE id = ${userId}`;
 
-// Bad
-const message = 'Hello, ' + name + '! You have ' + count + ' new messages.';
+// 悪い例
+const message = 'こんにちは、' + name + 'さん！' + count + '件の新着メッセージがあります。';
 ```
 
-## Arrow Functions
+## アロー関数
 
-### Concise Syntax
-Shorter function expressions.
+### 簡潔な構文
+短い関数式。
 
 ```javascript
-// Good
+// 良い例
 const double = x => x * 2;
 const add = (a, b) => a + b;
-const getUser = id => ({ id, name: 'User' });
+const getUser = id => ({ id, name: 'ユーザー' });
 
-// Implicit return with object
+// オブジェクトの暗黙的リターン
 const createUser = (name, age) => ({ name, age });
 
-// With array methods
+// 配列メソッドと共に
 const squared = numbers.map(n => n ** 2);
 const adults = users.filter(user => user.age >= 18);
 
-// Bad
+// 悪い例
 const double = function(x) {
   return x * 2;
 };
 ```
 
-## Optional Chaining & Nullish Coalescing
+## オプショナルチェーンとNull合体演算子
 
-### Optional Chaining
-Safely access nested properties.
+### オプショナルチェーン
+ネストしたプロパティに安全にアクセス。
 
 ```javascript
-// Good
+// 良い例
 const street = user?.address?.street;
 const result = obj?.method?.();
 const item = arr?.[index];
 
-// With default values
-const name = user?.profile?.name ?? 'Anonymous';
+// デフォルト値と共に
+const name = user?.profile?.name ?? '匿名';
 
-// Bad
+// 悪い例
 const street = user && user.address && user.address.street;
 ```
 
-### Nullish Coalescing
-Default values for null/undefined only.
+### Null合体演算子
+null/undefinedの場合のみデフォルト値を設定。
 
 ```javascript
-// Good
+// 良い例
 const port = config.port ?? 3000;
 const enabled = settings.enabled ?? true;
 const count = value ?? 0;
 
-// Different from OR operator
-const value1 = 0 || 5;        // 5 (0 is falsy)
-const value2 = 0 ?? 5;        // 0 (0 is not null/undefined)
+// OR演算子との違い
+const value1 = 0 || 5;        // 5 (0はfalsy)
+const value2 = 0 ?? 5;        // 0 (0はnull/undefinedではない)
 ```
 
 ## Async/Await
 
-### Promise Handling
-Clean asynchronous code.
+### Promise処理
+クリーンな非同期コード。
 
 ```javascript
-// Good
+// 良い例
 async function fetchUserData(id) {
   try {
     const user = await fetchUser(id);
     const posts = await fetchPosts(user.id);
     return { user, posts };
   } catch (error) {
-    console.error('Failed to fetch data:', error);
+    console.error('データ取得失敗:', error);
     throw error;
   }
 }
 
-// Parallel execution
+// 並列実行
 async function fetchAll() {
   const [users, posts, comments] = await Promise.all([
     fetchUsers(),
@@ -187,215 +187,101 @@ async function fetchAll() {
   return { users, posts, comments };
 }
 
-// Bad - promise chains
+// 悪い例 - Promiseチェーン
 function fetchUserData(id) {
   return fetchUser(id)
     .then(user => fetchPosts(user.id)
       .then(posts => ({ user, posts })))
     .catch(error => {
-      console.error('Failed:', error);
+      console.error('失敗:', error);
       throw error;
     });
 }
 ```
 
-## ES Modules
+## ESモジュール
 
 ### Import/Export
-Modern module syntax - always use named exports.
+モダンなモジュール構文 - 常に名前付きエクスポートを使用。
 
 ```javascript
-// ✅ Good - Named exports only
+// ✅ 良い例 - 名前付きエクスポートのみ
 export const API_URL = 'https://api.example.com';
 export function fetchData() { /* ... */ }
 export class User { /* ... */ }
 export class App { /* ... */ }
 
-// ❌ Bad - Default export (PROHIBITED)
+// ❌ 悪い例 - デフォルトエクスポート（禁止）
 // export default class App { /* ... */ }
 
-// Import named exports
+// 名前付きエクスポートをインポート
 import { App } from './App';
 import { API_URL, fetchData } from './api';
 import * as utils from './utils';
 
-// Dynamic imports
+// 動的インポート
 const module = await import('./heavy-module');
 
-// Barrel exports for clean imports
+// クリーンなインポートのためのbarrel exports
 export { UserService } from './UserService';
 export { AuthService } from './AuthService';
 export { validateEmail, validatePhone } from './validators';
 ```
 
-## Map, Set, and WeakMap
+## Map、Set、WeakMap
 
-### Modern Collections
-Built-in data structures.
+### モダンなコレクション
+組み込みデータ構造。
 
 ```javascript
-// Map - key-value pairs with any key type
+// Map - 任意のキータイプでのキー値ペア
 const map = new Map();
-map.set(obj, 'value');
+map.set(obj, '値');
 map.set('key', 42);
 map.has(obj);  // true
-map.get(obj);  // 'value'
+map.get(obj);  // '値'
 
-// Set - unique values
+// Set - ユニークな値
 const unique = new Set([1, 2, 2, 3, 3]);
 console.log([...unique]);  // [1, 2, 3]
 
-// WeakMap - garbage-collectable keys
+// WeakMap - ガベージコレクション可能なキー
 const cache = new WeakMap();
 cache.set(element, computeExpensive(element));
 ```
 
-## Proxy and Reflect
+## ProxyとReflect
 
-### Metaprogramming
-Intercept and customize operations.
+### メタプログラミング
+操作をインターセプトしてカスタマイズ。
 
 ```javascript
-// Reactive object
+// リアクティブオブジェクト
 const reactive = obj => new Proxy(obj, {
   set(target, key, value) {
-    console.log(`Setting ${key} to ${value}`);
+    console.log(`${key}を${value}に設定`);
     return Reflect.set(target, key, value);
   },
   get(target, key) {
-    console.log(`Getting ${key}`);
+    console.log(`${key}を取得`);
     return Reflect.get(target, key);
   }
 });
 
 const state = reactive({ count: 0 });
-state.count++;  // Logs: Getting count, Setting count to 1
+state.count++;  // ログ: countを取得、countを1に設定
 ```
 
-## Security Best Practices
+## ベストプラクティスチェックリスト
 
-✅ Secure data handling:
-```javascript
-// Good - input sanitization
-export const sanitizeInput = (input) => {
-  if (typeof input !== 'string') {
-    throw new Error('Input must be a string');
-  }
-  
-  return input
-    .trim()
-    .replace(/[<>]/g, '') // Remove potential HTML tags
-    .substring(0, 1000);   // Limit length
-};
-
-// Good - secure object creation
-export const createSecureUser = ({ name, email, role = 'user' }) => {
-  // Validate inputs
-  if (!name || typeof name !== 'string') {
-    throw new Error('Valid name required');
-  }
-  
-  if (!email || !email.includes('@')) {
-    throw new Error('Valid email required');
-  }
-  
-  return {
-    name: sanitizeInput(name),
-    email: email.toLowerCase().trim(),
-    role: ['user', 'admin'].includes(role) ? role : 'user'
-  };
-};
-
-// Bad - unvalidated input
-export default function createUser(data) {
-  return {
-    name: data.name,    // No validation
-    email: data.email,  // No sanitization
-    role: data.role     // No role validation
-  };
-}
-```
-
-✅ Secure API calls:
-```javascript
-// Good - secure fetch with timeout and validation
-export const secureApiCall = async (url, options = {}) => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-  
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    clearTimeout(timeoutId);
-    
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout');
-    }
-    
-    throw error;
-  }
-};
-
-// Bad - insecure fetch
-async function fetchData(url) {
-  const response = await fetch(url); // No timeout, no validation
-  return response.json(); // No error handling
-}
-```
-
-✅ Prevent code injection:
-```javascript
-// Good - safe dynamic imports
-export const loadModule = async (moduleName) => {
-  const allowedModules = ['userModule', 'adminModule', 'guestModule'];
-  
-  if (!allowedModules.includes(moduleName)) {
-    throw new Error('Module not allowed');
-  }
-  
-  try {
-    const module = await import(`./modules/${moduleName}.js`);
-    return module;
-  } catch (error) {
-    throw new Error(`Failed to load module: ${moduleName}`);
-  }
-};
-
-// Bad - dynamic imports without validation
-const loadModule = async (name) => {
-  return await import(`./modules/${name}.js`); // Code injection risk
-};
-```
-
-## Best Practices Checklist
-
-- [ ] Use const by default, let when needed, avoid var
-- [ ] Prefer arrow functions for callbacks
-- [ ] Use template literals for string concatenation
-- [ ] Apply destructuring for cleaner code
-- [ ] Use spread operator instead of Object.assign/Array.concat
-- [ ] Apply optional chaining for safe property access
-- [ ] Use nullish coalescing for defaults
-- [ ] Prefer async/await over promise chains
-- [ ] Use ES modules (import/export)
-- [ ] Apply array methods (map, filter, reduce) over loops
-- [ ] Use for...of for iteration, not for...in
-- [ ] Validate and sanitize all user inputs
-- [ ] Use secure API call patterns with timeouts
-- [ ] Prevent code injection with allowlists
-- [ ] Always use named exports (no default exports)
+- [ ] デフォルトでconst、必要時にlet、varは避ける
+- [ ] コールバックにはアロー関数を優先
+- [ ] 文字列連結にはテンプレートリテラルを使用
+- [ ] よりクリーンなコードのため分割代入を適用
+- [ ] Object.assign/Array.concatの代わりにスプレッド演算子を使用
+- [ ] 安全なプロパティアクセスにはオプショナルチェーンを適用
+- [ ] デフォルト値にはNull合体演算子を使用
+- [ ] Promiseチェーンよりasync/awaitを優先
+- [ ] ESモジュール（import/export）を使用
+- [ ] ループより配列メソッド（map、filter、reduce）を適用
+- [ ] 反復にはfor...inではなくfor...ofを使用

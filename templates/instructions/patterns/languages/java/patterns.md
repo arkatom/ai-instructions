@@ -1,10 +1,10 @@
-# Java Patterns
+# Java パターン
 
-Modern patterns for enterprise Java applications.
+エンタープライズJavaアプリケーションのモダンパターン。
 
-## Basic Structure
+## 基本構造
 
-### Project Layout (Spring Boot)
+### プロジェクト構成（Spring Boot）
 ```
 src/
 ├── main/
@@ -21,7 +21,7 @@ src/
 └── test/
 ```
 
-## Spring Boot Patterns
+## Spring Boot パターン
 
 ### REST Controller
 ```java
@@ -74,7 +74,7 @@ public class UserService {
 }
 ```
 
-## Data Access
+## データアクセス
 
 ### JPA Repository
 ```java
@@ -111,27 +111,27 @@ public interface UserRepository extends JpaRepository<User, Long> {
 }
 ```
 
-## Functional Programming
+## 関数型プログラミング
 
 ### Stream API
 ```java
-// Filter and map
+// フィルタリングとマッピング
 List<String> activeUserEmails = users.stream()
     .filter(User::isActive)
     .map(User::getEmail)
     .collect(Collectors.toList());
 
-// Grouping
+// グループ化
 Map<Department, List<User>> byDepartment = users.stream()
     .collect(Collectors.groupingBy(User::getDepartment));
 
-// Reduce
+// リデュース
 BigDecimal total = orders.stream()
     .map(Order::getAmount)
     .reduce(BigDecimal.ZERO, BigDecimal::add);
 ```
 
-### Optional Usage
+### Optional使用
 ```java
 public String getUserEmail(Long id) {
     return userRepository.findById(id)
@@ -141,9 +141,9 @@ public String getUserEmail(Long id) {
 }
 ```
 
-## Exception Handling
+## 例外処理
 
-### Global Exception Handler
+### グローバル例外ハンドラー
 ```java
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -169,7 +169,7 @@ public class GlobalExceptionHandler {
 }
 ```
 
-## Async Processing
+## 非同期処理
 
 ### CompletableFuture
 ```java
@@ -192,7 +192,7 @@ public class AsyncService {
 }
 ```
 
-## Validation
+## バリデーション
 
 ### Bean Validation
 ```java
@@ -213,7 +213,7 @@ public class CreateUserDto {
     private Integer age;
 }
 
-// Custom validator
+// カスタムバリデーター
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = UniqueEmailValidator.class)
@@ -224,9 +224,9 @@ public @interface UniqueEmail {
 }
 ```
 
-## Testing
+## テスト
 
-### JUnit 5 and Mockito
+### JUnit 5とMockito
 ```java
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -279,12 +279,12 @@ class UserControllerIntegrationTest {
 }
 ```
 
-## Checklist
-- [ ] Spring Boot utilized
-- [ ] Layer architecture clear
-- [ ] JPA properly used
-- [ ] Stream API utilized
-- [ ] Optional used
-- [ ] Exception handling unified
+## チェックリスト
+- [ ] Spring Boot活用
+- [ ] 層構造明確化
+- [ ] JPA適切使用
+- [ ] Stream API活用
+- [ ] Optional使用
+- [ ] 例外処理統一
 - [ ] Bean Validation
-- [ ] Comprehensive tests
+- [ ] 包括的テスト

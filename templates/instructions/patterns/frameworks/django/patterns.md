@@ -1,12 +1,12 @@
-# Django Patterns
+# Djangoパターン
 
-## MVT Architecture
+## MVTアーキテクチャ
 
-### Model-View-Template Structure
-Organize Django components properly.
+### Model-View-Template構造
+Djangoコンポーネントを適切に整理。
 
 ```python
-# models.py - Data layer
+# models.py - データレイヤー
 from django.db import models
 from django.contrib.auth import get_user_model
 
@@ -28,7 +28,7 @@ class Article(models.Model):
     def __str__(self):
         return self.title
 
-# views.py - Business logic
+# views.py - ビジネスロジック
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView, DetailView
 
@@ -41,7 +41,7 @@ class ArticleListView(ListView):
     def get_queryset(self):
         return Article.objects.select_related('author').prefetch_related('tags')
 
-# urls.py - URL routing
+# urls.py - URLルーティング
 from django.urls import path
 
 app_name = 'articles'
@@ -51,41 +51,41 @@ urlpatterns = [
 ]
 ```
 
-## Query Optimization
+## クエリ最適化
 
-### Select and Prefetch Related
-Minimize database queries.
+### Select RelatedとPrefetch Related
+データベースクエリを最小化。
 
 ```python
-# Good - Avoid N+1 queries
+# 良い例 - N+1クエリを回避
 articles = Article.objects.select_related('author').prefetch_related('comments')
 
-# Use only() for specific fields
+# 特定フィールドのみ取得
 articles = Article.objects.only('title', 'slug', 'published_at')
 
-# Use defer() to exclude heavy fields
+# 重いフィールドを除外
 articles = Article.objects.defer('content')
 
-# Annotate with aggregations
+# 集計でアノテート
 from django.db.models import Count, Avg
 articles = Article.objects.annotate(
     comment_count=Count('comments'),
     avg_rating=Avg('ratings__score')
 )
 
-# Bad - N+1 query problem
+# 悪い例 - N+1クエリ問題
 articles = Article.objects.all()
 for article in articles:
-    print(article.author.name)  # Hits DB each time
+    print(article.author.name)  # 毎回DBにアクセス
 ```
 
-## Custom Managers and QuerySets
+## カスタムマネージャーとQuerySet
 
-### Encapsulate Business Logic
-Keep query logic in models.
+### ビジネスロジックのカプセル化
+クエリロジックをモデルに保持。
 
 ```python
-# Good
+# 良い例
 class PublishedManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(status='published')
@@ -108,14 +108,14 @@ class Article(models.Model):
     objects = ArticleQuerySet.as_manager()
     published = PublishedManager()
     
-    # Usage
+    # 使用例
     recent_articles = Article.objects.published().recent(30)
 ```
 
-## Form Handling
+## フォーム処理
 
-### ModelForms and Validation
-Handle form data properly.
+### ModelFormとバリデーション
+フォームデータを適切に処理。
 
 ```python
 # forms.py
@@ -133,7 +133,7 @@ class ArticleForm(forms.ModelForm):
     def clean_title(self):
         title = self.cleaned_data['title']
         if Article.objects.filter(title__iexact=title).exists():
-            raise ValidationError('Article with this title already exists')
+            raise ValidationError('このタイトルの記事は既に存在します')
         return title
     
     def save(self, commit=True):
@@ -153,14 +153,14 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
     
     def form_valid(self, form):
         form.instance.author = self.request.user
-        messages.success(self.request, 'Article created successfully')
+        messages.success(self.request, '記事が正常に作成されました')
         return super().form_valid(form)
 ```
 
-## Authentication and Permissions
+## 認証と権限
 
-### Custom User Model and Permissions
-Implement proper access control.
+### カスタムユーザーモデルと権限
+適切なアクセス制御を実装。
 
 ```python
 # models.py
@@ -183,7 +183,7 @@ class ArticleUpdateView(UserPassesTestMixin, UpdateView):
         article = self.get_object()
         return self.request.user.can_edit_article(article)
 
-# Custom permission
+# カスタム権限
 from django.contrib.auth.decorators import user_passes_test
 
 def is_author(user):
@@ -191,53 +191,53 @@ def is_author(user):
 
 @user_passes_test(is_author)
 def create_article(request):
-    # View logic
+    # ビューロジック
 ```
 
-## Middleware
+## ミドルウェア
 
-### Custom Middleware
-Process requests globally.
+### カスタムミドルウェア
+リクエストをグローバルに処理。
 
 ```python
-# Good
+# 良い例
 class RequestLoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
     
     def __call__(self, request):
-        # Before view
+        # ビュー前
         request.request_id = str(uuid.uuid4())
         
         response = self.get_response(request)
         
-        # After view
-        logger.info(f'Request {request.request_id} completed with status {response.status_code}')
+        # ビュー後
+        logger.info(f'リクエスト {request.request_id} がステータス {response.status_code} で完了')
         
         return response
     
     def process_exception(self, request, exception):
-        logger.error(f'Request {request.request_id} failed: {exception}')
+        logger.error(f'リクエスト {request.request_id} が失敗: {exception}')
         return None
 ```
 
-## Caching
+## キャッシング
 
-### Cache Strategies
-Optimize performance with caching.
+### キャッシュ戦略
+キャッシングでパフォーマンスを最適化。
 
 ```python
-# Good - Multiple cache strategies
+# 良い例 - 複数のキャッシュ戦略
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.core.cache.utils import make_template_fragment_key
 
-# View caching
-@cache_page(60 * 15)  # Cache for 15 minutes
+# ビューキャッシング
+@cache_page(60 * 15)  # 15分間キャッシュ
 def article_list(request):
-    # View logic
+    # ビューロジック
 
-# Low-level caching
+# 低レベルキャッシング
 def get_popular_articles():
     key = 'popular_articles'
     articles = cache.get(key)
@@ -246,29 +246,29 @@ def get_popular_articles():
         articles = Article.objects.annotate(
             view_count=Count('views')
         ).order_by('-view_count')[:10]
-        cache.set(key, articles, 60 * 30)  # 30 minutes
+        cache.set(key, articles, 60 * 30)  # 30分
     
     return articles
 
-# Template fragment caching
+# テンプレートフラグメントキャッシング
 {% load cache %}
 {% cache 500 article_list request.user.id %}
-    <!-- Expensive template rendering -->
+    <!-- 高コストなテンプレートレンダリング -->
 {% endcache %}
 
-# Invalidate cache on save
+# 保存時にキャッシュを無効化
 def save(self, *args, **kwargs):
     super().save(*args, **kwargs)
     cache.delete('popular_articles')
 ```
 
-## Signals
+## シグナル
 
-### Decoupled Event Handling
-React to model events.
+### 疎結合イベント処理
+モデルイベントに反応。
 
 ```python
-# Good - Use signals for decoupled logic
+# 良い例 - 疎結合ロジックにシグナルを使用
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 
@@ -280,26 +280,26 @@ def create_article_slug(sender, instance, created, **kwargs):
 
 @receiver(pre_delete, sender=Article)
 def cleanup_article_files(sender, instance, **kwargs):
-    # Clean up associated files
+    # 関連ファイルをクリーンアップ
     if instance.featured_image:
         instance.featured_image.delete(save=False)
 
-# Custom signals
+# カスタムシグナル
 from django.dispatch import Signal
 
 article_viewed = Signal()
 
-# In view
+# ビュー内
 article_viewed.send(sender=Article, article=article, user=request.user)
 ```
 
-## Testing
+## テスト
 
-### Comprehensive Test Coverage
-Test models, views, and forms.
+### 包括的なテストカバレッジ
+モデル、ビュー、フォームをテスト。
 
 ```python
-# Good
+# 良い例
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -313,11 +313,11 @@ class ArticleModelTest(TestCase):
     
     def test_article_creation(self):
         article = Article.objects.create(
-            title='Test Article',
+            title='テスト記事',
             author=self.user,
-            content='Test content'
+            content='テストコンテンツ'
         )
-        self.assertEqual(str(article), 'Test Article')
+        self.assertEqual(str(article), 'テスト記事')
         self.assertTrue(article.slug)
 
 class ArticleViewTest(TestCase):
@@ -334,20 +334,20 @@ class ArticleViewTest(TestCase):
     
     def test_article_create_requires_login(self):
         response = self.client.get(reverse('articles:create'))
-        self.assertEqual(response.status_code, 302)  # Redirect to login
+        self.assertEqual(response.status_code, 302)  # ログインへリダイレクト
 ```
 
-## Best Practices Checklist
+## ベストプラクティスチェックリスト
 
-- [ ] Use custom User model from the start
-- [ ] Implement proper database indexes
-- [ ] Use select_related and prefetch_related
-- [ ] Create custom managers for business logic
-- [ ] Use Django's built-in security features
-- [ ] Implement proper caching strategy
-- [ ] Write comprehensive tests
-- [ ] Use environment variables for settings
-- [ ] Handle static files properly
-- [ ] Use Django Debug Toolbar in development
-- [ ] Implement proper logging
-- [ ] Use database transactions appropriately
+- [ ] 最初からカスタムUserモデルを使用
+- [ ] 適切なデータベースインデックスを実装
+- [ ] select_relatedとprefetch_relatedを使用
+- [ ] ビジネスロジック用のカスタムマネージャーを作成
+- [ ] Djangoの組み込みセキュリティ機能を使用
+- [ ] 適切なキャッシング戦略を実装
+- [ ] 包括的なテストを記述
+- [ ] 設定に環境変数を使用
+- [ ] 静的ファイルを適切に処理
+- [ ] 開発環境でDjango Debug Toolbarを使用
+- [ ] 適切なロギングを実装
+- [ ] データベーストランザクションを適切に使用

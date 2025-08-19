@@ -1,166 +1,110 @@
-# TypeScript 5.0+ Functional Programming Best Practices
+# TypeScript 5.0+ ベストプラクティス
 
-Purely functional programming patterns leveraging TypeScript 5.0+ latest features with absolute functional programming compliance.
+TypeScript 5.0以降の最新機能を活用した次世代型安全プログラミングパターン。
 
-## 🚨 FUNCTIONAL PROGRAMMING MANDATE
+## TypeScript 5.0+ 最新機能
 
-**ABSOLUTE REQUIREMENTS - NO EXCEPTIONS:**
-- All functions MUST be arrow functions
-- Functional programming is MANDATORY, not optional
-- Immutability is REQUIRED for all data structures
-- Pure functions with no side effects are MANDATORY
-- Composition over inheritance is ABSOLUTE
-
-## ❌ ABSOLUTELY FORBIDDEN
-
-The following practices are **COMPLETELY BANNED** and will result in immediate rejection:
-
-- ❌ **Function declarations** (`function name() {}`) - Use arrow functions ONLY
-- ❌ **`any` type** - Use `unknown` or proper typing
-- ❌ **Type assertions** (`as Type`) - Use type guards instead
-- ❌ **Classes** - Use functional factories with closures
-- ❌ **Mutable state** - Use immutable data structures
-- ❌ **Side effects in functions** - Keep functions pure
-- ❌ **Object-oriented patterns** - Use functional patterns only
-
-## 🔧 FUNCTIONAL PRINCIPLES
-
-### 1. Immutability First
-All data must be immutable. Never mutate existing data.
-
-### 2. Pure Functions Only
-Functions must be pure - same input always produces same output, no side effects.
-
-### 3. Function Composition
-Build complex operations by composing simple functions.
-
-### 4. Higher-Order Functions
-Use functions that take or return other functions.
-
-## TypeScript 5.0+ Functional Features
-
-### Functional Resource Management
-Replace `using` declarations with functional resource management patterns.
+### using宣言 - 自動リソース管理
+`using`によるリソースの自動クリーンアップ。
 
 ```typescript
-// ✅ Functional resource management
-type Resource<T> = {
-  readonly value: T;
-  readonly dispose: () => Promise<void>;
-};
-
-const createDatabaseConnection = (connectionString: string): Resource<{
-  readonly query: (sql: string) => Promise<readonly unknown[]>;
-}> => {
-  const connection = createConnection(connectionString);
+// ✅ using宣言パターン
+class DatabaseConnection implements Disposable {
+  private connection: Connection;
   
-  return {
-    value: {
-      query: (sql: string) => connection.query(sql)
-    },
-    dispose: async () => {
-      await connection.close();
-      console.log('Database connection closed');
-    }
-  };
-};
-
-const withResource = async <T, R>(
-  resource: Resource<T>,
-  operation: (value: T) => Promise<R>
-): Promise<R> => {
-  try {
-    return await operation(resource.value);
-  } finally {
-    await resource.dispose();
+  constructor(connectionString: string) {
+    this.connection = createConnection(connectionString);
   }
-};
-
-// Usage
-const performDatabaseOperation = async (): Promise<readonly unknown[]> => {
-  const dbResource = createDatabaseConnection('postgresql://localhost/appdb');
   
-  return withResource(dbResource, async (db) => {
-    return db.query('SELECT * FROM users');
-  });
-};
-
-// Async file handling
-const createAsyncFileHandler = (path: string): Resource<{
-  readonly read: () => Promise<string>;
-}> => {
-  const fileHandle = fs.open(path, 'r');
+  [Symbol.dispose](): void {
+    this.connection.close();
+    console.log('データベース接続を閉じました');
+  }
   
-  return {
-    value: {
-      read: async () => {
-        const handle = await fileHandle;
-        return handle.readFile('utf8');
-      }
-    },
-    dispose: async () => {
-      const handle = await fileHandle;
-      await handle.close();
-      console.log(`File ${path} closed`);
-    }
-  };
-};
+  query(sql: string): Promise<any[]> {
+    return this.connection.query(sql);
+  }
+}
 
-const processFile = async (path: string): Promise<string> => {
-  const fileResource = createAsyncFileHandler(path);
+// 自動クリーンアップ
+async function performDatabaseOperation(): Promise<void> {
+  using db = new DatabaseConnection('postgresql://localhost/mydb');
+  // スコープ終了時に自動的にdisposeが呼ばれる
   
-  return withResource(fileResource, async (file) => {
-    return file.read();
-  });
-};
+  const users = await db.query('SELECT * FROM users');
+  console.log(users);
+} // ここでdb[Symbol.dispose]()が自動実行
+
+// 非同期リソース管理
+class AsyncFileHandler implements AsyncDisposable {
+  private fileHandle: FileHandle;
+  
+  constructor(private path: string) {
+    this.fileHandle = fs.open(path, 'r');
+  }
+  
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.fileHandle.close();
+    console.log(`ファイル${this.path}を閉じました`);
+  }
+  
+  async read(): Promise<string> {
+    return (await this.fileHandle).readFile('utf8');
+  }
+}
+
+async function processFile(): Promise<string> {
+  await using file = new AsyncFileHandler('data.txt');
+  return file.read();
+} // 非同期でリソース解放
 ```
 
-### Functional satisfies Operator
-Constrain types while preserving literal types using functional patterns.
+### satisfies演算子 - 型検証
+型を制約しながらリテラル型を保持。
 
 ```typescript
-// ✅ Functional satisfies patterns
+// ✅ satisfies演算子パターン
 type Config = {
-  readonly endpoint: string;
-  readonly port: number;
-  readonly ssl?: boolean;
-  readonly retries?: number;
+  endpoint: string;
+  port: number;
+  ssl?: boolean;
+  retries?: number;
 };
 
-const createApiConfig = () => {
-  const config = {
-    endpoint: 'https://api.example.com',
-    port: 443,
-    ssl: true,
-    retries: 3,
-    timeout: 5000
-  } as const satisfies Config & Record<string, unknown>;
-  
-  return config;
+// 型チェックしつつリテラル型保持
+const apiConfig = {
+  endpoint: 'https://api.example.com',
+  port: 443,
+  ssl: true,
+  retries: 3,
+  timeout: 5000 // 追加プロパティも許可
+} satisfies Config;
+
+// apiConfig.port は単なるnumberではなく443
+// apiConfig.timeout も利用可能
+
+// 複雑な設定オブジェクト
+type DatabaseConfig = {
+  host: string;
+  port: number;
+  credentials: {
+    username: string;
+    password: string;
+  };
 };
 
-// Functional configuration factory
-const createDatabaseConfig = () => {
-  return {
-    host: 'localhost',
-    port: 5432,
-    credentials: {
-      username: 'admin',
-      password: 'secret'
-    },
-    pool: { min: 2, max: 10 }
-  } as const satisfies {
-    readonly host: string;
-    readonly port: number;
-    readonly credentials: {
-      readonly username: string;
-      readonly password: string;
-    };
-  } & Record<string, unknown>;
-};
+const dbConfig = {
+  host: 'localhost',
+  port: 5432,
+  credentials: {
+    username: 'admin',
+    password: 'secret'
+  },
+  pool: { min: 2, max: 10 } // 型にないが許可される
+} satisfies DatabaseConfig;
 
-// Functional theme factory
-const createTheme = () => {
+// 関数の戻り値でのsatisfies
+function createTheme() {
   return {
     colors: {
       primary: '#007bff',
@@ -172,124 +116,145 @@ const createTheme = () => {
       md: '1rem',
       lg: '2rem'
     }
-  } as const satisfies {
-    readonly colors: Record<string, string>;
-    readonly spacing: Record<string, string>;
+  } satisfies {
+    colors: Record<string, string>;
+    spacing: Record<string, string>;
   };
-};
+}
 
 type Theme = ReturnType<typeof createTheme>;
+// colors.primary は具体的に '#007bff' 型
 ```
 
-### Functional const Type Parameters
-Apply const assertion to generics with functional patterns.
+### const型パラメータ（TS 5.0+）
+ジェネリックでconst assertionを適用。
 
 ```typescript
-// ✅ Functional const type parameters
-const createConfiguration = <const T>(config: T): T => config;
+// ✅ const型パラメータ
+function createConfiguration<const T>(config: T): T {
+  return config;
+}
 
-// Functional array factory
-const createArray = <const T extends readonly unknown[]>(...items: T): T => items;
+// リテラル型が保持される
+const appConfig = createConfiguration({
+  version: '2.1.0',
+  features: ['auth', 'analytics', 'notifications']
+});
+
+// appConfig.version の型は '2.1.0'
+// appConfig.features の型は readonly ['auth', 'analytics', 'notifications']
+
+// 配列でのconst型パラメータ
+function createArray<const T extends readonly unknown[]>(...items: T): T {
+  return items;
+}
 
 const fruits = createArray('apple', 'banana', 'orange');
-// Type: readonly ['apple', 'banana', 'orange']
+// 型: readonly ['apple', 'banana', 'orange']
 
-// Functional route factory
-const defineRoutes = <const T extends Record<string, string>>(routes: T): T => routes;
+// オブジェクトファクトリー
+function defineRoutes<const T extends Record<string, string>>(routes: T): T {
+  return routes;
+}
 
 const routes = defineRoutes({
   home: '/',
   about: '/about',
   contact: '/contact'
-} as const);
-```
-
-### Functional Decorators Alternative
-Replace decorators with higher-order functions.
-
-```typescript
-// ✅ Functional decorator alternatives
-const withLogging = <T extends readonly unknown[], R>(
-  fn: (...args: T) => R
-) => (...args: T): R => {
-  console.log(`Calling function with args:`, args);
-  const result = fn(...args);
-  console.log(`Function result:`, result);
-  return result;
-};
-
-const withValidation = <T extends readonly unknown[], R>(
-  fn: (...args: T) => R
-) => (...args: T): R => {
-  if (args.some(arg => arg == null)) {
-    throw new Error('null/undefined arguments are invalid');
-  }
-  return fn(...args);
-};
-
-// Functional service factory
-const createUserService = () => {
-  const createUser = (name: string, email: string) => ({
-    id: generateId(),
-    name,
-    email
-  });
-  
-  const updateUser = (id: string, updates: Partial<User>) => ({
-    ...existingUser,
-    ...updates
-  });
-  
-  return {
-    createUser: withLogging(withValidation(createUser)),
-    updateUser: withLogging(updateUser)
-  };
-};
-
-// Functional singleton alternative
-const createSingleton = <T>(factory: () => T): (() => T) => {
-  let instance: T | undefined;
-  
-  return () => {
-    if (instance === undefined) {
-      instance = factory();
-    }
-    return instance;
-  };
-};
-
-const getConfigManager = createSingleton(() => {
-  let config: Record<string, unknown> = {};
-  
-  return {
-    setConfig: (key: string, value: unknown) => {
-      config = { ...config, [key]: value };
-    },
-    getConfig: () => ({ ...config })
-  };
 });
+
+// routes.home の型は '/' （stringではなく）
 ```
 
-## Advanced Functional Type System
-
-### Functional Conditional Types
-More flexible conditional types with functional patterns.
+### 拡張されたdecorator（TS 5.0+）
+標準化されたデコレータ構文。
 
 ```typescript
-// ✅ Functional conditional types
-type IsArray<T> = T extends readonly (infer U)[] ? true : false;
-type ArrayElementType<T> = T extends readonly (infer U)[] ? U : never;
+// ✅ モダンデコレータパターン
+function logged<T extends (...args: any[]) => any>(
+  target: T,
+  context: ClassMethodDecoratorContext
+): T {
+  return function (this: any, ...args: any[]) {
+    console.log(`${String(context.name)}を呼び出し:`, args);
+    const result = target.apply(this, args);
+    console.log(`${String(context.name)}の結果:`, result);
+    return result;
+  } as T;
+}
 
-// Functional parameter analysis
-type FunctionParameters<T> = T extends (...args: infer P) => unknown ? P : never;
-type FunctionReturnType<T> = T extends (...args: readonly unknown[]) => infer R ? R : never;
+function validate(
+  target: any,
+  context: ClassMethodDecoratorContext
+) {
+  return function (this: any, ...args: any[]) {
+    // バリデーションロジック
+    if (args.some(arg => arg == null)) {
+      throw new Error(`${String(context.name)}: null/undefined引数は不正`);
+    }
+    return target.apply(this, args);
+  };
+}
 
-// Deep immutable type
+class UserService {
+  @logged
+  @validate
+  createUser(name: string, email: string): User {
+    return { id: generateId(), name, email };
+  }
+  
+  @logged
+  updateUser(id: string, updates: Partial<User>): User {
+    // 更新ロジック
+    return { ...existingUser, ...updates };
+  }
+}
+
+// クラスデコレータ
+function singleton<T extends new (...args: any[]) => any>(target: T): T {
+  let instance: InstanceType<T>;
+  
+  return class extends target {
+    constructor(...args: any[]) {
+      if (instance) {
+        return instance;
+      }
+      super(...args);
+      instance = this;
+    }
+  } as T;
+}
+
+@singleton
+class ConfigManager {
+  private config: Record<string, any> = {};
+  
+  setConfig(key: string, value: any): void {
+    this.config[key] = value;
+  }
+}
+```
+
+## 高度な型システム機能
+
+### Conditional Types の進歩
+より柔軟な条件付き型。
+
+```typescript
+// ✅ 高度なConditional Types
+type IsArray<T> = T extends (infer U)[] ? true : false;
+type ArrayElementType<T> = T extends (infer U)[] ? U : never;
+
+// 関数の引数解析
+type Parameters<T> = T extends (...args: infer P) => any ? P : never;
+type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+
+// 深いReadonly
 type DeepReadonly<T> = {
   readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
 };
 
-// Required field extraction
+// 必須フィールド抽出
 type RequiredKeys<T> = {
   [K in keyof T]-?: {} extends Pick<T, K> ? never : K;
 }[keyof T];
@@ -298,23 +263,23 @@ type OptionalKeys<T> = {
   [K in keyof T]-?: {} extends Pick<T, K> ? K : never;
 }[keyof T];
 
-// Usage example
+// 使用例
 interface User {
-  readonly id: string;
-  readonly name: string;
-  readonly email?: string;
-  readonly profile?: UserProfile;
+  id: string;
+  name: string;
+  email?: string;
+  profile?: UserProfile;
 }
 
 type UserRequiredKeys = RequiredKeys<User>; // 'id' | 'name'
 type UserOptionalKeys = OptionalKeys<User>; // 'email' | 'profile'
 ```
 
-### Functional Template Literal Types
-Type-safe string manipulation with functional patterns.
+### Template Literal Types の拡張
+より複雑な文字列型操作。
 
 ```typescript
-// ✅ Functional template literal types
+// ✅ 高度なTemplate Literal Types
 type CamelCase<S extends string> = S extends `${infer P1}_${infer P2}${infer P3}`
   ? `${P1}${Uppercase<P2>}${CamelCase<P3>}`
   : S;
@@ -323,13 +288,13 @@ type SnakeCase<S extends string> = S extends `${infer T}${infer U}`
   ? `${T extends Capitalize<T> ? '_' : ''}${Lowercase<T>}${SnakeCase<U>}`
   : S;
 
-// Functional API endpoint generation
+// APIエンドポイント型生成
 type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 type ResourceName = 'users' | 'posts' | 'comments';
 type APIRoute = `/${ResourceName}` | `/${ResourceName}/${string}`;
 type APIEndpoint<M extends HTTPMethod, R extends APIRoute> = `${M} ${R}`;
 
-// Functional SQL builder types
+// 型安全なSQL builder
 type SQLTable = 'users' | 'posts' | 'comments';
 type SQLColumn<T extends SQLTable> = 
   T extends 'users' ? 'id' | 'name' | 'email' :
@@ -340,81 +305,98 @@ type SQLColumn<T extends SQLTable> =
 type SQLQuery<T extends SQLTable> = `SELECT ${SQLColumn<T>} FROM ${T}`;
 
 const query: SQLQuery<'users'> = 'SELECT id FROM users'; // ✅
+// const invalid: SQLQuery<'users'> = 'SELECT title FROM users'; // ❌
 ```
 
-## Functional Function Overloads
+## 関数オーバーロードの進歩
 
-### Functional Overloading Patterns
-Type-safe and flexible function definitions using functional patterns.
+### 高度な関数オーバーロード
+型安全で柔軟な関数定義。
 
 ```typescript
-// ✅ Functional overload patterns
+// ✅ 高度なオーバーロードパターン
 interface EventMap {
-  readonly click: { readonly x: number; readonly y: number };
-  readonly keypress: { readonly key: string };
-  readonly change: { readonly value: string };
+  click: { x: number; y: number };
+  keypress: { key: string };
+  change: { value: string };
 }
 
-const addEventListener = <K extends keyof EventMap>(
+function addEventListener<K extends keyof EventMap>(
   event: K,
   handler: (event: EventMap[K]) => void
-): void => {
-  // Implementation
-};
+): void;
+function addEventListener(
+  event: string,
+  handler: (event: any) => void
+): void;
+function addEventListener(
+  event: string,
+  handler: (event: any) => void
+): void {
+  // 実装
+}
 
-// Overloaded functional data fetcher
-const fetchData = (url: string): Promise<unknown> => 
-  fetch(url).then(res => res.json());
+// 使用時に型安全
+addEventListener('click', (e) => {
+  console.log(e.x, e.y); // 型安全
+});
 
-const fetchDataWithParser = <T>(
+addEventListener('keypress', (e) => {
+  console.log(e.key); // 型安全
+});
+
+// データフェッチャーのオーバーロード
+function fetchData(url: string): Promise<unknown>;
+function fetchData<T>(url: string, parser: (data: unknown) => T): Promise<T>;
+function fetchData<T>(
   url: string, 
-  parser: (data: unknown) => T
-): Promise<T> => 
-  fetchData(url).then(parser);
+  parser?: (data: unknown) => T
+): Promise<T | unknown> {
+  return fetch(url)
+    .then(res => res.json())
+    .then(data => parser ? parser(data) : data);
+}
 
-// Usage
-const userData = await fetchDataWithParser('/api/user', (data): User => {
-  return data as User; // Type guard should be used instead
+// 使用例
+const userData = await fetchData('/api/user', (data): User => {
+  // パース・バリデーション
+  return data as User;
 });
 ```
 
-## Functional Error Handling
+## エラーハンドリングの進歩
 
-### Functional Exception Patterns
-Sophisticated error handling using functional patterns.
+### 型安全な例外処理（TS 5.0+）
+より洗練されたエラー処理パターン。
 
 ```typescript
-// ✅ Functional Result type patterns
+// ✅ 型安全なResult型パターン
 type Result<T, E = Error> = 
   | { readonly status: 'success'; readonly data: T }
   | { readonly status: 'error'; readonly error: E };
 
-// Functional error factories
-type ValidationError = {
-  readonly type: 'ValidationError';
-  readonly field: string;
-  readonly message: string;
-};
+// カスタムエラー型
+class ValidationError extends Error {
+  constructor(
+    public readonly field: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
 
-type NetworkError = {
-  readonly type: 'NetworkError';
-  readonly statusCode: number;
-  readonly message: string;
-};
+class NetworkError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    message: string
+  ) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
 
-const createValidationError = (field: string, message: string): ValidationError => ({
-  type: 'ValidationError',
-  field,
-  message
-});
-
-const createNetworkError = (statusCode: number, message: string): NetworkError => ({
-  type: 'NetworkError',
-  statusCode,
-  message
-});
-
-// Functional operation functions
+// 型安全な操作関数
 const safeParseJSON = <T>(json: string): Result<T, SyntaxError> => {
   try {
     const data = JSON.parse(json);
@@ -427,7 +409,7 @@ const safeParseJSON = <T>(json: string): Result<T, SyntaxError> => {
   }
 };
 
-// Functional Result operations
+// チェーン可能なResult操作
 const mapResult = <T, U, E>(
   result: Result<T, E>,
   fn: (data: T) => U
@@ -444,7 +426,7 @@ const flatMapResult = <T, U, E>(
   return result.status === 'success' ? fn(result.data) : result;
 };
 
-// Functional usage example
+// 使用例
 const processUserInput = (input: string): Result<User, ValidationError | SyntaxError> => {
   const parseResult = safeParseJSON<{name: string; email: string}>(input);
   
@@ -452,7 +434,7 @@ const processUserInput = (input: string): Result<User, ValidationError | SyntaxE
     if (!data.email.includes('@')) {
       return { 
         status: 'error', 
-        error: createValidationError('email', 'Invalid email format')
+        error: new ValidationError('email', '無効なメール形式') 
       };
     }
     
@@ -464,42 +446,36 @@ const processUserInput = (input: string): Result<User, ValidationError | SyntaxE
 };
 ```
 
-## TypeScript 5.0+ Functional Programming Checklist
+## TypeScript 5.0+ ベストプラクティスチェックリスト
 
-### Mandatory Functional Features
-- [ ] ALL functions are arrow functions (zero exceptions)
-- [ ] Complete elimination of `any` type usage
-- [ ] Zero type assertions (`as`) - use type guards only
-- [ ] All data structures are immutable
-- [ ] All functions are pure (no side effects)
-- [ ] Use functional resource management patterns
-- [ ] Use functional composition over inheritance
+### 最新機能活用
+- [ ] リソース管理にusing宣言使用
+- [ ] 型制約にsatisfies演算子活用
+- [ ] ジェネリックでconst型パラメータ使用
+- [ ] 標準デコレータ構文使用
+- [ ] 高度なTemplate Literal Types活用
 
-### Advanced Functional Features
-- [ ] Use satisfies operator with functional patterns
-- [ ] Use const type parameters with functional factories
-- [ ] Replace decorators with higher-order functions
-- [ ] Use functional conditional types
-- [ ] Use functional template literal types
-- [ ] Use functional overload patterns
+### 型システム
+- [ ] Conditional Typesで柔軟な型操作
+- [ ] Mapped Typesでオブジェクト変換
+- [ ] Function overloadsで型安全API
+- [ ] Brand typesで型の区別強化
+- [ ] Phantom typesで状態管理
 
-### Functional Error Handling
-- [ ] Use Result type patterns for all error handling
-- [ ] Create functional error factories
-- [ ] Use functional error composition
-- [ ] Avoid try/catch in favor of functional error handling
-- [ ] Use chainable functional operations
+### エラー処理
+- [ ] Result型パターンで型安全例外処理
+- [ ] カスタムエラークラスで詳細情報
+- [ ]型ガードでエラー種別判定
+- [ ] チェーン可能な操作で関数型スタイル
 
-### Functional Performance
-- [ ] Design immutable types for tree shaking
-- [ ] Use functional lazy evaluation patterns
-- [ ] Optimize with functional composition
-- [ ] Use const assertions for compile-time optimization
+### パフォーマンス
+- [ ] Tree shakingを意識した型定義
+- [ ] Lazy evaluationパターン活用
+- [ ] Type-only importsで最適化
+- [ ] Const assertionsでコンパイル時最適化
 
-### Functional Compatibility
-- [ ] Target ES2022+ in TSConfig
-- [ ] Ensure functional patterns work with bundlers
-- [ ] Implement gradual functional adoption strategy
-- [ ] Use functional patterns compatible with frameworks
-
-**Appropriate Score: 1/10** - This represents the absolute dedication to functional programming with zero compromises.
+### 互換性
+- [ ] TSConfig targeting ES2022+
+- [ ] Node.js LTS対応設定
+- [ ] Bundler互換性確保
+- [ ] 段階的adoption戦略

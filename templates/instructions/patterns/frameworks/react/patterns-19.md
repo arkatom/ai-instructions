@@ -1,16 +1,16 @@
-# React 19 Patterns
+# React 19パターン
 
-Modern React patterns leveraging React 19's latest features and the use hook (React 19 specific).
+React 19の最新機能とuseフックを活用したモダンパターン（React 19専用）。
 
-## React 19 New Features
+## React 19 新機能
 
-### use Hook - Promise/Context Integration
-The new hook for directly "using" Promises, Contexts, and other resources.
+### useフック - Promise/Context統合
+Promise、Context、その他のリソースを直接的に「使用」する新しいフック。
 
 ```jsx
-// Promise with use hook
+// Promise with useフック
 const UserProfile = ({ userId }: { userId: string }) => {
-  // Directly use a Promise
+  // Promise を直接 use できる
   const user = use(fetchUser(userId));
   
   return (
@@ -21,72 +21,72 @@ const UserProfile = ({ userId }: { userId: string }) => {
   );
 };
 
-// Automatically handled within Suspense boundaries
+// Suspense境界内で自動的に処理
 const App = () => (
-  <Suspense fallback={<div>Loading user...</div>}>
+  <Suspense fallback={<div>ユーザー読み込み中...</div>}>
     <UserProfile userId="123" />
   </Suspense>
 );
 
-// Conditional Promise usage
+// 条件付きPromise使用
 const ConditionalData = ({ shouldLoad, dataId }: { shouldLoad: boolean; dataId: string }) => {
   let data = null;
   
   if (shouldLoad) {
-    // use hook can be used conditionally
+    // 条件内でもuseフックが使用可能
     data = use(fetchData(dataId));
   }
   
   return (
     <div>
-      {data ? <DataDisplay data={data} /> : <div>No data</div>}
+      {data ? <DataDisplay data={data} /> : <div>データなし</div>}
     </div>
   );
 };
 ```
 
-### use with Context - Dynamic Context
-Using the use hook as an alternative to useContext.
+### use with Context - 動的コンテキスト
+useContextの代替としてuseフックでコンテキストを使用。
 
 ```jsx
 const ThemeContext = createContext<'light' | 'dark'>('light');
 const UserContext = createContext<User | null>(null);
 
 const DynamicConsumer = ({ useTheme, useUser }: { useTheme: boolean; useUser: boolean }) => {
-  // Conditionally use contexts
+  // 条件的にコンテキストを使用
   const theme = useTheme ? use(ThemeContext) : 'light';
   const user = useUser ? use(UserContext) : null;
   
   return (
     <div className={`theme-${theme}`}>
-      {user ? `Hello, ${user.name}` : 'Guest user'}
+      {user ? `こんにちは、${user.name}さん` : 'ゲストユーザー'}
     </div>
   );
 };
 
-// Conditional context usage impossible with traditional useContext
+// 従来のuseContextでは不可能だった条件的使用が可能
 const FlexibleComponent = ({ mode }: { mode: 'simple' | 'advanced' }) => {
   const baseTheme = use(ThemeContext);
   
   if (mode === 'simple') {
-    return <div className={baseTheme}>Simple mode</div>;
+    return <div className={baseTheme}>シンプルモード</div>;
   }
   
-  // Only use UserContext in advanced mode
+  // advancedモードでのみUserContextを使用
   const user = use(UserContext);
   return (
     <div className={baseTheme}>
-      Advanced mode - {user?.name || 'Unknown'}
+      アドバンスモード - {user?.name || 'Unknown'}
     </div>
   );
 };
 ```
 
-### use Hook with Data Fetching Integration
-SWR/TanStack Query-like patterns with use hook.
+### useフック with データフェッチング統合
+SWR/TanStack Queryライクなパターンをuseフックで実現。
 
 ```jsx
-// Custom Promise factory
+// カスタムPromiseファクトリー
 const createDataFetcher = (url: string) => {
   let promise: Promise<any> | null = null;
   
@@ -114,26 +114,26 @@ const PostList = () => {
   );
 };
 
-// Error handling with use
+// エラーハンドリング付きuse
 const SafeDataComponent = ({ dataUrl }: { dataUrl: string }) => {
   try {
     const data = use(fetch(dataUrl).then(r => r.json()));
     return <DataDisplay data={data} />;
   } catch (error) {
     if (error instanceof Promise) {
-      // Still pending - Suspense will handle
+      // まだ pending - Suspense が処理
       throw error;
     }
-    // Actual error
+    // 実際のエラー
     return <ErrorDisplay error={error} />;
   }
 };
 ```
 
-## React 19 Enhanced Concurrent Features
+## React 19 強化された並行機能
 
 ### useTransition with React 19 improvements
-useTransition enhanced in React 19.
+React 19で強化されたuseTransition。
 
 ```jsx
 const EnhancedSearch = () => {
@@ -144,7 +144,7 @@ const EnhancedSearch = () => {
     setQuery(newQuery);
     
     startTransition(() => {
-      // React 19 automatically provides more efficient concurrent processing
+      // React 19では自動的により効率的な並行処理
       const results = use(searchAPI(newQuery));
       updateSearchResults(results);
     });
@@ -164,11 +164,11 @@ const EnhancedSearch = () => {
 ```
 
 ### Suspense with Resource Loading
-More flexible Suspense patterns in React 19.
+React 19でより柔軟になったSuspenseパターン。
 
 ```jsx
 const ResourcefulComponent = ({ resourceId }: { resourceId: string }) => {
-  // Fetch multiple resources concurrently
+  // 複数のリソースを並行取得
   const userData = use(fetchUser(resourceId));
   const userPosts = use(fetchUserPosts(resourceId));
   const userFollowers = use(fetchUserFollowers(resourceId));
@@ -182,7 +182,7 @@ const ResourcefulComponent = ({ resourceId }: { resourceId: string }) => {
   );
 };
 
-// Partial Suspense boundaries
+// 部分的Suspense境界
 const ProfilePage = ({ userId }: { userId: string }) => (
   <div>
     <Suspense fallback={<UserSkeleton />}>
@@ -200,15 +200,15 @@ const ProfilePage = ({ userId }: { userId: string }) => (
 );
 ```
 
-## Form Handling (React 19)
+## フォーム処理 (React 19)
 
 ### Actions with useFormStatus
-React 19's new form handling capabilities.
+React 19の新しいフォーム処理機能。
 
 ```jsx
 const ContactForm = () => {
   const submitAction = async (formData: FormData) => {
-    'use server'; // Server action
+    'use server'; // サーバーアクション
     
     const name = formData.get('name');
     const email = formData.get('email');
@@ -218,8 +218,8 @@ const ContactForm = () => {
   
   return (
     <form action={submitAction}>
-      <input name="name" placeholder="Name" required />
-      <input name="email" type="email" placeholder="Email" required />
+      <input name="name" placeholder="名前" required />
+      <input name="email" type="email" placeholder="メール" required />
       <SubmitButton />
     </form>
   );
@@ -230,14 +230,14 @@ const SubmitButton = () => {
   
   return (
     <button type="submit" disabled={pending}>
-      {pending ? 'Submitting...' : 'Submit'}
+      {pending ? '送信中...' : '送信'}
     </button>
   );
 };
 ```
 
-### useOptimistic - Optimistic Updates
-Optimistic UI update patterns.
+### useOptimistic - 楽観的更新
+楽観的UI更新パターン。
 
 ```jsx
 const TodoList = ({ todos }: { todos: Todo[] }) => {
@@ -249,14 +249,14 @@ const TodoList = ({ todos }: { todos: Todo[] }) => {
   const handleAddTodo = async (text: string) => {
     const newTodo = { id: Date.now(), text, completed: false };
     
-    // Optimistic update
+    // 楽観的更新
     addOptimisticTodo(newTodo);
     
     try {
       await addTodoAPI(newTodo);
     } catch (error) {
-      // Automatically rolls back on error
-      console.error('Failed to add todo:', error);
+      // エラー時は自動的にロールバック
+      console.error('Todo追加失敗:', error);
     }
   };
   
@@ -273,8 +273,8 @@ const TodoList = ({ todos }: { todos: Todo[] }) => {
 
 ## Error Boundaries (React 19)
 
-### Enhanced Error Handling
-More flexible error boundaries in React 19.
+### 強化されたエラー処理
+React 19でより柔軟になったエラーバウンダリ。
 
 ```jsx
 const AsyncErrorBoundary = ({ children }: { children: React.ReactNode }) => {
@@ -282,16 +282,16 @@ const AsyncErrorBoundary = ({ children }: { children: React.ReactNode }) => {
     <ErrorBoundary
       fallback={({ error, retry }) => (
         <div>
-          <h2>Something went wrong</h2>
+          <h2>エラーが発生しました</h2>
           <details>
-            <summary>Details</summary>
+            <summary>詳細</summary>
             <pre>{error.message}</pre>
           </details>
-          <button onClick={retry}>Retry</button>
+          <button onClick={retry}>再試行</button>
         </div>
       )}
       onError={(error, errorInfo) => {
-        // React 19 also catches async errors
+        // React 19では非同期エラーも捕捉
         console.error('Error caught:', error, errorInfo);
       }}
     >
@@ -300,7 +300,7 @@ const AsyncErrorBoundary = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Error handling combined with use
+// use と組み合わせたエラー処理
 const RobustDataComponent = ({ dataId }: { dataId: string }) => {
   const fetchWithRetry = useCallback(async () => {
     const maxRetries = 3;
@@ -323,13 +323,13 @@ const RobustDataComponent = ({ dataId }: { dataId: string }) => {
 };
 ```
 
-## Module Best Practices (React 19 Compatible)
+## モジュールベストプラクティス（React 19対応）
 
-### Named Exports Principle (React 19 Edition)
-Realistic export strategy for React 19 environments.
+### Named Exports原則（React 19版）
+React 19環境での現実的なエクスポート戦略。
 
 ```jsx
-// ✅ Principle: Named exports (library components)
+// ✅ 原則：名前付きエクスポート（ライブラリコンポーネント）
 export const Button = ({ children, ...props }: ButtonProps) => (
   <button {...props}>{children}</button>
 );
@@ -341,25 +341,25 @@ export const Input = ({ label, ...props }: InputProps) => (
   </div>
 );
 
-// ✅ Exception 1: Next.js App Router pages
+// ✅ 例外1：Next.js App Router ページ
 export default function HomePage() {
   return <div>Home Page</div>;
 }
 
-// ✅ Exception 2: Server actions
+// ✅ 例外2：サーバーアクション
 export default async function handleFormSubmit(formData: FormData) {
   'use server';
-  // Server action processing
+  // サーバーアクション処理
 }
 
-// ✅ Exception 3: Lazy loading targets
-const HeavyChart = lazy(() => import('./HeavyChart')); // expects default export
+// ✅ 例外3：lazy loading対象
+const HeavyChart = lazy(() => import('./HeavyChart')); // default exportを期待
 
-// ✅ Exception 4: use hook with dynamic imports
+// ✅ 例外4：useフック with dynamic imports
 const DynamicResourceUser = ({ resourceType }: { resourceType: string }) => {
   const getResource = useCallback(async () => {
     const module = await import(`./resources/${resourceType}`);
-    return module.default; // default export needed
+    return module.default; // default exportが必要
   }, [resourceType]);
   
   const resource = use(getResource());
@@ -367,16 +367,16 @@ const DynamicResourceUser = ({ resourceType }: { resourceType: string }) => {
 };
 ```
 
-## Testing (React 19)
+## テスト（React 19）
 
-### Testing use Hook
-Testing React 19's use hook and new features.
+### useフックのテスト
+React 19のuseフックを含む新機能のテスト。
 
 ```jsx
 import { render, screen, waitFor } from '@testing-library/react';
 
 describe('React 19 use hook', () => {
-  test('correctly fetches data from Promise', async () => {
+  test('Promiseからデータを正しく取得', async () => {
     const mockData = { id: 1, name: 'Test User' };
     const mockPromise = Promise.resolve(mockData);
     
@@ -398,7 +398,7 @@ describe('React 19 use hook', () => {
     });
   });
   
-  test('conditional use hook behavior', async () => {
+  test('条件付きuseフックの動作確認', async () => {
     const TestComponent = ({ shouldLoad }: { shouldLoad: boolean }) => {
       if (shouldLoad) {
         const data = use(Promise.resolve('Loaded Data'));
@@ -427,9 +427,9 @@ describe('React 19 use hook', () => {
   });
 });
 
-// Testing form features
+// フォーム機能のテスト
 describe('React 19 Forms', () => {
-  test('useFormStatus correctly shows form state', async () => {
+  test('useFormStatusでフォーム状態を正しく表示', async () => {
     const mockSubmit = jest.fn();
     
     const TestForm = () => (
@@ -445,34 +445,34 @@ describe('React 19 Forms', () => {
     fireEvent.click(button);
     
     expect(button).toBeDisabled();
-    expect(screen.getByText('Submitting...')).toBeInTheDocument();
+    expect(screen.getByText('送信中...')).toBeInTheDocument();
   });
 });
 ```
 
-## React 19 Best Practices Checklist
+## React 19ベストプラクティスチェックリスト
 
-### New Features
-- [ ] Use use hook for Promise handling
-- [ ] Leverage conditional hook usage with use
-- [ ] Consider use for Context reading
-- [ ] Implement useFormStatus for form handling
-- [ ] Use useOptimistic for optimistic updates
+### 新機能活用
+- [ ] Promise処理にuseフックを使用
+- [ ] 条件付きフック使用でuseを活用
+- [ ] Context読み取りにuseを検討
+- [ ] フォーム処理にuseFormStatusを実装
+- [ ] 楽観的更新にuseOptimisticを使用
 
-### Performance
-- [ ] Leverage use for concurrent resource fetching
-- [ ] Properly split Suspense boundaries
-- [ ] Handle async errors with error boundaries
-- [ ] Use useTransition for heavy processing
+### パフォーマンス
+- [ ] リソース並行取得でuseを活用
+- [ ] Suspense境界を適切に分割
+- [ ] エラーバウンダリで非同期エラーを処理
+- [ ] useTransitionで重い処理を並行実行
 
-### Code Quality
-- [ ] Use TypeScript with use hook type-safely
-- [ ] Implement comprehensive error handling
-- [ ] Write comprehensive tests for new features
-- [ ] Properly leverage server actions
-- [ ] Implement optimistic updates for better UX
+### コード品質
+- [ ] TypeScriptでuseフックを型安全に使用
+- [ ] エラー処理を包括的に実装
+- [ ] 新機能の包括的テストを記述
+- [ ] サーバーアクションを適切に活用
+- [ ] 楽観的更新でUX向上を図る
 
-### Module Management
-- [ ] Prefer named exports, use default exports when necessary
-- [ ] Use default exports for server actions
-- [ ] Choose appropriate export format for dynamic imports
+### モジュール管理
+- [ ] 原則named exports、必要時のみdefault exports
+- [ ] サーバーアクションでdefault exportを使用
+- [ ] 動的インポートでの適切なexport形式選択

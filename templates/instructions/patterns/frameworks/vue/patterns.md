@@ -1,24 +1,24 @@
-# Vue.js Patterns
+# Vue.js パターン
 
-Modern Vue patterns with Vue 3 Composition API.
+Vue 3 Composition APIを活用したモダンVueパターン。
 
 ## Composition API
 
-### Setup Function
+### setup 関数
 ```vue
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 
-// Reactive state
+// リアクティブな状態
 const count = ref(0);
 const doubled = computed(() => count.value * 2);
 
-// Methods
+// メソッド
 const increment = () => {
   count.value++;
 };
 
-// Lifecycle
+// ライフサイクル
 onMounted(() => {
   console.log('Component mounted');
 });
@@ -31,9 +31,9 @@ onMounted(() => {
 </template>
 ```
 
-## Composables
+## コンポーザブル
 
-### Custom Composables
+### カスタムコンポーザブル
 ```typescript
 // composables/useUser.ts
 import { ref, computed } from 'vue';
@@ -59,12 +59,13 @@ export function useUser() {
   };
 }
 
-// Usage
+// 使用
 const { user, isLoggedIn, login } = useUser();
 ```
 
-### Fetch Composable
+### フェッチコンポーザブル
 ```typescript
+// composables/useFetch.ts
 export function useFetch<T>(url: string) {
   const data = ref<T | null>(null);
   const error = ref<Error | null>(null);
@@ -88,20 +89,21 @@ export function useFetch<T>(url: string) {
 }
 ```
 
-## State Management (Pinia)
+## 状態管理 (Pinia)
 
-### Store Definition
+### ストア定義
 ```typescript
+// stores/counter.ts
 import { defineStore } from 'pinia';
 
 export const useCounterStore = defineStore('counter', () => {
-  // State
+  // 状態
   const count = ref(0);
   
-  // Getters
+  // ゲッター
   const doubled = computed(() => count.value * 2);
   
-  // Actions
+  // アクション
   function increment() {
     count.value++;
   }
@@ -109,14 +111,14 @@ export const useCounterStore = defineStore('counter', () => {
   return { count, doubled, increment };
 });
 
-// Usage
+// 使用
 const store = useCounterStore();
 store.increment();
 ```
 
-## Component Patterns
+## コンポーネントパターン
 
-### Props and Emits
+### Props とEmits
 ```vue
 <script setup lang="ts">
 interface Props {
@@ -139,7 +141,7 @@ const handleClick = () => {
 </script>
 ```
 
-### Slots
+### スロット
 ```vue
 <!-- BaseCard.vue -->
 <template>
@@ -156,7 +158,7 @@ const handleClick = () => {
   </div>
 </template>
 
-<!-- Usage -->
+<!-- 使用 -->
 <BaseCard>
   <template #header>
     <h2>Title</h2>
@@ -170,21 +172,21 @@ const handleClick = () => {
 </BaseCard>
 ```
 
-## Reactivity
+## リアクティビティ
 
-### Watch and WatchEffect
+### watchとwatchEffect
 ```typescript
-// watch: Monitor specific values
+// watch: 特定の値を監視
 watch(count, (newValue, oldValue) => {
   console.log(`Count changed: ${oldValue} -> ${newValue}`);
 });
 
-// watchEffect: Auto-track dependencies
+// watchEffect: 依存関係を自動追跡
 watchEffect(() => {
   console.log(`The count is ${count.value}`);
 });
 
-// Options
+// immediate と deep オプション
 watch(
   user,
   (newUser) => {
@@ -194,34 +196,60 @@ watch(
 );
 ```
 
-## Performance
-
-### Dynamic Imports
+### toRef と toRefs
 ```typescript
-// Route-level lazy loading
+// プロパティを個別のrefに変換
+const state = reactive({ count: 0, name: 'Vue' });
+const count = toRef(state, 'count');
+
+// すべてのプロパティをrefに変換
+const { count, name } = toRefs(state);
+```
+
+## パフォーマンス最適化
+
+### 動的インポート
+```typescript
+// ルートレベルの遅延読み込み
 const UserProfile = () => import('./views/UserProfile.vue');
 
-// Component-level
+// コンポーネントレベル
 const AsyncComponent = defineAsyncComponent(() =>
   import('./components/AsyncComponent.vue')
 );
 ```
 
-### v-memo Directive
+### v-memo ディレクティブ
 ```vue
 <template>
-  <!-- Skip re-render if dependencies unchanged -->
+  <!-- 依存値が変わらない限り再レンダリングスキップ -->
   <div v-for="item in list" :key="item.id" v-memo="[item.id, item.name]">
     {{ expensiveOperation(item) }}
   </div>
 </template>
 ```
 
-## Checklist
-- [ ] Composition API used
-- [ ] Composables utilized
-- [ ] Pinia state management
-- [ ] TypeScript integration
-- [ ] Props/Emits typed
-- [ ] Performance optimized
-- [ ] Reactivity managed
+## TypeScript統合
+
+### 型定義
+```typescript
+// types/user.ts
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// コンポーネントで使用
+const user = ref<User | null>(null);
+const users = ref<User[]>([]);
+```
+
+## チェックリスト
+- [ ] Composition API使用
+- [ ] コンポーザブル活用
+- [ ] Pinia状態管理
+- [ ] TypeScript統合
+- [ ] Props/Emits型定義
+- [ ] パフォーマンス最適化
+- [ ] 適切なリアクティビティ

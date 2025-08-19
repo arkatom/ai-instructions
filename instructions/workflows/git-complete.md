@@ -14,6 +14,14 @@ GitHub Flowベースの完全なGit・GitHub運用ガイド
 # Branch naming convention
 {type}/{issue-number}_{description}
 
+# Types:
+# - feature/ : 新機能
+# - fix/     : バグ修正
+# - refactor/: リファクタリング
+# - docs/    : ドキュメント
+# - test/    : テスト
+# - chore/   : 雑務
+
 # Examples
 feature/123_user_authentication
 fix/456_session_timeout
@@ -27,8 +35,8 @@ git checkout -b feature/123_description
 
 # 2. Make changes and commit frequently
 git status                    # Review changes
-git add .                    # Stage related changes
-git commit -m "message"      # Commit with proper format
+git add .                     # Stage related changes
+git commit -m "message"       # Commit with proper format
 
 # 3. Push and create PR
 git push -u origin feature/123_description
@@ -64,8 +72,8 @@ refactor(user): #789 extract user service [domain:user] [tags:service,extraction
 
 ### PR Creation Process
 1. **Title Format**: `#Issue-number: Brief description`
-2. **Description Template**:
-```markdown
+2. **Open in browser**: After creating, run `gh pr view --web <PR number>`
+3. **Description Template**:markdown
 ## Overview
 Brief summary of what, why, and how
 
@@ -198,5 +206,96 @@ git log --grep="[domain:user].*[domain:session]"
 - Verify proper domain/tag usage
 - Check for atomic, logical commits
 - Validate PR descriptions are complete
+
+## 🎯 Git Workflow Patterns
+
+### Merge Strategies
+
+#### Squash and Merge（推奨）
+```bash
+# PRのコミットを1つにまとめる
+# クリーンな履歴を維持
+gh pr merge --squash
+```
+
+#### Rebase and Merge
+```bash
+# 線形履歴を維持
+# コミット履歴を保持
+git rebase main feature/branch
+gh pr merge --rebase
+```
+
+### Conflict Resolution
+
+#### Rebase時の解決
+```bash
+# 1. リベース開始
+git rebase main
+
+# 2. コンフリクト解決
+git status  # コンフリクトファイル確認
+# ファイル編集
+
+# 3. 続行
+git add .
+git rebase --continue
+```
+
+#### Merge時の解決
+```bash
+# 1. マージ
+git merge feature/branch
+
+# 2. 解決（コンフリクトマーカーを編集）
+# <<<<<<< HEAD
+# 現在のブランチの内容
+# =======
+# マージするブランチの内容  
+# >>>>>>> feature/branch
+
+# 3. コミット
+git add .
+git commit
+```
+
+### Automation Hooks
+
+#### pre-commit設定
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: npm run lint
+        language: system
+        files: \.(js|jsx|ts|tsx)$
+```
+
+#### CI/CD統合
+```yaml
+# .github/workflows/pr.yml
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: npm test
+      - run: npm run lint
+```
+
+### Best Practices Checklist
+- [ ] ブランチ戦略選択（GitHub Flow推奨）
+- [ ] コミット規約遵守
+- [ ] PRテンプレート使用
+- [ ] レビュー実施
+- [ ] 自動化設定
+- [ ] マージ戦略決定（Squash推奨）
 
 This consolidated guide replaces the previous scattered Git documentation and provides a single source of truth for all Git & GitHub operations.

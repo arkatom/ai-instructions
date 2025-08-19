@@ -1,36 +1,38 @@
-# Microservices Architecture
+# Microservices アーキテクチャ
 
-Distributed systems and microservices patterns.
+分散システムとマイクロサービスのパターン。
 
-## Service Design
+## サービス設計
 
-### Domain Boundaries
+### ドメイン境界
 ```yaml
+# サービス分割例
 services:
   user-service:
     responsibilities:
-      - User authentication
-      - Profile management
+      - ユーザー認証
+      - プロファイル管理
     database: PostgreSQL
     
   order-service:
     responsibilities:
-      - Order processing
-      - Inventory management
+      - 注文処理
+      - 在庫管理
     database: MongoDB
     
   payment-service:
     responsibilities:
-      - Payment processing
-      - Billing management
+      - 決済処理
+      - 請求管理
     database: PostgreSQL
 ```
 
 ### API Gateway
 ```typescript
+// API Gateway実装例 (Express)
 const gateway = express();
 
-// Routing
+// ルーティング
 gateway.use('/api/users', 
   createProxyMiddleware({
     target: 'http://user-service:3001'
@@ -43,34 +45,36 @@ gateway.use('/api/orders',
   })
 );
 
-// Authentication
+// 認証
 gateway.use(authMiddleware);
 ```
 
-## Service Communication
+## サービス間通信
 
 ### REST API
 ```typescript
+// サービス間HTTP通信
 class OrderService {
   async createOrder(orderData) {
-    // Validate user
+    // ユーザー検証
     const user = await fetch(`http://user-service/users/${orderData.userId}`);
     if (!user.ok) throw new Error('User not found');
     
-    // Check inventory
+    // 在庫確認
     const inventory = await fetch(`http://inventory-service/check`, {
       method: 'POST',
       body: JSON.stringify(orderData.items)
     });
     
-    // Create order
+    // 注文作成
     return await this.orderRepository.create(orderData);
   }
 }
 ```
 
-### Message Queue
+### メッセージキュー
 ```typescript
+// RabbitMQ/Kafka実装
 const amqp = require('amqplib');
 
 // Publisher
@@ -96,10 +100,11 @@ async function consumeOrders() {
 }
 ```
 
-## Data Management
+## データ管理
 
 ### Database per Service
 ```typescript
+// 各サービスが独自のDB
 // user-service/db.ts
 const userDB = new PrismaClient({
   datasources: { db: { url: process.env.USER_DB_URL } }
@@ -109,8 +114,9 @@ const userDB = new PrismaClient({
 const orderDB = new MongoClient(process.env.ORDER_DB_URL);
 ```
 
-### Saga Pattern
+### Saga パターン
 ```typescript
+// 分散トランザクション
 class OrderSaga {
   async execute(order) {
     const steps = [
@@ -127,7 +133,7 @@ class OrderSaga {
         executed.push(step);
       }
     } catch (error) {
-      // Rollback
+      // ロールバック
       for (const step of executed.reverse()) {
         await this.compensate(step, order);
       }
@@ -137,7 +143,33 @@ class OrderSaga {
 }
 ```
 
-## Resilience
+## サービスディスカバリー
+
+### Consul/Eureka統合
+```typescript
+// サービス登録
+const consul = require('consul')();
+
+consul.agent.service.register({
+  name: 'user-service',
+  id: 'user-service-1',
+  address: '192.168.1.100',
+  port: 3001,
+  check: {
+    http: 'http://192.168.1.100:3001/health',
+    interval: '10s'
+  }
+});
+
+// サービス発見
+async function getService(serviceName) {
+  const services = await consul.health.service(serviceName);
+  const healthy = services.filter(s => s.Checks.every(c => c.Status === 'passing'));
+  return healthy[Math.floor(Math.random() * healthy.length)];
+}
+```
+
+## レジリエンス
 
 ### Circuit Breaker
 ```typescript
@@ -167,6 +199,19 @@ class CircuitBreaker {
       throw error;
     }
   }
+  
+  onSuccess() {
+    this.failureCount = 0;
+    this.state = 'CLOSED';
+  }
+  
+  onFailure() {
+    this.failureCount++;
+    if (this.failureCount >= this.threshold) {
+      this.state = 'OPEN';
+      this.nextAttempt = Date.now() + this.timeout;
+    }
+  }
 }
 ```
 
@@ -186,11 +231,38 @@ async function retryWithBackoff(fn, maxRetries = 3) {
 }
 ```
 
-## Checklist
-- [ ] Service boundaries defined
-- [ ] API Gateway implemented
-- [ ] Communication strategy
-- [ ] Data consistency handled
-- [ ] Service discovery
-- [ ] Fault tolerance
-- [ ] Monitoring/Logging
+## 監視とロギング
+
+### 分散トレーシング
+```typescript
+// OpenTelemetry
+const { trace } = require('@opentelemetry/api');
+const tracer = trace.getTracer('order-service');
+
+async function processOrder(order) {
+  const span = tracer.startSpan('process-order');
+  span.setAttribute('order.id', order.id);
+  
+  try {
+    // 処理
+    const result = await orderLogic(order);
+    span.setStatus({ code: SpanStatusCode.OK });
+    return result;
+  } catch (error) {
+    span.recordException(error);
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    throw error;
+  } finally {
+    span.end();
+  }
+}
+```
+
+## チェックリスト
+- [ ] サービス境界明確化
+- [ ] API Gateway実装
+- [ ] サービス間通信戦略
+- [ ] データ一貫性対策
+- [ ] サービスディスカバリー
+- [ ] 障害対策（Circuit Breaker）
+- [ ] 監視・ロギング体制

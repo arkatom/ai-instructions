@@ -1,111 +1,59 @@
-# React v18 Functional Programming Patterns
+# React 18パターン
 
-Modern purely functional React patterns leveraging React v18 concurrent features with absolute functional programming compliance.
+React 18の並行機能とサーバーコンポーネントを活用したモダンパターン（React 18専用）。
 
-## 🚨 FUNCTIONAL PROGRAMMING MANDATE
+## React 18 並行機能
 
-**ABSOLUTE REQUIREMENTS - NO EXCEPTIONS:**
-- All functions MUST be arrow functions
-- Functional programming is MANDATORY, not optional
-- Immutability is REQUIRED for all data structures
-- Pure functions with no side effects are MANDATORY
-- Functional components ONLY - no class components
-
-## ❌ ABSOLUTELY FORBIDDEN
-
-The following practices are **COMPLETELY BANNED** and will result in immediate rejection:
-
-- ❌ **Function declarations** (`function name() {}`) - Use arrow functions ONLY
-- ❌ **`any` type** - Use proper TypeScript typing
-- ❌ **Type assertions** (`as Type`) - Use type guards instead
-- ❌ **Class components** - Use functional components ONLY
-- ❌ **Mutable state** - Use immutable state patterns
-- ❌ **Side effects in render** - Keep components pure
-- ❌ **Object-oriented patterns** - Use functional patterns only
-
-## 🔧 FUNCTIONAL PRINCIPLES
-
-### 1. Pure Functional Components
-Components must be pure functions that render the same output for the same props.
-
-### 2. Immutable State Management
-All state updates must be immutable.
-
-### 3. Functional Composition
-Build complex UIs by composing simple functional components.
-
-### 4. Side Effect Isolation
-Use hooks to isolate side effects from pure component logic.
-
-## React v18 Functional Concurrent Features
-
-### Functional useTransition for Non-Urgent Updates
-Mark state updates as non-urgent to keep UI responsive using pure functional patterns.
+### useTransition - 緊急でない更新
+状態更新を緊急でないものとしてマークしてUIの応答性を保つ。
 
 ```jsx
 const SearchComponent = () => {
   const [isPending, startTransition] = useTransition();
-  const [searchResults, setSearchResults] = useState<readonly User[]>([]);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [query, setQuery] = useState('');
   
-  const handleSearch = useCallback((newQuery: string) => {
-    setQuery(newQuery); // Urgent update
+  const handleSearch = (newQuery: string) => {
+    setQuery(newQuery); // 緊急更新
     startTransition(() => {
-      // Non-urgent update - won't block UI
+      // 緊急でない更新 - UIをブロックしない
       setSearchResults(performHeavySearch(newQuery));
     });
-  }, []);
-  
-  const renderResults = useMemo(() => (
-    <Results data={searchResults} />
-  ), [searchResults]);
+  };
   
   return (
     <div>
-      <input 
-        value={query} 
-        onChange={e => handleSearch(e.target.value)} 
-      />
-      {isPending ? <Spinner /> : renderResults}
+      <input value={query} onChange={e => handleSearch(e.target.value)} />
+      {isPending ? <Spinner /> : <Results data={searchResults} />}
     </div>
   );
 };
 ```
 
-### Functional useDeferredValue for Debounced Updates
-Defer non-critical updates until more urgent ones complete using functional patterns.
+### useDeferredValue - 遅延更新
+より緊急な更新が完了するまで重要でない更新を遅延。
 
 ```jsx
 const SearchResults = () => {
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
-  
   const results = useMemo(() => 
     searchDatabase(deferredQuery), [deferredQuery]
   );
   
-  const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-  }, []);
-  
-  const renderResults = useMemo(() => 
-    results.map(item => <Item key={item.id} {...item} />), 
-    [results]
-  );
-  
   return (
     <div>
-      <input value={query} onChange={handleQueryChange} />
+      <input value={query} onChange={e => setQuery(e.target.value)} />
       <div className={query !== deferredQuery ? 'dimmed' : ''}>
-        {renderResults}
+        {results.map(item => <Item key={item.id} {...item} />)}
       </div>
     </div>
   );
 };
 ```
 
-### Functional Enhanced Suspense for Data Fetching
-Use Suspense with concurrent features for better UX using functional patterns.
+### 拡張Suspense - データフェッチング
+より良いUXのため並行機能と組み合わせてSuspenseを使用。
 
 ```jsx
 const UserProfile = ({ userId }: { userId: string }) => {
@@ -119,7 +67,7 @@ const UserProfile = ({ userId }: { userId: string }) => {
   );
 };
 
-// Functional streaming SSR component
+// ストリーミングSSRコンポーネント
 const StreamingApp = () => {
   return (
     <html>
@@ -135,50 +83,43 @@ const StreamingApp = () => {
 };
 ```
 
-## Functional Server Components (Next.js 13+)
+## サーバーコンポーネント（Next.js 13+）
 
-### Functional Server vs Client Components
-Clear separation between server and client rendering using functional patterns.
+### サーバー vs クライアントコンポーネント
+サーバーとクライアントレンダリングの明確な分離。
 
 ```jsx
-// Functional Server Component (no 'use client')
+// サーバーコンポーネント（'use client'なし）
 const HomePage = async () => {
-  const posts = await fetchPosts(); // Direct DB/API calls
-  
-  const renderPosts = useMemo(() => 
-    posts.map(post => <PostCard key={post.id} post={post} />), 
-    [posts]
-  );
+  const posts = await fetchPosts(); // 直接DB/API呼び出し
   
   return (
     <div>
-      <h1>Posts</h1>
-      {renderPosts}
+      <h1>投稿</h1>
+      {posts.map(post => (
+        <PostCard key={post.id} post={post} />
+      ))}
     </div>
   );
 };
 
-// Functional Client Component for interactivity
+// インタラクティブ機能のクライアントコンポーネント
 'use client';
 const InteractiveButton = ({ children }: { children: React.ReactNode }) => {
   const [count, setCount] = useState(0);
   
-  const handleClick = useCallback(() => {
-    setCount(prevCount => prevCount + 1);
-  }, []);
-  
   return (
-    <button onClick={handleClick}>
+    <button onClick={() => setCount(c => c + 1)}>
       {children} ({count})
     </button>
   );
 };
 ```
 
-## Functional Modern State Management (React v18)
+## モダン状態管理（React 18）
 
-### Functional useId for Stable IDs
-Generate stable unique IDs for accessibility using functional patterns.
+### useId - 安定ID
+アクセシビリティのための安定したユニークIDを生成。
 
 ```jsx
 const ContactForm = () => {
@@ -187,120 +128,110 @@ const ContactForm = () => {
   
   return (
     <form>
-      <label htmlFor={nameId}>Name</label>
+      <label htmlFor={nameId}>名前</label>
       <input id={nameId} name="name" />
       
-      <label htmlFor={emailId}>Email</label>
+      <label htmlFor={emailId}>メール</label>
       <input id={emailId} name="email" type="email" />
     </form>
   );
 };
 ```
 
-### Functional useSyncExternalStore for External State
-Safely sync with external stores using functional patterns.
+### useSyncExternalStore - 外部状態
+外部ストアと安全に同期。
 
 ```jsx
 const useOnlineStatus = () => {
   return useSyncExternalStore(
-    useCallback((callback) => {
+    (callback) => {
       window.addEventListener('online', callback);
       window.addEventListener('offline', callback);
       return () => {
         window.removeEventListener('online', callback);
         window.removeEventListener('offline', callback);
       };
-    }, []),
+    },
     () => navigator.onLine,
-    () => true // Server-side fallback
+    () => true // サーバーサイドフォールバック
   );
 };
 
 const NetworkStatus = () => {
   const isOnline = useOnlineStatus();
-  return <div>Status: {isOnline ? 'Online' : 'Offline'}</div>;
+  return <div>状態: {isOnline ? 'オンライン' : 'オフライン'}</div>;
 };
 ```
 
-## Functional Compound Component Patterns
+## 複合コンポーネントパターン
 
-### Functional TypeScript Compound Components
-Type-safe compound component patterns using functional approach.
+### TypeScript複合コンポーネント
+型安全な複合コンポーネントパターン。
 
 ```jsx
 interface ToggleContextType {
-  readonly on: boolean;
-  readonly toggle: () => void;
+  on: boolean;
+  toggle: () => void;
 }
 
 const ToggleContext = createContext<ToggleContextType | null>(null);
 
-const useToggle = (): ToggleContextType => {
+const useToggle = () => {
   const context = useContext(ToggleContext);
   if (!context) {
-    throw new Error('Toggle components must be used within Toggle');
+    throw new Error('Toggleコンポーネントは Toggle 内で使用してください');
   }
   return context;
 };
 
 interface ToggleProps {
-  readonly children: React.ReactNode;
-  readonly defaultOn?: boolean;
+  children: React.ReactNode;
+  defaultOn?: boolean;
 }
 
 export const Toggle = ({ children, defaultOn = false }: ToggleProps) => {
   const [on, setOn] = useState(defaultOn);
   const toggle = useCallback(() => setOn(prev => !prev), []);
   
-  const contextValue = useMemo(() => ({ on, toggle }), [on, toggle]);
-  
   return (
-    <ToggleContext.Provider value={contextValue}>
+    <ToggleContext.Provider value={{ on, toggle }}>
       {children}
     </ToggleContext.Provider>
   );
 };
 
-const ToggleButton = () => {
+Toggle.Button = () => {
   const { on, toggle } = useToggle();
   return (
     <button onClick={toggle} aria-pressed={on}>
-      {on ? 'ON' : 'OFF'}
+      {on ? 'オン' : 'オフ'}
     </button>
   );
 };
 
-const ToggleDisplay = () => {
+Toggle.Display = () => {
   const { on } = useToggle();
-  return <div>Status: {on ? 'Active' : 'Inactive'}</div>;
+  return <div>状態: {on ? 'アクティブ' : '非アクティブ'}</div>;
 };
-
-// Functional compound component assignment
-Toggle.Button = ToggleButton;
-Toggle.Display = ToggleDisplay;
 ```
 
-## Functional Performance Optimization
+## パフォーマンス最適化
 
-### Functional React.memo with Custom Comparison
-Optimize re-renders with custom comparison using functional patterns.
+### React.memo with カスタム比較
+カスタム比較で再レンダリングを最適化。
 
 ```jsx
 interface UserCardProps {
-  readonly user: User;
-  readonly onEdit: (id: string) => void;
+  user: User;
+  onEdit: (id: string) => void;
 }
 
 export const UserCard = memo<UserCardProps>(({ user, onEdit }) => {
-  const handleEdit = useCallback(() => {
-    onEdit(user.id);
-  }, [user.id, onEdit]);
-  
   return (
     <div>
       <h3>{user.name}</h3>
       <p>{user.email}</p>
-      <button onClick={handleEdit}>Edit</button>
+      <button onClick={() => onEdit(user.id)}>編集</button>
     </div>
   );
 }, (prevProps, nextProps) => {
@@ -311,23 +242,23 @@ export const UserCard = memo<UserCardProps>(({ user, onEdit }) => {
   );
 });
 
-const UserList = ({ users }: { readonly users: readonly User[] }) => {
+const UserList = ({ users }: { users: User[] }) => {
   const handleEdit = useCallback((id: string) => {
-    // Edit logic - pure functional implementation
+    // 編集ロジック
   }, []);
   
-  const renderUsers = useMemo(() =>
-    users.map(user => (
-      <UserCard key={user.id} user={user} onEdit={handleEdit} />
-    )), [users, handleEdit]
+  return (
+    <div>
+      {users.map(user => (
+        <UserCard key={user.id} user={user} onEdit={handleEdit} />
+      ))}
+    </div>
   );
-  
-  return <div>{renderUsers}</div>;
 };
 ```
 
-### Functional Code Splitting with Concurrent Features
-Lazy loading with better UX using functional patterns.
+### 並行機能付きコード分割
+より良いUXでの遅延読み込み。
 
 ```jsx
 const HeavyComponent = lazy(() => 
@@ -340,147 +271,124 @@ const App = () => {
   const [showHeavy, setShowHeavy] = useState(false);
   const [isPending, startTransition] = useTransition();
   
-  const loadHeavyComponent = useCallback(() => {
+  const loadHeavyComponent = () => {
     startTransition(() => {
       setShowHeavy(true);
     });
-  }, []);
-  
-  const renderHeavyComponent = useMemo(() => (
-    showHeavy && (
-      <Suspense fallback={<ComponentSkeleton />}>
-        <HeavyComponent />
-      </Suspense>
-    )
-  ), [showHeavy]);
+  };
   
   return (
     <div>
       <button onClick={loadHeavyComponent} disabled={isPending}>
-        {isPending ? 'Loading...' : 'Load Heavy Component'}
+        {isPending ? '読み込み中...' : '重いコンポーネントを読み込み'}
       </button>
-      {renderHeavyComponent}
+      
+      {showHeavy && (
+        <Suspense fallback={<ComponentSkeleton />}>
+          <HeavyComponent />
+        </Suspense>
+      )}
     </div>
   );
 };
 ```
 
-## Functional Module Best Practices
+## モジュールベストプラクティス
 
-### Functional Named Exports Principle (with Exceptions)
-Prefer named exports as a principle, allow default exports for specific cases.
+### Named Exports原則（例外あり）
+原則として名前付きエクスポートを使用、特定用途でデフォルトエクスポート許可。
 
 ```jsx
-// ✅ Principle: Functional named exports
+// ✅ 原則：名前付きエクスポート
 export const UserService = () => { /* ... */ };
 export const AuthService = () => { /* ... */ };
 
-// ✅ Exception: App components (main entry points)
-const App = () => {
+// ✅ 例外：Appコンポーネント（メインエントリーポイント）
+export default function App() {
   return <div>Main App</div>;
-};
+}
 
-export default App;
-
-// ✅ Exception: Next.js page components  
-const HomePage = () => {
+// ✅ 例外：Next.jsページコンポーネント
+export default function HomePage() {
   return <div>Home Page</div>;
-};
+}
 
-export default HomePage;
-
-// ✅ Exception: Components for dynamic imports
+// ✅ 例外：動的インポート用コンポーネント
 const LazyComponent = lazy(() => import('./ComponentRequiringDefault'));
 ```
 
-## Functional Testing (React v18)
+## テスト（React 18）
 
-### Functional Testing Concurrent Features
-Testing React v18 concurrent features and Suspense using functional patterns.
+### 並行機能テスト
+React 18の並行機能とSuspenseのテスト。
 
 ```jsx
 import { render, screen, waitFor, act } from '@testing-library/react';
 
-const testSearchComponent = () => {
-  test('handles concurrent updates correctly', async () => {
+describe('SearchComponent with React 18', () => {
+  test('並行更新を正しく処理', async () => {
     render(<SearchComponent />);
     
     const input = screen.getByRole('textbox');
     
     await act(async () => {
-      fireEvent.change(input, { target: { value: 'test query' } });
+      fireEvent.change(input, { target: { value: 'テストクエリ' } });
     });
     
     await waitFor(() => {
-      expect(screen.getByText(/results for "test query"/i)).toBeInTheDocument();
+      expect(screen.getByText(/「テストクエリ」の結果/i)).toBeInTheDocument();
     });
   });
   
-  test('shows loading state during transition', async () => {
+  test('トランジション中のローディング状態表示', async () => {
     render(<SearchComponent />);
     
     const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'slow query' } });
+    fireEvent.change(input, { target: { value: '重いクエリ' } });
     
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
   });
-};
+});
 
-const testSuspenseComponent = () => {
-  test('renders fallback during loading', async () => {
-    render(
-      <Suspense fallback={<div>Loading...</div>}>
-        <AsyncComponent />
-      </Suspense>
-    );
-    
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
-    
-    await waitFor(() => {
-      expect(screen.getByText('Loaded content')).toBeInTheDocument();
-    });
+test('Suspense境界でフォールバック表示', async () => {
+  render(
+    <Suspense fallback={<div>読み込み中...</div>}>
+      <AsyncComponent />
+    </Suspense>
+  );
+  
+  expect(screen.getByText('読み込み中...')).toBeInTheDocument();
+  
+  await waitFor(() => {
+    expect(screen.getByText('読み込み済みコンテンツ')).toBeInTheDocument();
   });
-};
-
-// Export functional test suites
-export { testSearchComponent, testSuspenseComponent };
+});
 ```
 
-## React v18 Functional Programming Checklist
+## React 18ベストプラクティスチェックリスト
 
-### Mandatory Functional Concurrent Features
-- [ ] Use useTransition for non-urgent updates with functional patterns
-- [ ] Implement useDeferredValue for heavy computations functionally
-- [ ] Leverage Suspense for data fetching with functional components
-- [ ] Use useId for stable component IDs in functional components
-- [ ] Implement useSyncExternalStore for external state functionally
+### 並行機能
+- [ ] 緊急でない更新にuseTransitionを使用
+- [ ] 重い計算にuseDeferredValueを実装  
+- [ ] データフェッチにSuspenseを活用
+- [ ] 安定したコンポーネントIDにuseIdを使用
+- [ ] 外部状態にuseSyncExternalStoreを実装
 
-### Functional Server Components
-- [ ] Consider Server Components for static content with functional patterns
-- [ ] Use 'use client' directive only when needed in functional components
-- [ ] Clearly separate server and client boundaries functionally
+### サーバーコンポーネント
+- [ ] 静的コンテンツにサーバーコンポーネントを検討
+- [ ] 必要な場合のみ'use client'ディレクティブを使用
+- [ ] サーバー・クライアント境界を明確に分離
 
-### Functional Performance
-- [ ] Memoize expensive computations with useMemo functionally
-- [ ] Stabilize callbacks with useCallback in functional components
-- [ ] Use React.memo for functional component optimization
-- [ ] Implement code splitting with lazy() for functional components
+### パフォーマンス
+- [ ] useMemoで高コスト計算をメモ化
+- [ ] useCallbackでコールバックを安定化
+- [ ] コンポーネント最適化にReact.memoを使用
+- [ ] lazy()でコード分割を実装
 
-### Mandatory Functional Code Quality
-- [ ] ALL functions are arrow functions (FORBIDDEN: function declarations)
-- [ ] Always use TypeScript for type safety in functional components
-- [ ] Implement proper error boundaries functionally
-- [ ] Write comprehensive tests for concurrent features functionally
-- [ ] Follow functional naming conventions (PascalCase for components)
-- [ ] Use ESLint rules for React hooks in functional components
-- [ ] ALL data structures are immutable (MANDATORY)
-- [ ] ALL components are pure functions (MANDATORY)
-
-### Functional Architecture
-- [ ] Replace any remaining class components with functional components
-- [ ] Use functional composition over inheritance patterns
-- [ ] Implement functional dependency injection in React
-- [ ] Design purely functional component hierarchies
-- [ ] Prefer named exports, use default exports for exceptions only
-
-**Appropriate Score: 1/10** - This represents the absolute dedication to functional programming in React v18 with zero tolerance for imperative or object-oriented patterns.
+### コード品質  
+- [ ] 型安全性のため常にTypeScriptを使用
+- [ ] 適切なエラーバウンダリを実装
+- [ ] 並行機能の包括的テストを記述
+- [ ] 命名規則に従う（コンポーネントはPascalCase）
+- [ ] ReactフックのESLintルールを使用
+- [ ] 原則named exports、例外的にdefault exportsを使用

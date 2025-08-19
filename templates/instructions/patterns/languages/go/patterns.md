@@ -1,11 +1,12 @@
-# Go Patterns
+# Go パターン
 
-Simple and efficient Go programming patterns.
+シンプルで効率的なGoプログラミングパターン。
 
-## Basic Structure
+## 基本構造
 
-### Package Layout
+### パッケージ構成
 ```go
+// プロジェクト構造
 myapp/
 ├── cmd/
 │   └── server/
@@ -20,9 +21,9 @@ myapp/
 └── go.sum
 ```
 
-### Error Handling
+### エラーハンドリング
 ```go
-// Custom errors
+// カスタムエラー
 type AppError struct {
     Code    int
     Message string
@@ -33,7 +34,7 @@ func (e *AppError) Error() string {
     return e.Message
 }
 
-// Error wrapping
+// エラーラップ
 func processData(data []byte) error {
     if err := validate(data); err != nil {
         return fmt.Errorf("validation failed: %w", err)
@@ -41,15 +42,15 @@ func processData(data []byte) error {
     return nil
 }
 
-// Error checking
+// エラーチェック
 if err != nil {
     return nil, err
 }
 ```
 
-## Concurrency
+## 並行処理
 
-### Goroutines and Channels
+### Goroutines とChannels
 ```go
 // Worker Pool
 func workerPool(jobs <-chan Job, results chan<- Result) {
@@ -73,7 +74,7 @@ func worker(jobs <-chan Job, results chan<- Result, wg *sync.WaitGroup) {
 }
 ```
 
-### Context Usage
+### Context使用
 ```go
 func fetchData(ctx context.Context, id string) (*Data, error) {
     ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -88,11 +89,11 @@ func fetchData(ctx context.Context, id string) (*Data, error) {
 }
 ```
 
-## Interfaces
+## インターフェース
 
-### Interface Definition
+### インターフェース定義
 ```go
-// Small interfaces
+// 小さなインターフェース
 type Reader interface {
     Read([]byte) (int, error)
 }
@@ -101,23 +102,24 @@ type Writer interface {
     Write([]byte) (int, error)
 }
 
-// Composition
+// 組み合わせ
 type ReadWriter interface {
     Reader
     Writer
 }
 
-// Implementation
+// インターフェース実装
 type FileStore struct {
     path string
 }
 
 func (fs *FileStore) Read(p []byte) (int, error) {
+    // 実装
     return len(p), nil
 }
 ```
 
-## Struct Patterns
+## 構造体パターン
 
 ### Functional Options
 ```go
@@ -155,14 +157,14 @@ func NewServer(opts ...Option) *Server {
     return s
 }
 
-// Usage
+// 使用
 server := NewServer(
     WithHost("0.0.0.0"),
     WithTimeout(60*time.Second),
 )
 ```
 
-### Builder Pattern
+### Builder パターン
 ```go
 type RequestBuilder struct {
     method  string
@@ -195,7 +197,7 @@ func (b *RequestBuilder) Build() (*http.Request, error) {
 }
 ```
 
-## Testing
+## テスト
 
 ### Table Driven Tests
 ```go
@@ -222,9 +224,33 @@ func TestAdd(t *testing.T) {
 }
 ```
 
-## HTTP Server
+### モック
+```go
+type MockDB struct {
+    mock.Mock
+}
 
-### Handler
+func (m *MockDB) Get(id string) (*User, error) {
+    args := m.Called(id)
+    return args.Get(0).(*User), args.Error(1)
+}
+
+func TestService(t *testing.T) {
+    mockDB := new(MockDB)
+    mockDB.On("Get", "123").Return(&User{ID: "123"}, nil)
+    
+    service := NewService(mockDB)
+    user, err := service.GetUser("123")
+    
+    assert.NoError(t, err)
+    assert.Equal(t, "123", user.ID)
+    mockDB.AssertExpectations(t)
+}
+```
+
+## HTTPサーバー
+
+### ハンドラー
 ```go
 type Handler struct {
     service Service
@@ -244,7 +270,7 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-### Middleware
+### ミドルウェア
 ```go
 func LoggingMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -263,22 +289,22 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 }
 ```
 
-## Best Practices
+## ベストプラクティス
 
-### Defer Usage
+### defer使用
 ```go
 func readFile(path string) ([]byte, error) {
     f, err := os.Open(path)
     if err != nil {
         return nil, err
     }
-    defer f.Close() // Always close
+    defer f.Close() // 必ずクローズ
     
     return io.ReadAll(f)
 }
 ```
 
-### Embed Usage
+### embed使用
 ```go
 //go:embed templates/*
 var templates embed.FS
@@ -287,11 +313,11 @@ var templates embed.FS
 var configData []byte
 ```
 
-## Checklist
-- [ ] Proper error handling
-- [ ] Goroutine leak prevention
-- [ ] Context usage
-- [ ] Small interfaces
-- [ ] Table-driven tests
-- [ ] Defer for resources
-- [ ] Concurrency patterns
+## チェックリスト
+- [ ] エラーハンドリング適切
+- [ ] goroutine リーク防止
+- [ ] context 適切使用
+- [ ] インターフェース小さく
+- [ ] テーブル駆動テスト
+- [ ] defer でリソース管理
+- [ ] 並行処理パターン適用

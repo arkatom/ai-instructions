@@ -1,10 +1,10 @@
-# Express.js Patterns
+# Express.js パターン
 
-Node.js backend API patterns with Express.js.
+Node.js バックエンドAPIのためのExpress.jsパターン。
 
-## Application Structure
+## アプリケーション構造
 
-### Basic Setup
+### 基本セットアップ
 ```javascript
 const express = require('express');
 const cors = require('cors');
@@ -12,26 +12,28 @@ const helmet = require('helmet');
 
 const app = express();
 
-// Middleware
-app.use(helmet());
+// ミドルウェア
+app.use(helmet()); // セキュリティヘッダー
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// ルート
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 
-// Error handling
+// エラーハンドリング
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);
 ```
 
-## Routing
+## ルーティング
 
-### Modular Router
+### モジュラールーター
 ```javascript
+// routes/users.js
 const router = express.Router();
 
 router.get('/', getAllUsers);
@@ -43,7 +45,7 @@ router.delete('/:id', deleteUser);
 module.exports = router;
 ```
 
-### Parameter Validation
+### パラメータ検証
 ```javascript
 const { body, param, validationResult } = require('express-validator');
 
@@ -61,9 +63,9 @@ router.post('/',
 );
 ```
 
-## Middleware
+## ミドルウェア
 
-### Authentication
+### 認証ミドルウェア
 ```javascript
 const jwt = require('jsonwebtoken');
 
@@ -83,25 +85,26 @@ const authenticate = (req, res, next) => {
   }
 };
 
+// 使用
 router.get('/profile', authenticate, getProfile);
 ```
 
-### Rate Limiting
+### レート制限
 ```javascript
 const rateLimit = require('express-rate-limit');
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 100, // 最大100リクエスト
   message: 'Too many requests'
 });
 
 app.use('/api/', limiter);
 ```
 
-## Error Handling
+## エラーハンドリング
 
-### Global Error Handler
+### グローバルエラーハンドラー
 ```javascript
 class AppError extends Error {
   constructor(message, statusCode) {
@@ -122,6 +125,7 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
+// 非同期エラーキャッチ
 const catchAsync = (fn) => {
   return (req, res, next) => {
     fn(req, res, next).catch(next);
@@ -129,15 +133,77 @@ const catchAsync = (fn) => {
 };
 ```
 
-## Performance
+## データベース統合
 
-### Compression
+### MongoDB (Mongoose)
+```javascript
+const mongoose = require('mongoose');
+
+// スキーマ定義
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+// ミドルウェア
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+
+const User = mongoose.model('User', userSchema);
+```
+
+### PostgreSQL (Prisma)
+```javascript
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+const getUsers = catchAsync(async (req, res) => {
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      email: true,
+      name: true
+    }
+  });
+  res.json(users);
+});
+```
+
+## セキュリティ
+
+### 入力サニタイゼーション
+```javascript
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+
+app.use(mongoSanitize()); // NoSQL インジェクション防止
+app.use(xss()); // XSS攻撃防止
+```
+
+### HTTPS強制
+```javascript
+app.use((req, res, next) => {
+  if (req.header('x-forwarded-proto') !== 'https') {
+    res.redirect(`https://${req.header('host')}${req.url}`);
+  } else {
+    next();
+  }
+});
+```
+
+## パフォーマンス
+
+### 圧縮
 ```javascript
 const compression = require('compression');
 app.use(compression());
 ```
 
-### Caching
+### キャッシング
 ```javascript
 const redis = require('redis');
 const client = redis.createClient();
@@ -160,14 +226,15 @@ const cache = (duration) => {
   };
 };
 
+// 使用
 router.get('/products', cache(300), getProducts);
 ```
 
-## Checklist
-- [ ] Middleware configured
-- [ ] Routes modularized
-- [ ] Input validation
-- [ ] Authentication/Authorization
-- [ ] Error handling
-- [ ] Security measures
-- [ ] Performance optimized
+## チェックリスト
+- [ ] 適切なミドルウェア構成
+- [ ] ルートモジュール化
+- [ ] 入力検証実装
+- [ ] 認証・認可
+- [ ] エラーハンドリング
+- [ ] セキュリティ対策
+- [ ] パフォーマンス最適化

@@ -1,63 +1,63 @@
-# Python Best Practices
+# Pythonベストプラクティス
 
-## Type Hints (Python 3.10+)
-Use modern type annotations for better code clarity and IDE support.
+## 型ヒント（Python 3.10+）
+コードの明確性とIDE支援のために最新の型アノテーションを使用。
 
 ```python
-# Good - Python 3.10+ syntax
+# 良い例 - Python 3.10+構文
 def calculate_discount(price: float, discount_rate: float) -> float:
     return price * (1 - discount_rate)
 
-# Use Union types with | operator (Python 3.10+)
+# Union型に | 演算子を使用（Python 3.10+）
 def process_items(items: list[str], config: dict[str, Any] | None = None) -> list[str]:
     config = config or {}
     return [item.upper() for item in items]
 
-# TypeAlias for complex types (Python 3.10+)
+# 複雑な型にはTypeAlias（Python 3.10+）
 from typing import TypeAlias, Any
 
 UserData: TypeAlias = dict[str, str | int | list[str]]
 
-# Bad - Old style (pre-3.10)
-from typing import List, Optional, Dict  # Don't use these anymore
-def old_process(items: List[str], config: Optional[Dict[str, Any]] = None):  # Outdated
+# 悪い例 - 古いスタイル（3.10以前）
+from typing import List, Optional, Dict  # もう使わない
+def old_process(items: List[str], config: Optional[Dict[str, Any]] = None):  # 古い
     pass
 ```
 
-## Pattern Matching (Python 3.10+)
-Use match/case for cleaner conditional logic.
+## パターンマッチング（Python 3.10+）
+クリーンな条件ロジックにmatch/caseを使用。
 
 ```python
-# Good - Pattern matching
+# 良い例 - パターンマッチング
 def handle_response(response: dict[str, Any]) -> str:
     match response:
         case {"status": 200, "data": data}:
-            return f"Success: {data}"
+            return f"成功: {data}"
         case {"status": 404}:
-            return "Not found"
+            return "見つかりません"
         case {"status": code} if code >= 500:
-            return f"Server error: {code}"
+            return f"サーバーエラー: {code}"
         case _:
-            return "Unknown response"
+            return "不明なレスポンス"
 
-# Structural pattern matching with guards
+# ガード付き構造パターンマッチング
 def process_command(command: list[str]) -> str:
     match command:
         case ["move", ("north" | "south" | "east" | "west") as direction]:
-            return f"Moving {direction}"
+            return f"{direction}へ移動"
         case ["attack", target] if target:
-            return f"Attacking {target}"
+            return f"{target}を攻撃"
         case ["defend"]:
-            return "Defending"
+            return "防御"
         case _:
-            return "Invalid command"
+            return "無効なコマンド"
 ```
 
-## Data Classes
-Use dataclasses for simple data containers.
+## データクラス
+単純なデータコンテナにはdataclassesを使用。
 
 ```python
-# Good
+# 良い例
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -69,7 +69,7 @@ class User:
     created_at: datetime = field(default_factory=datetime.now)
     tags: list[str] = field(default_factory=list)
 
-# With __post_init__ for validation
+# バリデーション付き__post_init__
 @dataclass
 class Product:
     name: str
@@ -78,9 +78,9 @@ class Product:
     
     def __post_init__(self):
         if self.price < 0:
-            raise ValueError("Price cannot be negative")
+            raise ValueError("価格は負の値にできません")
 
-# Bad
+# 悪い例
 class User:
     def __init__(self, id, name, email):
         self.id = id
@@ -89,11 +89,11 @@ class User:
         self.created_at = datetime.now()
 ```
 
-## Protocols (Structural Subtyping)
-Use Protocol for duck typing with type safety.
+## プロトコル（構造的サブタイピング）
+型安全性を持つダックタイピングにProtocolを使用。
 
 ```python
-# Good - Protocol pattern
+# 良い例 - プロトコルパターン
 from typing import Protocol, runtime_checkable
 
 @runtime_checkable
@@ -106,32 +106,32 @@ class Resizable(Protocol):
 
 class Shape:
     def draw(self) -> None:
-        print("Drawing shape")
+        print("図形を描画")
     
     def resize(self, width: int, height: int) -> None:
-        print(f"Resizing to {width}x{height}")
+        print(f"{width}x{height}にリサイズ")
 
 def render(obj: Drawable) -> None:
-    obj.draw()  # Type-safe duck typing
+    obj.draw()  # 型安全なダックタイピング
 
-# Shape implements Drawable protocol implicitly
+# ShapeはDrawableプロトコルを暗黙的に実装
 shape = Shape()
-render(shape)  # Works!
+render(shape)  # 動作する！
 
-# Runtime check
+# ランタイムチェック
 if isinstance(shape, Drawable):
-    print("Shape is drawable")
+    print("図形は描画可能")
 ```
 
-## Context Managers
-Use context managers for resource management.
+## コンテキストマネージャー
+リソース管理にはコンテキストマネージャーを使用。
 
 ```python
-# Good
+# 良い例
 with open('file.txt', 'r') as f:
     content = f.read()
 
-# Custom context manager with contextlib
+# contextlibでカスタムコンテキストマネージャー
 from contextlib import contextmanager
 import sqlite3
 
@@ -143,29 +143,29 @@ def database_connection(db_name: str):
     finally:
         conn.close()
 
-# Using the custom context manager
+# カスタムコンテキストマネージャーの使用
 with database_connection('app.db') as conn:
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users")
 
-# Parenthesized context managers (Python 3.10+)
+# 括弧内コンテキストマネージャー（Python 3.10+）
 with (
     open('input.txt') as infile,
     open('output.txt', 'w') as outfile
 ):
     outfile.write(infile.read())
 
-# Bad
+# 悪い例
 f = open('file.txt', 'r')
 content = f.read()
-f.close()  # Easy to forget
+f.close()  # 忘れやすい
 ```
 
 ## Async/Await
-Use async/await for concurrent I/O operations.
+並行I/O操作にはasync/awaitを使用。
 
 ```python
-# Good
+# 良い例
 import asyncio
 import aiohttp
 
@@ -178,13 +178,13 @@ async def fetch_multiple(urls: list[str]) -> list[dict[str, Any]]:
     tasks = [fetch_data(url) for url in urls]
     return await asyncio.gather(*tasks)
 
-# Using asyncio.TaskGroup (Python 3.11+)
+# asyncio.TaskGroupの使用（Python 3.11+）
 async def fetch_with_taskgroup(urls: list[str]) -> list[dict[str, Any]]:
     async with asyncio.TaskGroup() as tg:
         tasks = [tg.create_task(fetch_data(url)) for url in urls]
     return [task.result() for task in tasks]
 
-# Bad - blocking I/O
+# 悪い例 - ブロッキングI/O
 import requests
 
 def fetch_multiple_blocking(urls):
@@ -195,75 +195,75 @@ def fetch_multiple_blocking(urls):
     return results
 ```
 
-## Error Handling
-Use specific exceptions and proper error handling.
+## エラー処理
+特定の例外と適切なエラー処理を使用。
 
 ```python
-# Good - Custom exceptions with Exception Groups (Python 3.11+)
+# 良い例 - カスタム例外とException Groups（Python 3.11+）
 class ValidationError(Exception):
-    """Raised when validation fails"""
+    """検証失敗時に発生"""
     pass
 
 class EmailValidationError(ValidationError):
-    """Specific email validation error"""
+    """特定のメール検証エラー"""
     pass
 
 def validate_user(data: dict[str, Any]) -> None:
     errors = []
     
     if 'email' not in data:
-        errors.append(EmailValidationError("Email is required"))
+        errors.append(EmailValidationError("メールは必須"))
     elif '@' not in data['email']:
-        errors.append(EmailValidationError(f"Invalid email: {data['email']}"))
+        errors.append(EmailValidationError(f"無効なメール: {data['email']}"))
     
     if 'age' in data and data['age'] < 0:
-        errors.append(ValidationError("Age cannot be negative"))
+        errors.append(ValidationError("年齢は負の値にできません"))
     
     if errors:
-        raise ExceptionGroup("Validation failed", errors)
+        raise ExceptionGroup("検証失敗", errors)
 
-# Handle exception groups
+# exception groupsの処理
 try:
     validate_user({'email': 'invalid', 'age': -1})
 except* EmailValidationError as eg:
     for error in eg.exceptions:
-        print(f"Email error: {error}")
+        print(f"メールエラー: {error}")
 except* ValidationError as eg:
     for error in eg.exceptions:
-        print(f"Validation error: {error}")
+        print(f"検証エラー: {error}")
 ```
 
-## List Comprehensions and Generators
-Use comprehensions for cleaner code, generators for memory efficiency.
+## リスト内包表記とジェネレータ
+クリーンなコードには内包表記、メモリ効率にはジェネレータを使用。
 
 ```python
-# Good
-# List comprehension with walrus operator (Python 3.8+)
+# 良い例
+# セイウチ演算子付きリスト内包表記（Python 3.8+）
 data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 filtered = [y for x in data if (y := x * 2) > 10]
 
-# Generator for large datasets
+# 大規模データセット用ジェネレータ
 def read_large_file(file_path: str):
     with open(file_path) as f:
         for line in f:
-            if processed := line.strip():  # Walrus operator
+            if processed := line.strip():  # セイウチ演算子
                 yield processed
 
-# Generator expression
+# ジェネレータ式
 sum_squares = sum(x**2 for x in range(1000000))
 
-# Bad
+# 悪い例
 squares = []
 for x in range(10):
     if x % 2 == 0:
         squares.append(x**2)
 ```
 
-## Decorators
-Use decorators for cross-cutting concerns.
+## デコレータ
+横断的関心事にはデコレータを使用。
 
 ```python
-# Good - Modern decorator with ParamSpec (Python 3.10+)
+# 良い例 - ParamSpecを使った最新デコレータ（Python 3.10+）
 from functools import wraps
 from typing import ParamSpec, TypeVar, Callable
 import time
@@ -277,16 +277,16 @@ def measure_time(func: Callable[P, R]) -> Callable[P, R]:
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        print(f"{func.__name__} took {end - start:.2f}s")
+        print(f"{func.__name__}は{end - start:.2f}秒かかりました")
         return result
     return wrapper
 
 @measure_time
 def slow_function() -> str:
     time.sleep(1)
-    return "done"
+    return "完了"
 
-# Caching decorator
+# キャッシュデコレータ
 from functools import lru_cache
 
 @lru_cache(maxsize=128)
@@ -294,11 +294,11 @@ def expensive_computation(n: int) -> int:
     return n ** n
 ```
 
-## Path Handling
-Use pathlib for file system operations.
+## パス処理
+ファイルシステム操作にはpathlibを使用。
 
 ```python
-# Good
+# 良い例
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent
@@ -308,26 +308,26 @@ if config_file.exists():
     with config_file.open() as f:
         config = json.load(f)
 
-# Create directory if it doesn't exist
+# ディレクトリが存在しない場合は作成
 output_dir = project_root / "output"
 output_dir.mkdir(parents=True, exist_ok=True)
 
-# Glob patterns
+# globパターン
 for py_file in project_root.glob("**/*.py"):
     print(py_file)
 
-# Bad
+# 悪い例
 import os
 
 project_root = os.path.dirname(os.path.dirname(__file__))
 config_file = os.path.join(project_root, "config", "settings.json")
 ```
 
-## Testing
-Write comprehensive tests with pytest.
+## テスト
+pytestで包括的なテストを記述。
 
 ```python
-# Good - Modern pytest with type hints
+# 良い例 - 型ヒント付き最新pytest
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
@@ -347,7 +347,7 @@ def test_get_user_from_db(mock_database: Mock) -> None:
     assert user["name"] == "Alice"
     mock_database.get_user.assert_called_once_with(1)
 
-# Async test
+# 非同期テスト
 @pytest.mark.asyncio
 async def test_async_function() -> None:
     mock_api = AsyncMock()
@@ -355,7 +355,7 @@ async def test_async_function() -> None:
     result = await process_api_call(mock_api)
     assert result["status"] == "ok"
 
-# Parametrized tests
+# パラメータ化テスト
 @pytest.mark.parametrize("input,expected", [
     (2, 4),
     (3, 9),
@@ -365,228 +365,20 @@ def test_square(input: int, expected: int) -> None:
     assert square(input) == expected
 ```
 
-## Security Best Practices
+## ベストプラクティスチェックリスト
 
-✅ Input validation and sanitization:
-```python
-# Good - comprehensive input validation
-import re
-from typing import Any
-from html import escape
-
-def validate_email(email: str) -> bool:
-    """Validate email format and length."""
-    if not isinstance(email, str) or len(email) > 254:
-        return False
-    
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return bool(re.match(pattern, email))
-
-def sanitize_html_input(user_input: str) -> str:
-    """Sanitize user input to prevent XSS."""
-    if not isinstance(user_input, str):
-        raise ValueError("Input must be a string")
-    
-    # HTML escape and limit length
-    sanitized = escape(user_input.strip())
-    return sanitized[:1000]  # Limit length
-
-def validate_user_data(data: dict[str, Any]) -> dict[str, str]:
-    """Validate and sanitize user registration data."""
-    required_fields = ['name', 'email']
-    
-    for field in required_fields:
-        if field not in data:
-            raise ValueError(f"Missing required field: {field}")
-    
-    if not validate_email(data['email']):
-        raise ValueError("Invalid email format")
-    
-    return {
-        'name': sanitize_html_input(data['name']),
-        'email': data['email'].lower().strip()
-    }
-
-# Bad - no validation
-def unsafe_user_creation(data):
-    return {
-        'name': data['name'],      # No validation
-        'email': data['email'],    # No format check
-        'bio': data.get('bio', '') # No XSS protection
-    }
-```
-
-✅ Secure database operations:
-```python
-# Good - parameterized queries with sqlalchemy
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
-def get_user_securely(db: Session, user_id: int) -> dict[str, Any] | None:
-    """Safely get user data using parameterized query."""
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise ValueError("Invalid user ID")
-    
-    query = text("SELECT id, name, email FROM users WHERE id = :user_id")
-    result = db.execute(query, {"user_id": user_id}).fetchone()
-    
-    if result:
-        return {
-            'id': result.id,
-            'name': result.name,
-            'email': result.email
-        }
-    return None
-
-def search_users_securely(db: Session, search_term: str) -> list[dict[str, Any]]:
-    """Secure user search with input validation."""
-    # Validate and sanitize search term
-    if not isinstance(search_term, str):
-        raise ValueError("Search term must be string")
-    
-    clean_term = sanitize_html_input(search_term)
-    if len(clean_term) < 2:
-        return []
-    
-    # Use parameterized query with LIKE
-    query = text("""
-        SELECT id, name, email 
-        FROM users 
-        WHERE name ILIKE :search_term 
-        LIMIT 50
-    """)
-    
-    results = db.execute(query, {"search_term": f"%{clean_term}%"}).fetchall()
-    
-    return [
-        {'id': r.id, 'name': r.name, 'email': r.email}
-        for r in results
-    ]
-
-# Bad - SQL injection vulnerability
-def unsafe_user_search(db, search_term):
-    query = f"SELECT * FROM users WHERE name LIKE '%{search_term}%'"
-    return db.execute(query).fetchall()  # SQL injection risk
-```
-
-✅ Secure file operations:
-```python
-# Good - secure file handling
-from pathlib import Path
-import os
-
-ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.pdf', '.txt'}
-UPLOAD_DIRECTORY = Path('/secure/uploads')
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-
-def validate_file_upload(filename: str, content: bytes) -> tuple[bool, str]:
-    """Validate uploaded file for security."""
-    if not filename:
-        return False, "Filename required"
-    
-    # Check file extension
-    file_path = Path(filename)
-    if file_path.suffix.lower() not in ALLOWED_UPLOAD_EXTENSIONS:
-        return False, f"File type not allowed: {file_path.suffix}"
-    
-    # Check file size
-    if len(content) > MAX_FILE_SIZE:
-        return False, "File too large"
-    
-    # Check for path traversal
-    if '..' in filename or filename.startswith('/'):
-        return False, "Invalid filename"
-    
-    return True, "Valid file"
-
-def save_uploaded_file(filename: str, content: bytes) -> Path:
-    """Securely save uploaded file."""
-    is_valid, message = validate_file_upload(filename, content)
-    if not is_valid:
-        raise ValueError(message)
-    
-    # Generate safe filename
-    safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
-    file_path = UPLOAD_DIRECTORY / safe_filename
-    
-    # Ensure upload directory exists
-    UPLOAD_DIRECTORY.mkdir(parents=True, exist_ok=True)
-    
-    # Write file securely
-    with file_path.open('wb') as f:
-        f.write(content)
-    
-    return file_path
-
-# Bad - insecure file handling
-def unsafe_file_save(filename, content):
-    with open(f"/uploads/{filename}", 'wb') as f:  # Path traversal risk
-        f.write(content)  # No validation
-```
-
-✅ Environment and secrets management:
-```python
-# Good - secure configuration management
-import os
-from functools import lru_cache
-from pydantic import BaseSettings, validator
-
-class SecureSettings(BaseSettings):
-    """Secure application settings with validation."""
-    
-    database_url: str
-    secret_key: str
-    api_key: str
-    debug: bool = False
-    
-    @validator('secret_key')
-    def validate_secret_key(cls, v: str) -> str:
-        if len(v) < 32:
-            raise ValueError('Secret key must be at least 32 characters')
-        return v
-    
-    @validator('database_url')
-    def validate_database_url(cls, v: str) -> str:
-        if not v.startswith(('postgresql://', 'sqlite://')):
-            raise ValueError('Invalid database URL')
-        return v
-    
-    class Config:
-        env_file = '.env'
-        env_file_encoding = 'utf-8'
-
-@lru_cache()
-def get_settings() -> SecureSettings:
-    """Get validated settings (cached)."""
-    return SecureSettings()
-
-# Usage
-settings = get_settings()
-
-# Bad - insecure configuration
-SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret')  # Weak default
-DATABASE_URL = os.environ['DATABASE_URL']  # No validation
-```
-
-## Best Practices Checklist
-
-- [ ] Use type hints for all functions (Python 3.10+ syntax)
-- [ ] Use `|` for Union types instead of `Union[X, Y]`
-- [ ] Use built-in generics (`list`, `dict`) instead of `List`, `Dict`
-- [ ] Use pattern matching for complex conditionals
-- [ ] Use Protocol for structural subtyping
-- [ ] Follow PEP 8 style guide
-- [ ] Use virtual environments (venv, poetry, pipenv)
-- [ ] Pin dependencies with requirements.txt or pyproject.toml
-- [ ] Use f-strings for formatting
-- [ ] Prefer pathlib over os.path
-- [ ] Write docstrings for modules, classes, and functions
-- [ ] Use logging instead of print for debugging
-- [ ] Handle exceptions specifically
-- [ ] Write tests with pytest
-- [ ] Use linters (pylint, flake8, black, mypy)
-- [ ] Validate and sanitize all user inputs
-- [ ] Use parameterized queries to prevent SQL injection  
-- [ ] Implement secure file upload validation
-- [ ] Validate environment variables and secrets
-- [ ] Use proper HTML escaping for web output
+- [ ] すべての関数に型ヒントを使用（Python 3.10+構文）
+- [ ] Union型に `|` を使用、`Union[X, Y]` は不使用
+- [ ] 組み込みジェネリック（`list`、`dict`）使用、`List`、`Dict`は不使用
+- [ ] 複雑な条件にパターンマッチングを使用
+- [ ] 構造的サブタイピングにProtocolを使用
+- [ ] PEP 8スタイルガイドに従う
+- [ ] 仮想環境を使用（venv、poetry、pipenv）
+- [ ] requirements.txtまたはpyproject.tomlで依存関係を固定
+- [ ] フォーマットにはf文字列を使用
+- [ ] os.pathよりpathlibを優先
+- [ ] モジュール、クラス、関数にdocstringを記述
+- [ ] デバッグにはprintの代わりにloggingを使用
+- [ ] 例外を具体的に処理
+- [ ] pytestでテストを記述
+- [ ] リンターを使用（pylint、flake8、black、mypy）
