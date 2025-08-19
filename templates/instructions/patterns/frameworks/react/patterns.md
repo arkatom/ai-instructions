@@ -1,183 +1,75 @@
-# React Patterns
+# Reactパターン
 
-Modern React patterns with React 18+ features for concurrent, performant applications.
+React 18+の並行機能とパフォーマンス最適化パターン。
 
-## React 18 Concurrent Features
+## 並行機能
 
-### useTransition for Non-Urgent Updates
-Mark state updates as non-urgent to keep UI responsive.
+### useTransition
+```tsx
+const [isPending, startTransition] = useTransition();
 
-```jsx
-// Good - React 18 concurrent features
-const searchUsers = (query: string) => {
-  const [isPending, startTransition] = useTransition();
-  const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [query, setQuery] = useState('');
-  
-  const handleSearch = (newQuery: string) => {
-    setQuery(newQuery); // Urgent update
-    startTransition(() => {
-      // Non-urgent update - won't block UI
-      setSearchResults(performHeavySearch(newQuery));
-    });
-  };
-  
-  return (
-    <div>
-      <input value={query} onChange={e => handleSearch(e.target.value)} />
-      {isPending ? <Spinner /> : <Results data={searchResults} />}
-    </div>
-  );
-};
-
-// Bad - blocking updates
 const handleSearch = (query: string) => {
-  setQuery(query);
-  setSearchResults(performHeavySearch(query)); // Blocks UI
+  setQuery(query); // 緊急更新
+  startTransition(() => {
+    setSearchResults(performHeavySearch(query)); // 非緊急更新
+  });
 };
 ```
 
-### useDeferredValue for Debounced Updates
-Defer non-critical updates until more urgent ones complete.
-
-```jsx
-// Good - deferred rendering
-const SearchResults = () => {
-  const [query, setQuery] = useState('');
-  const deferredQuery = useDeferredValue(query);
-  const results = useMemo(() => 
-    searchDatabase(deferredQuery), [deferredQuery]
-  );
-  
-  return (
-    <div>
-      <input value={query} onChange={e => setQuery(e.target.value)} />
-      <div className={query !== deferredQuery ? 'dimmed' : ''}>
-        {results.map(item => <Item key={item.id} {...item} />)}
-      </div>
-    </div>
-  );
-};
+### useDeferredValue
+```tsx
+const deferredQuery = useDeferredValue(query);
+const results = useMemo(() => searchDatabase(deferredQuery), [deferredQuery]);
 ```
 
-### Enhanced Suspense for Data Fetching
-Use Suspense with concurrent features for better UX.
-
-```jsx
-// Good - React 18 Suspense patterns
-const UserProfile = ({ userId }: { userId: string }) => {
-  return (
-    <Suspense 
-      fallback={<ProfileSkeleton />}
-      unstable_avoidThisFallback={true} // Prefer stale content
-    >
-      <UserData userId={userId} />
-      <Suspense fallback={<PostsSkeleton />}>
-        <UserPosts userId={userId} />
-      </Suspense>
-    </Suspense>
-  );
-};
-
-// Streaming SSR component
-const StreamingApp = () => {
-  return (
-    <html>
-      <body>
-        <Header />
-        <Suspense fallback={<MainSkeleton />}>
-          <MainContent />
-        </Suspense>
-        <Footer />
-      </body>
-    </html>
-  );
-};
+### Suspense
+```tsx
+<Suspense fallback={<ProfileSkeleton />}>
+  <UserData userId={userId} />
+  <Suspense fallback={<PostsSkeleton />}>
+    <UserPosts userId={userId} />
+  </Suspense>
+</Suspense>
 ```
 
-## Server Components (Next.js 13+)
+## サーバーコンポーネント（Next.js 13+）
 
-### Server vs Client Components
-Clear separation between server and client rendering.
-
-```jsx
-// Good - Server Component (no 'use client')
-// app/page.tsx - runs on server
+```tsx
+// サーバーコンポーネント（デフォルト）
 const HomePage = async () => {
-  const posts = await fetchPosts(); // Direct DB/API calls
-  
-  return (
-    <div>
-      <h1>Posts</h1>
-      {posts.map(post => (
-        <PostCard key={post.id} post={post} />
-      ))}
-    </div>
-  );
+  const posts = await fetchPosts(); // DB/API直接呼び出し
+  return <PostList posts={posts} />;
 };
 
-// Client Component for interactivity
+// クライアントコンポーネント（インタラクティブ）
 'use client';
-const InteractiveButton = ({ children }: { children: React.ReactNode }) => {
+const InteractiveButton = () => {
   const [count, setCount] = useState(0);
-  
-  return (
-    <button onClick={() => setCount(c => c + 1)}>
-      {children} ({count})
-    </button>
-  );
-};
-
-// Bad - mixing server logic in client component
-'use client';
-const BadComponent = () => {
-  const [posts, setPosts] = useState([]);
-  
-  useEffect(() => {
-    // This should be done in Server Component
-    fetchPosts().then(setPosts);
-  }, []);
-  
-  return <div>...</div>;
+  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
 };
 ```
 
-## Modern State Management
+## 状態管理
 
-### useId for Stable IDs
-Generate stable unique IDs for accessibility.
-
-```jsx
-// Good - useId for form labels
+### useId
+```tsx
 const ContactForm = () => {
   const nameId = useId();
   const emailId = useId();
   
   return (
     <form>
-      <label htmlFor={nameId}>Name</label>
+      <label htmlFor={nameId}>名前</label>
       <input id={nameId} name="name" />
-      
-      <label htmlFor={emailId}>Email</label>
+      <label htmlFor={emailId}>メール</label>
       <input id={emailId} name="email" type="email" />
     </form>
   );
 };
-
-// Bad - hardcoded IDs (SSR mismatch)
-const BadForm = () => (
-  <form>
-    <label htmlFor="name">Name</label>
-    <input id="name" name="name" />
-  </form>
-);
 ```
 
-### useSyncExternalStore for External State
-Safely sync with external stores.
-
-```jsx
-// Good - external store synchronization
+### useSyncExternalStore
+```tsx
 const useOnlineStatus = () => {
   return useSyncExternalStore(
     (callback) => {
@@ -189,43 +81,16 @@ const useOnlineStatus = () => {
       };
     },
     () => navigator.onLine,
-    () => true // Server-side fallback
+    () => true // SSRフォールバック
   );
-};
-
-// Usage
-const NetworkStatus = () => {
-  const isOnline = useOnlineStatus();
-  return <div>Status: {isOnline ? 'Online' : 'Offline'}</div>;
 };
 ```
 
-## Advanced Component Patterns
+## コンポーネントパターン
 
-### Compound Components with TypeScript
-Type-safe compound component patterns.
-
-```jsx
-// Good - modern compound components
-interface ToggleContextType {
-  on: boolean;
-  toggle: () => void;
-}
-
+### 複合コンポーネント
+```tsx
 const ToggleContext = createContext<ToggleContextType | null>(null);
-
-const useToggle = () => {
-  const context = useContext(ToggleContext);
-  if (!context) {
-    throw new Error('Toggle components must be used within Toggle');
-  }
-  return context;
-};
-
-interface ToggleProps {
-  children: React.ReactNode;
-  defaultOn?: boolean;
-}
 
 export const Toggle = ({ children, defaultOn = false }: ToggleProps) => {
   const [on, setOn] = useState(defaultOn);
@@ -240,175 +105,92 @@ export const Toggle = ({ children, defaultOn = false }: ToggleProps) => {
 
 Toggle.Button = () => {
   const { on, toggle } = useToggle();
-  return (
-    <button onClick={toggle} aria-pressed={on}>
-      {on ? 'ON' : 'OFF'}
-    </button>
-  );
+  return <button onClick={toggle} aria-pressed={on}>{on ? 'ON' : 'OFF'}</button>;
 };
 
 Toggle.Display = () => {
   const { on } = useToggle();
-  return <div>Status: {on ? 'Active' : 'Inactive'}</div>;
+  return <div>{on ? 'Active' : 'Inactive'}</div>;
 };
 ```
 
-### Error Boundaries with Hooks
-Modern error handling patterns.
-
-```jsx
-// Good - functional error boundary (using library like react-error-boundary)
-const ErrorFallback = ({ error, resetErrorBoundary }: any) => (
-  <div role="alert">
-    <h2>Something went wrong:</h2>
-    <pre>{error.message}</pre>
-    <button onClick={resetErrorBoundary}>Try again</button>
-  </div>
-);
-
-const App = () => (
-  <ErrorBoundary
-    FallbackComponent={ErrorFallback}
-    onError={(error, errorInfo) => {
-      console.error('Error caught:', error, errorInfo);
-      // Send to error reporting service
-    }}
-  >
-    <Header />
-    <Main />
-  </ErrorBoundary>
-);
-
-// Custom error hook
-const useErrorHandler = () => {
-  return useCallback((error: Error) => {
-    console.error('Handled error:', error);
-    // Report to service
-  }, []);
-};
+### エラーバウンダリ（react-error-boundary）
+```tsx
+<ErrorBoundary
+  FallbackComponent={ErrorFallback}
+  onError={(error, errorInfo) => {
+    console.error('Error:', error, errorInfo);
+  }}
+>
+  <App />
+</ErrorBoundary>
 ```
 
-## Performance Optimization
+## パフォーマンス最適化
 
-### React.memo with Comparison Function
-Optimize re-renders with custom comparison.
-
-```jsx
-// Good - optimized memo
-interface UserCardProps {
-  user: User;
-  onEdit: (id: string) => void;
-}
-
-export const UserCard = memo<UserCardProps>(({ user, onEdit }) => {
-  return (
+### React.memo with カスタム比較
+```tsx
+export const UserCard = memo<UserCardProps>(
+  ({ user, onEdit }) => (
     <div>
       <h3>{user.name}</h3>
-      <p>{user.email}</p>
-      <button onClick={() => onEdit(user.id)}>Edit</button>
+      <button onClick={() => onEdit(user.id)}>編集</button>
     </div>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison
-  return (
+  ),
+  (prevProps, nextProps) => 
     prevProps.user.id === nextProps.user.id &&
-    prevProps.user.name === nextProps.user.name &&
-    prevProps.onEdit === nextProps.onEdit
-  );
-});
-
-// Better - use callback stabilization
-const UserList = ({ users }: { users: User[] }) => {
-  const handleEdit = useCallback((id: string) => {
-    // Edit logic
-  }, []);
-  
-  return (
-    <div>
-      {users.map(user => (
-        <UserCard key={user.id} user={user} onEdit={handleEdit} />
-      ))}
-    </div>
-  );
-};
+    prevProps.user.name === nextProps.user.name
+);
 ```
 
-### Code Splitting with Concurrent Features
-Lazy loading with better UX.
-
-```jsx
-// Good - concurrent code splitting
-const HeavyComponent = lazy(() => 
-  import('./HeavyComponent').then(module => ({
-    default: module.HeavyComponent
-  }))
-);
+### コード分割 + 並行機能
+```tsx
+const HeavyComponent = lazy(() => import('./HeavyComponent'));
 
 const App = () => {
   const [showHeavy, setShowHeavy] = useState(false);
   const [isPending, startTransition] = useTransition();
   
-  const loadHeavyComponent = () => {
-    startTransition(() => {
-      setShowHeavy(true);
-    });
+  const loadComponent = () => {
+    startTransition(() => setShowHeavy(true));
   };
   
   return (
-    <div>
-      <button onClick={loadHeavyComponent} disabled={isPending}>
-        {isPending ? 'Loading...' : 'Load Heavy Component'}
+    <>
+      <button onClick={loadComponent} disabled={isPending}>
+        {isPending ? 'Loading...' : 'Load'}
       </button>
-      
       {showHeavy && (
-        <Suspense fallback={<ComponentSkeleton />}>
+        <Suspense fallback={<Skeleton />}>
           <HeavyComponent />
         </Suspense>
       )}
-    </div>
+    </>
   );
 };
 ```
 
-## Testing Patterns
+## テストパターン
 
-### Modern Testing with React 18
-Testing concurrent features and Suspense.
-
-```jsx
-// Good - testing with concurrent features
-import { render, screen, waitFor, act } from '@testing-library/react';
-import { unstable_renderSubtreeIntoContainer } from 'react-dom';
-
-describe('SearchComponent', () => {
-  test('handles concurrent updates correctly', async () => {
-    render(<SearchComponent />);
-    
-    const input = screen.getByRole('textbox');
-    
-    // Simulate rapid typing
-    await act(async () => {
-      fireEvent.change(input, { target: { value: 'test query' } });
-    });
-    
-    // Wait for deferred updates
-    await waitFor(() => {
-      expect(screen.getByText(/results for "test query"/i)).toBeInTheDocument();
-    });
+### 並行機能テスト
+```tsx
+test('並行更新の処理', async () => {
+  render(<SearchComponent />);
+  
+  const input = screen.getByRole('textbox');
+  await act(async () => {
+    fireEvent.change(input, { target: { value: 'test' } });
   });
   
-  test('shows loading state during transition', async () => {
-    render(<SearchComponent />);
-    
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'slow query' } });
-    
-    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText(/test結果/i)).toBeInTheDocument();
   });
 });
+```
 
-// Testing Suspense boundaries
-test('renders fallback during loading', async () => {
+### Suspenseテスト
+```tsx
+test('Suspenseフォールバック', async () => {
   render(
     <Suspense fallback={<div>Loading...</div>}>
       <AsyncComponent />
@@ -416,36 +198,30 @@ test('renders fallback during loading', async () => {
   );
   
   expect(screen.getByText('Loading...')).toBeInTheDocument();
-  
   await waitFor(() => {
-    expect(screen.getByText('Loaded content')).toBeInTheDocument();
+    expect(screen.getByText('Loaded Content')).toBeInTheDocument();
   });
 });
 ```
 
-## Best Practices Checklist
+## チェックリスト
 
-### React 18+ Features
-- [ ] Use useTransition for non-urgent updates
-- [ ] Implement useDeferredValue for heavy computations
-- [ ] Leverage Suspense for data fetching
-- [ ] Use useId for stable component IDs
-- [ ] Implement useSyncExternalStore for external state
-- [ ] Consider Server Components for static content
-- [ ] Use 'use client' directive only when needed
+### React 18+
+- [ ] useTransition for non-urgent updates
+- [ ] useDeferredValue for heavy computations
+- [ ] Suspense for data fetching
+- [ ] useId for stable IDs
+- [ ] useSyncExternalStore for external state
 
-### Performance
-- [ ] Memoize expensive computations with useMemo
-- [ ] Stabilize callbacks with useCallback
-- [ ] Use React.memo for component optimization
-- [ ] Implement code splitting with lazy()
-- [ ] Profile with React DevTools Profiler
-- [ ] Optimize bundle size and tree shaking
+### パフォーマンス
+- [ ] useMemo for expensive calculations
+- [ ] useCallback for stable callbacks
+- [ ] React.memo for component optimization
+- [ ] lazy() for code splitting
+- [ ] Bundle size optimization
 
-### Code Quality
-- [ ] Always use TypeScript for type safety
-- [ ] Implement proper error boundaries
-- [ ] Write comprehensive tests for concurrent features
-- [ ] Follow naming conventions (PascalCase for components)
-- [ ] Use ESLint rules for React hooks
-- [ ] Handle loading and error states consistently
+### 品質
+- [ ] TypeScript for type safety
+- [ ] Error boundaries
+- [ ] Comprehensive testing
+- [ ] ESLint React hooks rules

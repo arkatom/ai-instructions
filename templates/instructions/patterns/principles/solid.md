@@ -1,40 +1,40 @@
-# SOLID Principles
+# SOLID原則
 
-Core object-oriented design principles for maintainable code.
+保守性の高いコードのためのオブジェクト指向設計原則。
 
-## Single Responsibility Principle (SRP)
-A class should have only one reason to change.
+## 単一責任の原則 (SRP)
+クラスは変更の理由を1つだけ持つべき。
 
-✅ Good:
+✅ 良い例:
 ```typescript
-// Each class has one responsibility
+// 各クラスが単一責任
 class User {
   constructor(public id: string, public email: string) {}
 }
 
 class UserRepository {
-  async save(user: User): Promise<void> { /* DB logic */ }
+  async save(user: User): Promise<void> { /* DB処理 */ }
 }
 
 class EmailService {
-  async sendEmail(user: User): Promise<void> { /* Email logic */ }
+  async sendEmail(user: User): Promise<void> { /* メール処理 */ }
 }
 ```
 
-❌ Bad:
+❌ 悪い例:
 ```typescript
-// Multiple responsibilities in one class
+// 1クラスに複数責任
 class UserService {
   async createUser(email: string): Promise<User> {
-    // Validation + DB + Email + Logging = Too many responsibilities
+    // 検証 + DB + メール + ログ = 責任過多
   }
 }
 ```
 
-## Open/Closed Principle (OCP)
-Open for extension, closed for modification.
+## 開放閉鎖の原則 (OCP)
+拡張に対して開き、修正に対して閉じる。
 
-✅ Good:
+✅ 良い例:
 ```typescript
 interface PaymentProcessor {
   process(amount: number): Promise<void>;
@@ -42,13 +42,13 @@ interface PaymentProcessor {
 
 class CreditCardProcessor implements PaymentProcessor { /* ... */ }
 class PayPalProcessor implements PaymentProcessor { /* ... */ }
-// Add new payment methods without modifying existing code
+// 既存コード修正なしで新決済方法追加
 ```
 
-## Liskov Substitution Principle (LSP)
-Derived classes must be substitutable for base classes.
+## リスコフの置換原則 (LSP)
+派生クラスは基底クラスと置換可能であるべき。
 
-✅ Good:
+✅ 良い例:
 ```typescript
 abstract class Bird {
   abstract move(): void;
@@ -61,13 +61,13 @@ class FlyingBird extends Bird {
 class SwimmingBird extends Bird {
   move() { this.swim(); }
 }
-// Both work with base class interface
+// どちらも基底クラスとして扱える
 ```
 
-## Interface Segregation Principle (ISP)
-Don't force clients to depend on methods they don't use.
+## インターフェース分離の原則 (ISP)
+使わないメソッドへの依存を強制しない。
 
-✅ Good:
+✅ 良い例:
 ```typescript
 interface Readable { read(): string; }
 interface Writable { write(data: string): void; }
@@ -76,25 +76,25 @@ class ReadOnlyFile implements Readable { /* ... */ }
 class EditableFile implements Readable, Writable { /* ... */ }
 ```
 
-## Dependency Inversion Principle (DIP)
-Depend on abstractions, not concretions.
+## 依存性逆転の原則 (DIP)
+具象ではなく抽象に依存する。
 
-✅ Good:
+✅ 良い例:
 ```typescript
 interface Logger { log(msg: string): void; }
 interface Database { save(data: any): Promise<void>; }
 
 class OrderService {
   constructor(
-    private logger: Logger,    // Depend on abstractions
+    private logger: Logger,    // 抽象に依存
     private db: Database
   ) {}
 }
 ```
 
-## Checklist
-- [ ] Each class has single responsibility
-- [ ] New features added via extension not modification
-- [ ] Subclasses properly substitute base classes
-- [ ] Interfaces are small and focused
-- [ ] Dependencies point to abstractions
+## チェックリスト
+- [ ] 各クラスが単一責任
+- [ ] 拡張による機能追加、修正不要
+- [ ] サブクラスが基底クラスを適切に代替
+- [ ] インターフェースが小さく集中的
+- [ ] 依存が抽象を向いている
