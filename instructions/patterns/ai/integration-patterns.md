@@ -1,8 +1,8 @@
-# AI統合パターン (2024)
+# AI統合パターン (2024-2025)
 
-モダンアプリケーションへのAI機能統合のベストプラクティス。
+モダンアプリケーションへのAI機能統合の最新ベストプラクティス。
 
-## Vercel AI SDK
+## Vercel AI SDK v5 (最新版)
 
 ### ストリーミングチャット実装
 ```typescript
@@ -167,6 +167,71 @@ export async function queryDocuments(question: string) {
     answer: response.text,
     sources: response.sourceDocuments,
   };
+}
+```
+
+## Anthropic Claude Integration (2024)
+
+### Claude 3 API統合
+```typescript
+// app/api/claude/route.ts
+import Anthropic from '@anthropic-ai/sdk';
+import { AnthropicStream, StreamingTextResponse } from 'ai';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  
+  const response = await anthropic.messages.create({
+    model: 'claude-3-opus-20240229', // または claude-3-sonnet, claude-3-haiku
+    max_tokens: 4096,
+    messages,
+    stream: true,
+    temperature: 0.7,
+    system: 'You are a helpful assistant with expertise in coding.',
+  });
+  
+  const stream = AnthropicStream(response);
+  return new StreamingTextResponse(stream);
+}
+```
+
+### Vercel AI SDK v5でのClaude使用
+```typescript
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { streamText } from 'ai';
+
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  
+  const result = await streamText({
+    model: anthropic('claude-3-5-sonnet-20241022'),
+    messages,
+    temperature: 0.7,
+    maxTokens: 4096,
+    // Tool calling対応
+    tools: {
+      searchWeb: {
+        description: 'Search the web for information',
+        parameters: z.object({
+          query: z.string().describe('Search query'),
+        }),
+        execute: async ({ query }) => {
+          // Web検索ロジック
+          return searchResults;
+        },
+      },
+    },
+  });
+  
+  return result.toDataStreamResponse();
 }
 ```
 

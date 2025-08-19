@@ -130,6 +130,264 @@ function Counter() {
 }
 ```
 
+## Redux Toolkit (現代的なRedux実装)
+
+### Redux Toolkitの設定
+```typescript
+// store.ts
+import { configureStore } from '@reduxjs/toolkit';
+import { setupListeners } from '@reduxjs/toolkit/query';
+import userReducer from './features/userSlice';
+import cartReducer from './features/cartSlice';
+import { api } from './services/api';
+
+export const store = configureStore({
+  reducer: {
+    user: userReducer,
+    cart: cartReducer,
+    [api.reducerPath]: api.reducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: ['persist/PERSIST'],
+      },
+    }).concat(api.middleware),
+});
+
+setupListeners(store.dispatch);
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+```
+
+### Sliceの作成 (Redux Toolkit)
+```typescript
+// features/userSlice.ts
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { userApi } from '../services/api';
+
+interface UserState {
+  currentUser: User | null;
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  error: string | null;
+}
+
+const initialState: UserState = {
+  currentUser: null,
+  status: 'idle',
+  error: null,
+};
+
+// 非同期アクション
+export const fetchUserById = createAsyncThunk(
+  'user/fetchById',
+  async (userId: string) => {
+    const response = await userApi.getUser(userId);
+    return response.data;
+  }
+);
+
+const userSlice = createSlice({
+  name: 'user',
+  initialState,
+  reducers: {
+    setUser: (state, action: PayloadAction<User>) => {
+      state.currentUser = action.payload;
+    },
+    clearUser: (state) => {
+      state.currentUser = null;
+      state.status = 'idle';
+      state.error = null;
+    },
+    updateUserProfile: (state, action: PayloadAction<Partial<User>>) => {
+      if (state.currentUser) {
+        state.currentUser = { ...state.currentUser, ...action.payload };
+      }
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchUserById.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(fetchUserById.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.currentUser = action.payload;
+      })
+      .addCase(fetchUserById.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message || 'Failed to fetch user';
+      });
+  },
+});
+
+export const { setUser, clearUser, updateUserProfile } = userSlice.actions;
+export default userSlice.reducer;
+```
+
+### RTK Query (データフェッチング)
+```typescript
+// services/api.ts
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+
+export const api = createApi({
+  reducerPath: 'api',
+  baseQuery: fetchBaseQuery({
+    baseUrl: '/api',
+    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as RootState).auth.token;
+      if (token) {
+        headers.set('authorization', `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
+  tagTypes: ['User', 'Product', 'Order'],
+  endpoints: (builder) => ({
+    getProducts: builder.query<Product[], void>({
+      query: () => 'products',
+      providesTags: ['Product'],
+    }),
+    getProductById: builder.query<Product, string>({
+      query: (id) => `products/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Product', id }],
+    }),
+    createProduct: builder.mutation<Product, Partial<Product>>({
+      query: (product) => ({
+        url: 'products',
+        method: 'POST',
+        body: product,
+      }),
+      invalidatesTags: ['Product'],
+    }),
+    updateProduct: builder.mutation<Product, Partial<Product> & { id: string }>({
+      query: ({ id, ...patch }) => ({
+        url: `products/${id}`,
+        method: 'PATCH',
+        body: patch,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Product', id }],
+    }),
+  }),
+});
+
+export const {
+  useGetProductsQuery,
+  useGetProductByIdQuery,
+  useCreateProductMutation,
+  useUpdateProductMutation,
+} = api;
+```
+
+### カスタムフック (TypeScript対応)
+```typescript
+// hooks/redux.ts
+import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
+import type { RootState, AppDispatch } from '../store';
+
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+
+// カスタムセレクター
+export const useCurrentUser = () => 
+  useAppSelector((state) => state.user.currentUser);
+
+export const useCartItems = () => 
+  useAppSelector((state) => state.cart.items);
+
+export const useCartTotal = () => 
+  useAppSelector((state) => 
+    state.cart.items.reduce((total, item) => total + item.price * item.quantity, 0)
+  );
+```
+
+### Redux Persist (永続化)
+```typescript
+// store/persist.ts
+import { persistStore, persistReducer } from 'redux-persist';
+import storage from 'redux-persist/lib/storage';
+import { combineReducers } from '@reduxjs/toolkit';
+
+const persistConfig = {
+  key: 'root',
+  storage,
+  whitelist: ['user', 'cart'], // 永続化するreducer
+  blacklist: ['api'], // 永続化しないreducer
+};
+
+const rootReducer = combineReducers({
+  user: userReducer,
+  cart: cartReducer,
+  [api.reducerPath]: api.reducer,
+});
+
+export const persistedReducer = persistReducer(persistConfig, rootReducer);
+```
+
+### 使用例
+```typescript
+// components/ProductList.tsx
+import { useGetProductsQuery } from '../services/api';
+import { useAppDispatch, useAppSelector } from '../hooks/redux';
+import { addToCart } from '../features/cartSlice';
+
+export function ProductList() {
+  const dispatch = useAppDispatch();
+  const { data: products, isLoading, error } = useGetProductsQuery();
+  const cartItems = useAppSelector((state) => state.cart.items);
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading products</div>;
+  
+  return (
+    <div>
+      {products?.map((product) => (
+        <div key={product.id}>
+          <h3>{product.name}</h3>
+          <p>{product.price}</p>
+          <button onClick={() => dispatch(addToCart(product))}>
+            Add to Cart
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## Classic Redux (レガシーパターン - 参考用)
+
+### アクションとリデューサー
+```typescript
+// Classic Redux (Redux Toolkit推奨のため参考程度)
+// actions/types.ts
+const ADD_TODO = 'ADD_TODO';
+const TOGGLE_TODO = 'TOGGLE_TODO';
+
+// actions/creators.ts
+export const addTodo = (text: string) => ({
+  type: ADD_TODO,
+  payload: { id: Date.now(), text, completed: false }
+});
+
+// reducers/todos.ts
+const todosReducer = (state = [], action) => {
+  switch (action.type) {
+    case ADD_TODO:
+      return [...state, action.payload];
+    case TOGGLE_TODO:
+      return state.map(todo =>
+        todo.id === action.payload
+          ? { ...todo, completed: !todo.completed }
+          : todo
+      );
+    default:
+      return state;
+  }
+};
+```
+
 ## Context API パターン
 
 ### 基本的なContext実装
