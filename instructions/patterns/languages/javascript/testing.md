@@ -1,6 +1,157 @@
-# JavaScriptテストパターン
+# JavaScriptテストパターン (2024)
 
-## Jestによるユニットテスト
+## Vitest (高速で現代的なテストランナー)
+
+### Vitestの基本設定
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      exclude: ['node_modules/', 'src/test/'],
+    },
+  },
+});
+```
+
+### Vitestによるユニットテスト
+```typescript
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// モックの設定
+vi.mock('@/services/api', () => ({
+  fetchUser: vi.fn(),
+}));
+
+describe('UserService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  
+  it('ユーザー情報を正しく取得する', async () => {
+    const mockUser = { id: 1, name: 'Test User' };
+    vi.mocked(fetchUser).mockResolvedValue(mockUser);
+    
+    const user = await getUserInfo(1);
+    
+    expect(user).toEqual(mockUser);
+    expect(fetchUser).toHaveBeenCalledWith(1);
+  });
+  
+  // スナップショットテスト
+  it('正しいUIをレンダリングする', () => {
+    const { container } = render(<UserCard user={mockUser} />);
+    expect(container).toMatchSnapshot();
+  });
+});
+```
+
+## Playwright (E2Eテスト)
+
+### Playwrightの設定
+```typescript
+// playwright.config.ts
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+    // モバイルテスト
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+  ],
+});
+```
+
+### PlaywrightによるE2Eテスト
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('ユーザー認証フロー', () => {
+  test('ログインして商品を購入する', async ({ page }) => {
+    // ページへナビゲート
+    await page.goto('/login');
+    
+    // ログインフォームを埋める
+    await page.fill('[data-testid="email-input"]', 'user@example.com');
+    await page.fill('[data-testid="password-input"]', 'password123');
+    
+    // ログインボタンをクリック
+    await page.click('[data-testid="login-button"]');
+    
+    // ダッシュボードへのリダイレクトを待つ
+    await page.waitForURL('/dashboard');
+    
+    // ユーザー名が表示されていることを確認
+    await expect(page.locator('[data-testid="user-name"]')).toContainText('Test User');
+    
+    // 商品を選択
+    await page.click('[data-testid="product-1"]');
+    
+    // カートに追加
+    await page.click('[data-testid="add-to-cart"]');
+    
+    // カートアイコンの数値を確認
+    await expect(page.locator('[data-testid="cart-count"]')).toHaveText('1');
+    
+    // スクリーンショットを撮る
+    await page.screenshot({ path: 'cart-added.png' });
+  });
+  
+  test('APIモックを使用したテスト', async ({ page }) => {
+    // APIレスポンスをモック
+    await page.route('**/api/products', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 1, name: 'Product 1', price: 100 },
+          { id: 2, name: 'Product 2', price: 200 },
+        ]),
+      });
+    });
+    
+    await page.goto('/products');
+    
+    // 商品が表示されることを確認
+    await expect(page.locator('[data-testid="product-list"] > li')).toHaveCount(2);
+  });
+});
+```
+
+## Testing Library (コンポーネントテスト標準)
 
 ### 基本的なテスト構造
 テストを明確かつ一貫して整理。

@@ -1,6 +1,134 @@
-# React State Management Patterns
+# React State Management Patterns (2024)
 
-React アプリケーションの状態管理パターンとベストプラクティス。
+最新のReact状態管理パターンとベストプラクティス。State of React 2024準拠。
+
+## 最新の状態管理ソリューション
+
+### TanStack Query v5 (サーバー状態管理のデファクトスタンダード)
+```typescript
+// v5の新しいAPI（gcTimeに変更）
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+// データ取得
+function useProducts() {
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+    staleTime: 5 * 60 * 1000, // 5分間はfreshとして扱う
+    gcTime: 10 * 60 * 1000, // 10分後にガベージコレクション（旧cacheTime）
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ミューテーション
+function useCreateProduct() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: createProduct,
+    onSuccess: (data) => {
+      // キャッシュを無効化
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      // または楽観的更新
+      queryClient.setQueryData(['products'], (old) => [...old, data]);
+    },
+    onError: (error, variables, context) => {
+      // エラーハンドリング
+      console.error('Failed to create product:', error);
+    },
+  });
+}
+```
+
+### Zustand (軽量でシンプルなクライアント状態管理)
+```typescript
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+interface AppState {
+  user: User | null;
+  theme: 'light' | 'dark';
+  notifications: Notification[];
+  
+  // アクション
+  setUser: (user: User | null) => void;
+  toggleTheme: () => void;
+  addNotification: (notification: Notification) => void;
+  clearNotifications: () => void;
+}
+
+const useAppStore = create<AppState>()(
+  devtools(
+    persist(
+      immer((set) => ({
+        user: null,
+        theme: 'light',
+        notifications: [],
+        
+        setUser: (user) => set((state) => {
+          state.user = user;
+        }),
+        
+        toggleTheme: () => set((state) => {
+          state.theme = state.theme === 'light' ? 'dark' : 'light';
+        }),
+        
+        addNotification: (notification) => set((state) => {
+          state.notifications.push(notification);
+        }),
+        
+        clearNotifications: () => set((state) => {
+          state.notifications = [];
+        }),
+      })),
+      {
+        name: 'app-storage',
+        partialize: (state) => ({ theme: state.theme }), // 一部のみ永続化
+      }
+    )
+  )
+);
+
+// 使用方法
+function Component() {
+  const { user, theme, toggleTheme } = useAppStore();
+  return <div>{user?.name}</div>;
+}
+```
+
+### Jotai (原子的な状態管理)
+```typescript
+import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { atomWithStorage } from 'jotai/utils';
+
+// アトムの定義
+const countAtom = atom(0);
+const userAtom = atom<User | null>(null);
+const themeAtom = atomWithStorage('theme', 'light'); // localStorage連携
+
+// 派生アトム
+const doubleCountAtom = atom((get) => get(countAtom) * 2);
+
+// 非同期アトム
+const productsAtom = atom(async () => {
+  const response = await fetch('/api/products');
+  return response.json();
+});
+
+// 使用方法
+function Counter() {
+  const [count, setCount] = useAtom(countAtom);
+  const doubleCount = useAtomValue(doubleCountAtom);
+  
+  return (
+    <div>
+      <p>Count: {count}, Double: {doubleCount}</p>
+      <button onClick={() => setCount(c => c + 1)}>Increment</button>
+    </div>
+  );
+}
+```
 
 ## Context API パターン
 

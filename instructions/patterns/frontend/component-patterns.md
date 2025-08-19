@@ -4,33 +4,7 @@ Reusable component architecture patterns for modern frontend development.
 
 ## Component Organization
 
-### Atomic Design
-```
-atoms/
-  Button.tsx
-  Input.tsx
-  Label.tsx
-
-molecules/
-  FormField.tsx
-  SearchBar.tsx
-  Card.tsx
-
-organisms/
-  Header.tsx
-  LoginForm.tsx
-  ProductList.tsx
-
-templates/
-  PageLayout.tsx
-  DashboardTemplate.tsx
-
-pages/
-  HomePage.tsx
-  ProfilePage.tsx
-```
-
-### Feature-Based Structure
+### Feature-Based Structure (推奨)
 ```
 features/
   auth/
@@ -267,6 +241,121 @@ class ErrorBoundary extends React.Component<
     
     return this.props.children;
   }
+}
+```
+
+## Modern UI Libraries (2024)
+
+### shadcn/ui Pattern (Copy & Paste UI)
+```typescript
+// コンポーネントをプロジェクトに直接コピー
+// components/ui/button.tsx
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+```
+
+### Radix UI Primitives (アクセシブルなプリミティブ)
+```typescript
+import * as Dialog from '@radix-ui/react-dialog';
+import * as Select from '@radix-ui/react-select';
+
+// アクセシブルなダイアログ
+<Dialog.Root>
+  <Dialog.Trigger asChild>
+    <button>開く</button>
+  </Dialog.Trigger>
+  <Dialog.Portal>
+    <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+    <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <Dialog.Title>タイトル</Dialog.Title>
+      <Dialog.Description>説明文</Dialog.Description>
+      <Dialog.Close>閉じる</Dialog.Close>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
+```
+
+### Server Components Pattern (Next.js 14+)
+```typescript
+// app/products/page.tsx - Server Component
+async function ProductsPage() {
+  // サーバーサイドでデータ取得
+  const products = await fetch('https://api.example.com/products', {
+    cache: 'no-store' // または 'force-cache' でキャッシュ
+  }).then(res => res.json());
+  
+  return (
+    <div>
+      {products.map(product => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+
+// components/ProductCard.tsx - Client Component
+'use client';
+
+import { useState } from 'react';
+
+export function ProductCard({ product }) {
+  const [liked, setLiked] = useState(false);
+  
+  return (
+    <div>
+      <h3>{product.name}</h3>
+      <button onClick={() => setLiked(!liked)}>
+        {liked ? '❤️' : '🤍'}
+      </button>
+    </div>
+  );
 }
 ```
 

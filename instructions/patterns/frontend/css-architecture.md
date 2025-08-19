@@ -4,22 +4,40 @@ Scalable and maintainable CSS architecture patterns.
 
 ## CSS Methodologies
 
-### BEM (Block Element Modifier)
-```css
-/* Block */
-.card {}
+### Tailwind CSS (最も人気のあるユーティリティファースト)
+```jsx
+// 採用率68% (State of CSS 2024)
+<div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
+  <h3 className="text-lg font-semibold text-gray-900">タイトル</h3>
+  <button className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600">
+    アクション
+  </button>
+</div>
 
-/* Element */
-.card__header {}
-.card__body {}
-.card__footer {}
+// JIT（Just-In-Time）で任意の値も使用可能
+<div className="w-[137px] h-[69px] bg-[#1da1f2]" />
+```
 
-/* Modifier */
-.card--featured {}
-.card--disabled {}
+### CSS Modules (スコープ化されたCSS)
+```typescript
+// styles.module.css
+.container {
+  display: flex;
+  padding: 1rem;
+  background: white;
+}
 
-/* Full example */
-.card--featured .card__header {}
+.title {
+  font-size: 1.5rem;
+  color: var(--color-primary);
+}
+
+// Component.tsx
+import styles from './styles.module.css';
+
+<div className={styles.container}>
+  <h1 className={styles.title}>Title</h1>
+</div>
 ```
 
 ### Atomic CSS
@@ -251,11 +269,89 @@ import styles from './styles.module.css';
 }
 ```
 
+## Modern CSS Features (2024)
+
+### Container Queries
+```css
+/* コンテナベースのレスポンシブデザイン */
+.card-container {
+  container-type: inline-size;
+  container-name: card;
+}
+
+@container card (min-width: 400px) {
+  .card {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+  }
+}
+
+@container card (max-width: 399px) {
+  .card {
+    display: block;
+  }
+}
+```
+
+### View Transitions API
+```javascript
+// ページ遷移アニメーション
+if (document.startViewTransition) {
+  document.startViewTransition(() => {
+    updateDOM();
+  });
+} else {
+  updateDOM();
+}
+```
+
+```css
+/* トランジション設定 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+```
+
+### CSS Cascade Layers
+```css
+/* レイヤーで詳細度を管理 */
+@layer reset, base, components, utilities;
+
+@layer reset {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+
+@layer base {
+  body {
+    font-family: system-ui;
+    line-height: 1.5;
+  }
+}
+
+@layer components {
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+  }
+}
+
+@layer utilities {
+  .mt-4 {
+    margin-top: 1rem;
+  }
+}
+```
+
 ## Checklist
-- [ ] Choose CSS methodology (BEM recommended)
+- [ ] Choose CSS methodology (Tailwind CSS推奨)
 - [ ] Set up CSS custom properties
-- [ ] Implement responsive design
+- [ ] Implement Container Queries
 - [ ] Optimize critical CSS
 - [ ] Use modern layout (Grid/Flexbox)
-- [ ] Optimize animations
-- [ ] Consider CSS-in-JS for React
+- [ ] Implement View Transitions
+- [ ] Consider CSS-in-JS (Emotion/styled-components) for React
