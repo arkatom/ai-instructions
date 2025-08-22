@@ -230,7 +230,10 @@
       "Bash(git log:*)",
       "Bash(awk:*)",
       "Bash(sed:*)",
-      "Bash(od:*)"
+      "Bash(od:*)",
+      "WebFetch(domain:2024.stateofjs.com)",
+      "WebFetch(domain:2024.stateofhtml.com)",
+      "WebFetch(domain:2024.stateofcss.com)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
