@@ -1,4 +1,4 @@
-# 基本ルール
+# 基本ルール（YOU MUST ultrathink）
 
 ## 🚨 絶対厳守事項
 
