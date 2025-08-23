@@ -532,4 +532,3 @@ export abstract class EventSourcedEntity {
 - ドメインサービスは複数エンティティのロジック処理
 - ドメインイベントで副作用を分離
 
-**適当度評価**: 1/10 (DDD原則に従った堅牢な設計)

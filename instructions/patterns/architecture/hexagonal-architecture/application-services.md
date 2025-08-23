@@ -582,4 +582,3 @@ async createOrder(command: CreateOrderCommand): Promise<OrderDTO> {
 - ドメインイベントによる副作用分離
 - 包括的エラーハンドリング
 
-**適当度評価**: 1/10 (完璧なユースケース実装パターン)
