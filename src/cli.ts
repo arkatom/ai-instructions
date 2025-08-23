@@ -10,8 +10,10 @@ import { join } from 'path';
 import { CommandRegistry } from './cli/CommandRegistry';
 import { InitCommand } from './cli/commands/InitCommand';
 import { AgentsCommand } from './cli/commands/AgentsCommand';
+import { PatternsCommand } from './cli/commands/PatternsCommand';
 import { EnvironmentService } from './services/EnvironmentService';
 import { InitCommandArgs, CommanderInitOptions, AgentCommandArgs } from './cli/interfaces/CommandArgs';
+import { PatternCommandArgs } from './cli/interfaces/PatternTypes';
 import { Logger } from './utils/logger';
 import { ErrorHandler } from './utils/error-handler';
 import { InteractivePrompts } from './init/prompts';
@@ -58,6 +60,10 @@ class CLICoordinator {
     // Register AgentsCommand
     const agentsCommand = new AgentsCommand();
     this.registry.register('agents', agentsCommand);
+
+    // Register PatternsCommand
+    const patternsCommand = new PatternsCommand();
+    this.registry.register('patterns', patternsCommand);
 
     // Setup init command
     this.program
@@ -140,6 +146,51 @@ class CLICoordinator {
         await this.executeAgentsCommand('profile', { ...options, project });
       });
 
+    // Setup patterns command with subcommands
+    const patternsCmd = this.program
+      .command('patterns')
+      .description('Interactive pattern selection and management');
+
+    // patterns (default - interactive selection)
+    patternsCmd
+      .command('select', { isDefault: true })
+      .description('Interactive pattern selection')
+      .option('-l, --language <lang>', 'language preference (ja, en)')
+      .action(async (options) => {
+        await this.executePatternsCommand('select', options);
+      });
+
+    // patterns list subcommand
+    patternsCmd
+      .command('list')
+      .description('List available patterns')
+      .option('-c, --category <category>', 'filter by category')
+      .option('-l, --language <lang>', 'language preference (ja, en)')
+      .option('-f, --format <format>', 'output format (table, json, tree)', 'table')
+      .action(async (options) => {
+        await this.executePatternsCommand('list', options);
+      });
+
+    // patterns search subcommand
+    patternsCmd
+      .command('search <query>')
+      .description('Search patterns by keyword')
+      .option('-l, --language <lang>', 'language preference (ja, en)')
+      .option('-f, --format <format>', 'output format (table, json, tree)', 'table')
+      .action(async (query, options) => {
+        await this.executePatternsCommand('search', { ...options, query });
+      });
+
+    // patterns preferences subcommand
+    patternsCmd
+      .command('preferences')
+      .description('Configure pattern preferences')
+      .option('-l, --language <lang>', 'set language preference (ja, en)')
+      .option('--reset', 'reset all preferences to defaults')
+      .action(async (options) => {
+        await this.executePatternsCommand('preferences', options);
+      });
+
     // Setup help-interactive command
     this.program
       .command('help-interactive')
@@ -215,6 +266,40 @@ class CLICoordinator {
       const args: AgentCommandArgs = {
         command: 'agents',
         subcommand: subcommand as 'list' | 'recommend' | 'deploy' | 'deploy-all' | 'info' | 'profile',
+        ...options
+      };
+
+      const result = await command.execute(args);
+
+      if (!result.success) {
+        Logger.error(result.error || 'Command execution failed');
+        process.exit(1);
+      }
+
+    } catch (error) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      ErrorHandler.handleError(errorObj);
+    }
+  }
+
+  /**
+   * Execute patterns command
+   */
+  private async executePatternsCommand(
+    subcommand: string,
+    options: any
+  ): Promise<void> {
+    try {
+      const command = this.registry.get('patterns');
+      if (!command) {
+        Logger.error('Patterns command not found');
+        process.exit(1);
+      }
+
+      // Convert options to PatternCommandArgs
+      const args: PatternCommandArgs = {
+        command: 'patterns',
+        subcommand: subcommand as 'select' | 'list' | 'search' | 'preferences',
         ...options
       };
 
