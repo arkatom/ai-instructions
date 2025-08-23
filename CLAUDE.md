@@ -1,60 +1,77 @@
 ---
-description: 開発指示
-globs: [
-  \"**/*.css\",
-  \"**/*.html\",
-  \"**/*.json\",
-  \"**/*.md\",
-  \"**/*.txt\",
-  \"**/*.xml\",
-  \"**/*.yaml\",
-  \"**/*.yml\",
-  \"**/.env\",
-  \"**/.gitignore\",
-  \"**/CHANGELOG*\",
-  \"**/Dockerfile\",
-  \"**/LICENSE*\",
-  \"**/README*\",
-  \"**/docker-compose.yml\"
-]
+description: AI開発指示
+globs: ["**/*.md", "**/*.json", "**/*.yaml", "**/*.yml", "**/Dockerfile", "**/docker-compose.yml"]
 alwaysApply: true
 ---
 
-# 開発指示
+# AI開発指示
 
-## 🔄 実行フロー
+## 🎯 核心原則（必須読込）
 
-1. 基本ルール読み込み → 絶対厳守事項の確認
-2. 場面に応じた専用ファイル読み込み → 具体的な実行ルール確認
-3. 実行 → ルールに従って作業実行
+### 品質基準
+- **品質優先**: 速さより正確性と完全性
+- **深層思考**: 表面的な理解を避け、本質を把握
+- **価値提供**: 期待を超える成果を目指す
 
+### 実行フロー
+1. **分析** → 要求の本質を理解
+2. **計画** → 最適なアプローチを選択  
+3. **実装** → 品質基準を満たす実行
+4. **検証** → 結果の妥当性を確認
 
-## 🚨 核心原則（必須）
+## 📚 必須参照
 
-すべてのタスク・コマンド・ツール実行前に必ず読み込み
-
+### コア指示（常時適用）
 - [基本ルール](./instructions/core/base.md) - 絶対厳守事項
-- [深層思考](./instructions/core/deep-think.md)
-- [実装前分析プロトコル](./instructions/methodologies/implementation-analysis.md) - **必須実行**
+- [実装前分析](./instructions/methodologies/implementation-analysis.md) - 実装前に必須
 
+### 場面別指示（自動判断）
+| 場面 | 参照ファイル | 適用条件 |
+|------|------------|---------|
+| Git操作 | [Git運用](./instructions/workflows/git-complete.md) | commit/PR/branch操作時 |
+| TDD開発 | [TDD手法](./instructions/methodologies/tdd.md) | テスト駆動開発時 |
+| Issue管理 | [Issue駆動](./instructions/methodologies/github-idd.md) | Issue関連作業時 |
 
-## 📋 場面別必須参照ファイル
+## 🔧 ツール活用
 
-### Git・GitHub関連
+### 優先順位
+1. **専用ツール** → 利用可能なら最優先
+2. **エージェント** → 複雑なタスクは適切に委任
+3. **コマンド** → ツールがない場合のみ
 
-- [Complete Git & GitHub Guide](./instructions/workflows/git-complete.md) - 統合されたGit運用ガイド
+### 記録管理
+- 重要事項 → Issue/memoryに記録
+- 作業記録 → [ノート形式](./instructions/note.md)で保存
 
-### 開発プロセス
+## ⚠️ 重要制約
 
-- [TDD開発スタイル](./instructions/methodologies/tdd.md)
-- [Github Issue Driven Development](./instructions/methodologies/github-idd.md)
+### してはいけないこと
+- コード重複・散在
+- 不要ファイルの放置
+- 表面的な理解での実装
+- 適当な推測や仮定
 
-### エージェントシステム（Claude Code専用）
+### 必ずすること
+- 参照確認: `✅:{filename.md}`を出力
+- 適当度評価: 1-10で自己評価（5以上なら再考）
+- 完全性確認: ユーザーが追加質問不要な状態
 
-- **Agent Dependency Management**: エージェント間の依存関係と協調パターンが実装済み
-- 利用可能な場合は適切なエージェント選択と組み合わせを活用
+## 📂 構造規約
 
-### 記録・管理
+```
+project/
+├── docs/          # ドキュメント集約
+├── instructions/  # AI指示（このファイル群）
+│   ├── core/     # 必須ルール
+│   └── patterns/ # 参照パターン（人間向け）
+└── src/          # ソースコード
+```
 
-- [ノート・日誌](./instructions/note.md) - 作業記録の書き方
+## 🎨 patterns/について
 
+`instructions/patterns/`配下のファイルは**開発者向けリファレンス**です。
+AIは必要と判断した場合のみ参照してください。
+過度な具体例への依存は創造性を制限します。
+
+---
+*コンテキスト効率: 100行以内で核心を伝達*
