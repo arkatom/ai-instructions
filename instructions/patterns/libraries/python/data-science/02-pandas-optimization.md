@@ -220,45 +220,26 @@ class IOOptimizer:
 ```python
 def method_chaining_example(df: pd.DataFrame) -> pd.DataFrame:
     """Efficient method chaining patterns"""
-    
-    result = (df
-              .pipe(PandasOptimizer.optimize_dtypes)  # Custom function in chain
-              .query('age > 18 and salary > 0')        # Filter
-              .assign(                                  # Add columns
-                  age_group=lambda x: pd.cut(x['age'], bins=[0, 30, 50, 100], 
-                                            labels=['young', 'middle', 'senior']),
-                  salary_log=lambda x: np.log1p(x['salary'])
-              )
-              .groupby('department')                    # Group
-              .agg({
-                  'salary': ['mean', 'median'],
-                  'age': 'mean',
-                  'employee_id': 'count'
-              })
-              .round(2)                                 # Round results
-              )
-    
-    # Flatten column names
+    result = (df.pipe(PandasOptimizer.optimize_dtypes)
+              .query('age > 18 and salary > 0')
+              .assign(age_group=lambda x: pd.cut(x['age'], bins=[0, 30, 50, 100], 
+                                                labels=['young', 'middle', 'senior']),
+                     salary_log=lambda x: np.log1p(x['salary']))
+              .groupby('department')
+              .agg({'salary': ['mean', 'median'], 'age': 'mean', 'employee_id': 'count'})
+              .round(2))
     result.columns = ['_'.join(col).strip() for col in result.columns]
-    
     return result.reset_index()
 
 # Performance monitoring
 def profile_pandas_operation(operation_func, df: pd.DataFrame):
     """Profile pandas operations"""
     import time
-    
     start_time = time.time()
     start_memory = df.memory_usage(deep=True).sum()
-    
     result = operation_func(df)
-    
-    end_time = time.time()
-    end_memory = result.memory_usage(deep=True).sum() if hasattr(result, 'memory_usage') else 0
-    
-    print(f"Execution time: {end_time - start_time:.3f}s")
-    print(f"Memory change: {(end_memory - start_memory) / 1024**2:.1f}MB")
-    
+    print(f"Execution time: {time.time() - start_time:.3f}s")
+    print(f"Memory change: {(result.memory_usage(deep=True).sum() if hasattr(result, 'memory_usage') else 0 - start_memory) / 1024**2:.1f}MB")
     return result
 ```
 

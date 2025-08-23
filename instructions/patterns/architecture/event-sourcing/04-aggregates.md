@@ -84,8 +84,7 @@ export class Account extends AggregateRoot {
 
   // Business methods
   public deposit(amount: number, source: string, reference: string): void {
-    this.validateNotClosed();
-    this.validateNotFrozen();
+    this.validate();
     
     if (amount <= 0) {
       throw new Error('Deposit amount must be positive');
@@ -97,8 +96,7 @@ export class Account extends AggregateRoot {
   }
 
   public withdraw(amount: number, reason: string, reference: string): void {
-    this.validateNotClosed();
-    this.validateNotFrozen();
+    this.validate();
     
     if (amount <= 0) {
       throw new Error('Withdrawal amount must be positive');
@@ -132,11 +130,13 @@ export class Account extends AggregateRoot {
   }
 
   private handleAccountCreated(event: AccountCreatedEvent): void {
-    this.accountNumber = event.accountNumber;
-    this.accountHolder = event.accountHolder;
-    this.balance = event.initialBalance;
-    this.currency = event.currency;
-    this.accountType = event.accountType;
+    Object.assign(this, {
+      accountNumber: event.accountNumber,
+      accountHolder: event.accountHolder,
+      balance: event.initialBalance,
+      currency: event.currency,
+      accountType: event.accountType
+    });
   }
 
   private handleMoneyDeposited(event: MoneyDepositedEvent): void {
@@ -156,11 +156,8 @@ export class Account extends AggregateRoot {
   }
 
   // Validation
-  private validateNotClosed(): void {
+  private validate(): void {
     if (this.isClosed) throw new Error('Account is closed');
-  }
-
-  private validateNotFrozen(): void {
     if (this.isFrozen) throw new Error('Account is frozen');
   }
 }
@@ -180,32 +177,22 @@ export class AccountCommandHandler {
     const handlers: Record<string, (cmd: any) => Promise<void>> = {
       'CreateAccount': (cmd) => this.createAccount(cmd),
       'DepositMoney': (cmd) => this.depositMoney(cmd),
-      'WithdrawMoney': (cmd) => this.withdrawMoney(cmd),
-      'FreezeAccount': (cmd) => this.freezeAccount(cmd),
-      'CloseAccount': (cmd) => this.closeAccount(cmd)
+      'WithdrawMoney': (cmd) => this.withdrawMoney(cmd)
     };
 
     const handler = handlers[command.type];
-    if (!handler) {
-      throw new Error(`Unknown command type: ${command.type}`);
-    }
-
+    if (!handler) throw new Error(`Unknown command type: ${command.type}`);
     await handler(command);
   }
 
   private async createAccount(command: CreateAccountCommand): Promise<void> {
-    // Check if account already exists
     if (await this.eventStore.streamExists(command.accountId)) {
       throw new Error('Account already exists');
     }
 
     const account = Account.create(
-      command.accountId,
-      command.accountNumber,
-      command.accountHolder,
-      command.initialBalance,
-      command.currency,
-      command.accountType
+      command.accountId, command.accountNumber, command.accountHolder,
+      command.initialBalance, command.currency, command.accountType
     );
 
     await this.saveAggregate(account);
@@ -213,42 +200,27 @@ export class AccountCommandHandler {
 
   private async depositMoney(command: DepositMoneyCommand): Promise<void> {
     const account = await this.loadAggregate(command.accountId);
-    
-    account.deposit(
-      command.amount,
-      command.source,
-      command.reference
-    );
-
+    account.deposit(command.amount, command.source, command.reference);
     await this.saveAggregate(account);
   }
 
   private async withdrawMoney(command: WithdrawMoneyCommand): Promise<void> {
     const account = await this.loadAggregate(command.accountId);
-    
-    account.withdraw(
-      command.amount,
-      command.reason,
-      command.reference
-    );
-
+    account.withdraw(command.amount, command.reason, command.reference);
     await this.saveAggregate(account);
   }
 
   private async loadAggregate(aggregateId: string): Promise<Account> {
     const { snapshot, events } = await this.snapshotManager.loadAggregate(aggregateId);
     
-    let account: Account;
-    
     if (snapshot) {
-      account = Account.fromSnapshot(aggregateId, snapshot.data);
+      const account = Account.fromSnapshot(aggregateId, snapshot.data);
       account.loadFromHistory(events);
-    } else {
-      const allEvents = await this.eventStore.getEvents(aggregateId);
-      account = Account.fromEvents(aggregateId, allEvents);
+      return account;
     }
-
-    return account;
+    
+    const allEvents = await this.eventStore.getEvents(aggregateId);
+    return Account.fromEvents(aggregateId, allEvents);
   }
 
   private async saveAggregate(account: Account): Promise<void> {
@@ -262,14 +234,9 @@ export class AccountCommandHandler {
 
     account.markEventsAsCommitted();
 
-    // Check if snapshot is needed
-    if (this.shouldSnapshot(account.getVersion())) {
+    if (account.getVersion() % 100 === 0) {
       await this.snapshotManager.saveSnapshot(account);
     }
-  }
-
-  private shouldSnapshot(version: number): boolean {
-    return version % 100 === 0; // Snapshot every 100 events
   }
 }
 ```
@@ -283,9 +250,7 @@ interface AggregateRepository<T extends AggregateRoot> {
   exists(id: string): Promise<boolean>;
 }
 
-class EventSourcedRepository<T extends AggregateRoot> 
-  implements AggregateRepository<T> {
-  
+class EventSourcedRepository<T extends AggregateRoot> implements AggregateRepository<T> {
   constructor(
     private readonly eventStore: EventStore,
     private readonly factory: (id: string, events: DomainEvent[]) => T
@@ -293,13 +258,9 @@ class EventSourcedRepository<T extends AggregateRoot>
 
   async save(aggregate: T): Promise<void> {
     const events = aggregate.getUncommittedEvents();
-    
     await this.eventStore.append(
-      aggregate.getId(),
-      events,
-      aggregate.getVersion() - events.length
+      aggregate.getId(), events, aggregate.getVersion() - events.length
     );
-    
     aggregate.markEventsAsCommitted();
   }
 
