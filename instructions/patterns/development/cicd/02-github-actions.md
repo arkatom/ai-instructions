@@ -1,369 +1,240 @@
 # GitHub Actions
 
-## Complete Production Workflow
+## 基本ワークフロー
 
 ```yaml
-# .github/workflows/production.yml
-name: Production CI/CD Pipeline
-
+# .github/workflows/ci.yml
+name: CI/CD Pipeline
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: environment
-        description: 'Target environment'
-        default: 'staging'
-
-env:
-  NODE_VERSION: '20.x'
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+    types: [opened, synchronize]
 
 jobs:
   test:
-    name: Test Suite
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run linting
-        run: npm run lint
-
-      - name: Run type checking
-        run: npm run type-check
-
-      - name: Run tests
-        run: npm test -- --coverage --ci
-        env:
-          CI: true
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: matrix.node-version == '20.x' && matrix.os == 'ubuntu-latest'
-        with:
-          file: ./coverage/lcov.info
-          flags: unittests
-
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
+        node: [18, 20]
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - uses: actions/setup-node@v4
         with:
-          args: --severity-threshold=high
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test -- --coverage
+      - uses: codecov/codecov-action@v4
+        if: matrix.node == '20'
+```
 
-      - name: CodeQL Analysis
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-      
-      - uses: github/codeql-action/analyze@v3
+## 高度な機能
 
-  build:
-    name: Build and Push
-    runs-on: ubuntu-latest
-    needs: [test, security]
-    permissions:
-      contents: read
-      packages: write
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+### 再利用可能ワークフロー
+```yaml
+# .github/workflows/reusable-deploy.yml
+name: Reusable Deploy
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    secrets:
+      deploy_key:
+        required: true
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
+jobs:
   deploy:
-    name: Deploy
     runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    environment: 
-      name: production
-      url: https://myapp.com
-    
+    environment: ${{ inputs.environment }}
     steps:
-      - name: Deploy to Production
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: 'my-production-app'
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+      - run: echo "Deploying to ${{ inputs.environment }}"
 ```
 
-## Custom Actions
-
+### 条件付き実行
 ```yaml
-# .github/actions/setup-app/action.yml
-name: 'Setup Application'
-description: 'Setup Node.js app with caching and dependencies'
-
-inputs:
-  node-version:
-    description: 'Node.js version'
-    required: false
-    default: '20.x'
-  cache-key:
-    description: 'Cache key prefix'
-    required: false
-    default: 'app'
-
-outputs:
-  cache-hit:
-    description: 'Whether cache was hit'
-    value: ${{ steps.cache.outputs.cache-hit }}
-
-runs:
-  using: 'composite'
-  steps:
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ inputs.node-version }}
-        
-    - name: Cache dependencies
-      id: cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.npm
-          node_modules
-        key: ${{ inputs.cache-key }}-${{ runner.os }}-node-${{ inputs.node-version }}-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ inputs.cache-key }}-${{ runner.os }}-node-${{ inputs.node-version }}-
-          
-    - name: Install dependencies
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: npm ci
-      shell: bash
-```
-
-## Conditional Workflows
-
-```yaml
-# .github/workflows/conditional.yml
-name: Conditional Execution
-
-on: [push, pull_request]
-
 jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      frontend: ${{ steps.changes.outputs.frontend }}
-      backend: ${{ steps.changes.outputs.backend }}
-      docs: ${{ steps.changes.outputs.docs }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
     steps:
-      - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
-        id: changes
+        id: filter
         with:
           filters: |
-            frontend:
-              - 'src/frontend/**'
-              - 'package.json'
-            backend:
-              - 'src/backend/**'
-              - 'requirements.txt'
-            docs:
-              - 'docs/**'
-              - '*.md'
-
-  frontend-tests:
+            frontend: 'src/frontend/**'
+            backend: 'src/backend/**'
+  
+  frontend-build:
     needs: changes
-    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Run frontend tests
-        run: npm run test:frontend
-
-  backend-tests:
-    needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run backend tests
-        run: python -m pytest
-
-  docs-build:
-    needs: changes
-    if: ${{ needs.changes.outputs.docs == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build documentation
-        run: npm run docs:build
+      - run: npm run build:frontend
 ```
 
-## Environment Management
-
+### キャッシュ戦略
 ```yaml
-# .github/workflows/environments.yml
-name: Multi-Environment Deployment
+- uses: actions/cache@v4
+  with:
+    path: |
+      ~/.npm
+      node_modules
+      .next/cache
+    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+    restore-keys: |
+      ${{ runner.os }}-node-
+```
 
-on:
-  push:
-    branches: [main, develop, 'release/*']
+## 環境とシークレット
 
+### 環境設定
+```yaml
 jobs:
-  deploy-staging:
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: https://staging.myapp.com
-    steps:
-      - name: Deploy to Staging
-        run: |
-          echo "Deploying to staging environment"
-          echo "URL: https://staging.myapp.com"
-
-  deploy-production:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+  deploy:
     environment:
       name: production
-      url: https://myapp.com
+      url: https://example.com
     steps:
-      - name: Deploy to Production
-        run: |
-          echo "Deploying to production environment"
-          echo "URL: https://myapp.com"
-        env:
-          DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_KEY }}
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      - run: |
+          echo "Deploy to production"
+          echo "Using secret: ${{ secrets.PROD_API_KEY }}"
 ```
 
-## Artifact Management
+### Dependabot統合
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "team-name"
+```
+
+## セキュリティ
+
+### OIDC認証（AWS）
+```yaml
+permissions:
+  id-token: write
+  contents: read
+
+steps:
+  - uses: aws-actions/configure-aws-credentials@v4
+    with:
+      role-to-assume: arn:aws:iam::123456789:role/GitHubActions
+      aws-region: us-east-1
+```
+
+### CodeQL分析
+```yaml
+- uses: github/codeql-action/init@v3
+  with:
+    languages: javascript, typescript
+- run: npm run build
+- uses: github/codeql-action/analyze@v3
+```
+
+## アーティファクト管理
 
 ```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build application
-        run: npm run build
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-files
-          path: |
-            dist/
-            !dist/**/*.map
-          retention-days: 30
+# アップロード
+- uses: actions/upload-artifact@v4
+  with:
+    name: build-output
+    path: dist/
+    retention-days: 30
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results
-          path: |
-            coverage/
-            test-results.xml
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-files
-          path: ./dist
-      
-      - name: Deploy artifacts
-        run: |
-          ls -la dist/
-          # Deploy logic here
+# ダウンロード
+- uses: actions/download-artifact@v4
+  with:
+    name: build-output
+    path: ./dist
 ```
 
-## Self-Hosted Runners
+## 並列処理とMatrix
 
 ```yaml
-# .github/workflows/self-hosted.yml
-name: Self-Hosted Runner Pipeline
-
-on: [push]
-
-jobs:
-  build-on-premise:
-    runs-on: [self-hosted, linux, x64, gpu]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup custom environment
-        run: |
-          export CUDA_VERSION=12.0
-          export PATH=/usr/local/cuda/bin:$PATH
-      
-      - name: Run ML training
-        run: python train_model.py
-        
-      - name: GPU cleanup
-        if: always()
-        run: nvidia-smi --gpu-reset
+strategy:
+  matrix:
+    os: [ubuntu-latest, windows-latest, macos-latest]
+    node: [18, 20]
+    exclude:
+      - os: windows-latest
+        node: 18
+  max-parallel: 2
+  fail-fast: false
 ```
 
-## Best Practices
+## カスタムアクション
 
-1. **Use Matrices**: Test across multiple versions and platforms
-2. **Cache Dependencies**: Reduce build times with effective caching
-3. **Conditional Execution**: Only run necessary jobs based on changes
-4. **Environment Secrets**: Use GitHub environments for secret management
-5. **Artifact Lifecycle**: Set appropriate retention periods for artifacts
-6. **Custom Actions**: Create reusable actions for common workflows
+```yaml
+# action.yml
+name: 'Custom Deploy'
+inputs:
+  environment:
+    required: true
+    default: 'staging'
+outputs:
+  url:
+    value: ${{ steps.deploy.outputs.url }}
+runs:
+  using: 'composite'
+  steps:
+    - id: deploy
+      run: |
+        echo "url=https://${{ inputs.environment }}.example.com" >> $GITHUB_OUTPUT
+      shell: bash
+```
+
+## 最適化テクニック
+
+### 並列ジョブ
+- テスト、ビルド、Lintを並列実行
+- `needs`で依存関係を管理
+- 独立したジョブは並列化
+
+### 実行時間短縮
+- キャッシュの積極活用
+- 不要なステップをスキップ
+- Dockerレイヤーキャッシュ
+- Self-hosted runnerの活用
+
+### コスト削減
+- 条件付き実行で不要な実行を回避
+- タイムアウト設定
+- 並列数の制限
+- Artifact保持期間の最適化
+
+## トラブルシューティング
+
+| 問題 | 解決策 |
+|------|--------|
+| Rate limit | Tokenを使用、実行を分散 |
+| タイムアウト | timeout-minutes設定、処理を分割 |
+| キャッシュミス | restore-keys設定、キャッシュキー見直し |
+| シークレット漏洩 | マスク処理、環境変数使用 |
+
+## ベストプラクティス
+
+✅ **推奨**:
+- ワークフローの再利用
+- 適切なトリガー設定
+- 環境別のシークレット管理
+- 包括的なエラーハンドリング
+- 定期的な依存関係更新
+
+❌ **避けるべき**:
+- シークレットのハードコード
+- 無制限の並列実行
+- キャッシュなしの大規模ビルド
+- テストなしの自動デプロイ
+- 過度に複雑なワークフロー

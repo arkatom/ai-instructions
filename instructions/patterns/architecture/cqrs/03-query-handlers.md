@@ -1,369 +1,215 @@
 # Query Handlers
 
-## Query Bus Implementation
+## クエリハンドラー設計
 
+### 基本構造
 ```typescript
-interface QueryBus {
-  ask<TQuery extends Query, TResult>(query: TQuery): Promise<TResult>;
-  register<TQuery extends Query, TResult>(
-    queryType: string,
-    handler: QueryHandler<TQuery, TResult>
-  ): void;
+interface Query<T> {
+  readonly type: string;
+  readonly parameters: T;
 }
 
-class InMemoryQueryBus implements QueryBus {
-  private handlers = new Map<string, QueryHandler<any, any>>();
-  private middleware: QueryMiddleware[] = [];
-
-  register<TQuery extends Query, TResult>(
-    queryType: string,
-    handler: QueryHandler<TQuery, TResult>
-  ): void {
-    if (this.handlers.has(queryType)) {
-      throw new Error(`Handler already registered for ${queryType}`);
-    }
-    this.handlers.set(queryType, handler);
-  }
-
-  async ask<TQuery extends Query, TResult>(query: TQuery): Promise<TResult> {
-    const handler = this.handlers.get(query.type);
-    if (!handler) {
-      throw new Error(`No handler registered for ${query.type}`);
-    }
-
-    // Execute middleware pipeline
-    const pipeline = this.buildPipeline(handler, query);
-    return pipeline(query);
-  }
-
-  use(middleware: QueryMiddleware): void {
-    this.middleware.push(middleware);
-  }
-
-  private buildPipeline<TQuery extends Query, TResult>(
-    handler: QueryHandler<TQuery, TResult>,
-    query: TQuery
-  ): (q: TQuery) => Promise<TResult> {
-    let pipeline = (q: TQuery) => handler.handle(q);
-
-    for (let i = this.middleware.length - 1; i >= 0; i--) {
-      const middleware = this.middleware[i];
-      const next = pipeline;
-      pipeline = (q: TQuery) => middleware.execute(q, next);
-    }
-
-    return pipeline;
-  }
-}
-```
-
-## Query Optimization Patterns
-
-```typescript
-// Query optimizer
-class QueryOptimizer {
-  constructor(
-    private queryPlanner: QueryPlanner,
-    private statsCollector: StatsCollector
-  ) {}
-
-  optimize(query: Query): OptimizedQuery {
-    const stats = this.statsCollector.getStats(query.type);
-    const plan = this.queryPlanner.createPlan(query, stats);
-    
-    return {
-      ...query,
-      executionPlan: plan,
-      hints: this.generateHints(plan, stats)
-    };
-  }
-
-  private generateHints(plan: QueryPlan, stats: QueryStats): QueryHints {
-    return {
-      useIndex: plan.suggestedIndexes,
-      parallelism: stats.averageRows > 10000 ? 4 : 1,
-      fetchSize: Math.min(stats.averageRows, 1000),
-      timeout: stats.p95Duration * 2
-    };
-  }
-}
-
-// Complex query handler
-class ComplexQueryHandler<T extends ComplexQuery> implements QueryHandler<T, any> {
-  constructor(
-    private queryBuilder: QueryBuilder,
-    private database: Database
-  ) {}
-
-  async handle(query: T): Promise<any> {
-    const sql = this.queryBuilder
-      .select(query.fields)
-      .from(query.table)
-      .where(query.conditions)
-      .orderBy(query.sorting)
-      .limit(query.pagination.limit)
-      .offset(query.pagination.offset)
-      .build();
-
-    const result = await this.database.query(sql, query.parameters);
-    
-    return {
-      data: result.rows,
-      total: await this.getTotalCount(query),
-      page: query.pagination.page,
-      pageSize: query.pagination.limit
-    };
-  }
-
-  private async getTotalCount(query: T): Promise<number> {
-    const countSql = this.queryBuilder
-      .select('COUNT(*) as total')
-      .from(query.table)
-      .where(query.conditions)
-      .build();
-
-    const result = await this.database.query(countSql, query.parameters);
-    return result.rows[0].total;
-  }
-}
-```
-
-## Caching Strategies
-
-```typescript
-// Cache-aware query handler
-class CachedQueryHandler<TQuery extends Query, TResult> 
-  implements QueryHandler<TQuery, TResult> {
-  
-  constructor(
-    private innerHandler: QueryHandler<TQuery, TResult>,
-    private cache: Cache,
-    private cacheKeyGenerator: CacheKeyGenerator,
-    private ttl: number = 300 // 5 minutes default
-  ) {}
-
+class QueryHandler<TQuery extends Query<any>, TResult> {
   async handle(query: TQuery): Promise<TResult> {
-    const cacheKey = this.cacheKeyGenerator.generate(query);
-    
-    // Try to get from cache
-    const cached = await this.cache.get<TResult>(cacheKey);
-    if (cached !== null) {
-      return cached;
-    }
-
-    // Execute query and cache result
-    const result = await this.innerHandler.handle(query);
-    await this.cache.set(cacheKey, result, this.ttl);
-    
-    return result;
-  }
-}
-
-// Multi-level caching
-class MultiLevelCache implements Cache {
-  constructor(
-    private l1Cache: InMemoryCache,
-    private l2Cache: RedisCache
-  ) {}
-
-  async get<T>(key: string): Promise<T | null> {
-    // Check L1 cache first
-    let value = await this.l1Cache.get<T>(key);
-    if (value !== null) {
-      return value;
-    }
-
-    // Check L2 cache
-    value = await this.l2Cache.get<T>(key);
-    if (value !== null) {
-      // Promote to L1 cache
-      await this.l1Cache.set(key, value, 60); // 1 minute in L1
-      return value;
-    }
-
-    return null;
-  }
-
-  async set<T>(key: string, value: T, ttl: number): Promise<void> {
-    await Promise.all([
-      this.l1Cache.set(key, value, Math.min(ttl, 60)),
-      this.l2Cache.set(key, value, ttl)
-    ]);
-  }
-
-  async invalidate(pattern: string): Promise<void> {
-    await Promise.all([
-      this.l1Cache.invalidate(pattern),
-      this.l2Cache.invalidate(pattern)
-    ]);
+    // 1. パラメータ検証
+    // 2. 読み込み専用DBアクセス
+    // 3. 結果変換・返却
   }
 }
 ```
 
-## Query Composition
+## 実装パターン
 
+### シンプルクエリ
 ```typescript
-// Composite query handler
-class CompositeQueryHandler implements QueryHandler<CompositeQuery, CompositeResult> {
-  constructor(
-    private queryBus: QueryBus,
-    private aggregator: ResultAggregator
-  ) {}
+class GetOrderQuery extends Query<{ orderId: string }> {}
 
-  async handle(query: CompositeQuery): Promise<CompositeResult> {
-    // Execute sub-queries in parallel
-    const results = await Promise.all(
-      query.subQueries.map(subQuery => 
-        this.queryBus.ask(subQuery)
+class GetOrderHandler {
+  constructor(private readDb: ReadDatabase) {}
+  
+  async handle(query: GetOrderQuery): Promise<OrderView> {
+    const sql = `SELECT * FROM order_views WHERE id = $1`;
+    const result = await this.readDb.query(sql, [query.parameters.orderId]);
+    return this.mapToView(result.rows[0]);
+  }
+}
+```
+
+### 複雑な集計クエリ
+```typescript
+class GetSalesReportHandler {
+  async handle(query: GetSalesReportQuery): Promise<SalesReport> {
+    const sql = `
+      WITH monthly_sales AS (
+        SELECT DATE_TRUNC('month', created_at) as month,
+               SUM(total) as revenue,
+               COUNT(*) as order_count
+        FROM orders
+        WHERE created_at BETWEEN $1 AND $2
+        GROUP BY month
       )
-    );
-
-    // Aggregate results
-    return this.aggregator.aggregate(results, query.aggregationStrategy);
-  }
-}
-
-// GraphQL-style query resolver
-class GraphQLQueryResolver {
-  constructor(
-    private fieldResolvers: Map<string, FieldResolver>,
-    private dataLoader: DataLoader
-  ) {}
-
-  async resolve(query: GraphQLQuery): Promise<any> {
-    const result: any = {};
-
-    for (const field of query.fields) {
-      if (field.subFields) {
-        // Resolve nested fields
-        result[field.name] = await this.resolveNested(field);
-      } else {
-        // Resolve scalar field
-        const resolver = this.fieldResolvers.get(field.name);
-        if (resolver) {
-          result[field.name] = await resolver.resolve(query.context);
-        }
-      }
-    }
-
-    return result;
-  }
-
-  private async resolveNested(field: Field): Promise<any> {
-    // Use DataLoader for N+1 query prevention
-    const ids = await this.getIds(field);
-    return this.dataLoader.loadMany(ids);
+      SELECT * FROM monthly_sales ORDER BY month
+    `;
+    
+    const result = await this.readDb.query(sql, [
+      query.parameters.startDate,
+      query.parameters.endDate
+    ]);
+    
+    return {
+      period: query.parameters,
+      data: result.rows,
+      summary: this.calculateSummary(result.rows)
+    };
   }
 }
 ```
 
-## Performance Monitoring
+## クエリ最適化
+
+### インデックス戦略
+```sql
+-- 頻繁なクエリパターンに最適化
+CREATE INDEX idx_orders_customer_date ON orders(customer_id, created_at DESC);
+CREATE INDEX idx_orders_status ON orders(status) WHERE status != 'completed';
+```
+
+### マテリアライズドビュー
+```sql
+CREATE MATERIALIZED VIEW order_summary AS
+SELECT customer_id,
+       COUNT(*) as total_orders,
+       SUM(total) as lifetime_value,
+       MAX(created_at) as last_order_date
+FROM orders
+GROUP BY customer_id;
+
+-- 定期更新
+REFRESH MATERIALIZED VIEW CONCURRENTLY order_summary;
+```
+
+## キャッシング戦略
+
+### Redisキャッシュ
+```typescript
+class CachedQueryHandler {
+  constructor(
+    private cache: RedisClient,
+    private handler: QueryHandler
+  ) {}
+  
+  async handle(query: Query): Promise<any> {
+    const key = this.getCacheKey(query);
+    
+    // キャッシュチェック
+    const cached = await this.cache.get(key);
+    if (cached) return JSON.parse(cached);
+    
+    // DBクエリ実行
+    const result = await this.handler.handle(query);
+    
+    // キャッシュ保存（TTL付き）
+    await this.cache.setex(key, 300, JSON.stringify(result));
+    return result;
+  }
+}
+```
+
+## ページネーション
+
+### カーソルベース
+```typescript
+class PaginatedQueryHandler {
+  async handle(query: PaginatedQuery): Promise<PaginatedResult> {
+    const limit = query.pageSize + 1; // 次ページ確認用
+    const sql = `
+      SELECT * FROM items
+      WHERE id > $1
+      ORDER BY id
+      LIMIT $2
+    `;
+    
+    const rows = await this.db.query(sql, [query.cursor || 0, limit]);
+    const hasMore = rows.length > query.pageSize;
+    
+    return {
+      items: rows.slice(0, query.pageSize),
+      nextCursor: hasMore ? rows[query.pageSize - 1].id : null,
+      hasMore
+    };
+  }
+}
+```
+
+## GraphQL統合
 
 ```typescript
-// Query performance tracker
-class QueryPerformanceTracker implements QueryMiddleware {
-  constructor(
-    private metrics: MetricsCollector,
-    private slowQueryThreshold: number = 1000 // 1 second
-  ) {}
+const resolvers = {
+  Query: {
+    order: async (_, { id }, context) => {
+      const query = new GetOrderQuery({ orderId: id });
+      return context.queryBus.ask(query);
+    },
+    
+    orders: async (_, { filter, pagination }, context) => {
+      const query = new SearchOrdersQuery({ filter, pagination });
+      return context.queryBus.ask(query);
+    }
+  }
+};
+```
 
-  async execute<T>(
-    query: Query,
-    next: (query: Query) => Promise<T>
-  ): Promise<T> {
-    const startTime = Date.now();
-    const timer = this.metrics.startTimer('query.duration', {
-      type: query.type
-    });
+## エラーハンドリング
 
+```typescript
+class SafeQueryHandler {
+  async handle(query: Query): Promise<Result<T>> {
     try {
-      const result = await next(query);
-      const duration = Date.now() - startTime;
-      
-      timer.end();
-      this.metrics.increment('query.success', { type: query.type });
-      
-      if (duration > this.slowQueryThreshold) {
-        this.logSlowQuery(query, duration);
+      const result = await this.innerHandler.handle(query);
+      return { success: true, data: result };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return { success: false, error: 'NOT_FOUND' };
       }
-      
+      // ログ記録、メトリクス送信
+      return { success: false, error: 'INTERNAL_ERROR' };
+    }
+  }
+}
+```
+
+## パフォーマンス監視
+
+```typescript
+class MonitoredQueryHandler {
+  async handle(query: Query): Promise<any> {
+    const start = Date.now();
+    const labels = { query_type: query.type };
+    
+    try {
+      const result = await this.handler.handle(query);
+      this.metrics.histogram('query_duration', Date.now() - start, labels);
       return result;
     } catch (error) {
-      timer.end();
-      this.metrics.increment('query.failure', { type: query.type });
+      this.metrics.increment('query_errors', labels);
       throw error;
     }
   }
-
-  private logSlowQuery(query: Query, duration: number): void {
-    console.warn('Slow query detected', {
-      type: query.type,
-      duration,
-      parameters: query.parameters,
-      timestamp: new Date()
-    });
-  }
 }
 ```
 
-## Query Result Transformation
+## ベストプラクティス
 
-```typescript
-// Result mapper
-class QueryResultMapper<TRaw, TDto> {
-  constructor(
-    private mappingRules: MappingRule<TRaw, TDto>[]
-  ) {}
+✅ **推奨**:
+- 読み込み専用DB接続の使用
+- 適切なインデックス設計
+- キャッシュの活用
+- ページネーション実装
+- エラーの適切な処理
 
-  map(raw: TRaw): TDto {
-    const result = {} as TDto;
-    
-    for (const rule of this.mappingRules) {
-      const value = rule.extract(raw);
-      rule.assign(result, value);
-    }
-    
-    return result;
-  }
-
-  mapMany(raws: TRaw[]): TDto[] {
-    return raws.map(raw => this.map(raw));
-  }
-}
-
-// Pagination wrapper
-class PaginatedQueryHandler<T> implements QueryHandler<PaginatedQuery, PaginatedResult<T>> {
-  constructor(private innerHandler: QueryHandler<any, T[]>) {}
-
-  async handle(query: PaginatedQuery): Promise<PaginatedResult<T>> {
-    const [data, total] = await Promise.all([
-      this.innerHandler.handle(query),
-      this.getTotalCount(query)
-    ]);
-
-    return {
-      data,
-      pagination: {
-        page: query.page,
-        pageSize: query.pageSize,
-        total,
-        totalPages: Math.ceil(total / query.pageSize)
-      }
-    };
-  }
-
-  private async getTotalCount(query: PaginatedQuery): Promise<number> {
-    // Implementation specific to data source
-    return 0;
-  }
-}
-```
-
-## Best Practices
-
-1. **Query Optimization**: Use appropriate indexes and query plans
-2. **Caching**: Implement multi-level caching for frequently accessed data
-3. **Pagination**: Always paginate large result sets
-4. **N+1 Prevention**: Use DataLoader or similar patterns
-5. **Monitoring**: Track query performance and identify bottlenecks
-6. **Testing**: Test queries with realistic data volumes
+❌ **避けるべき**:
+- 書き込み操作の混入
+- N+1クエリ問題
+- 無制限の結果返却
+- キャッシュの過度な依存
+- 同期的な重い処理

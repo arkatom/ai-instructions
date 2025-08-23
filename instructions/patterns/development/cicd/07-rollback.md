@@ -1,395 +1,190 @@
 # Rollback Strategies
 
-## Automated Rollback Triggers
+## ロールバック戦略
 
+### 1. Blue-Green Deployment
+```yaml
+# 即座に旧バージョンへ切り替え
+deployment:
+  blue: v1.0 (stable)
+  green: v2.0 (new)
+  switch: load_balancer.target = blue  # 瞬時切り替え
+```
+
+**利点**: 即座の切り替え、ゼロダウンタイム
+**欠点**: リソース2倍必要、DBスキーマ変更が困難
+
+### 2. Canary Deployment
+```yaml
+# 段階的にトラフィックを戻す
+rollback_stages:
+  - { version: v2.0, traffic: 10%, duration: 5m }
+  - { version: v2.0, traffic: 0%, duration: immediate }  # 問題検知時
+```
+
+**利点**: リスク最小化、段階的検証
+**欠点**: 複雑な設定、部分的影響
+
+### 3. Feature Flags
 ```typescript
-interface RollbackTrigger {
-  metric: string;
-  threshold: number;
-  duration: number; // seconds to monitor
-  action: 'rollback' | 'alert' | 'scale';
-}
-
-class AutomatedRollback {
-  private triggers: RollbackTrigger[] = [
-    { metric: 'error_rate', threshold: 5, duration: 300, action: 'rollback' },
-    { metric: 'response_time_p99', threshold: 2000, duration: 180, action: 'rollback' },
-    { metric: 'availability', threshold: 99, duration: 60, action: 'rollback' }
-  ];
-
-  async monitorDeployment(deploymentId: string): Promise<void> {
-    const startTime = Date.now();
-    const timeout = 30 * 60 * 1000; // 30 minutes
-
-    while (Date.now() - startTime < timeout) {
-      const metrics = await this.collectMetrics();
-      
-      for (const trigger of this.triggers) {
-        if (await this.shouldTrigger(trigger, metrics)) {
-          await this.executeRollback(deploymentId, trigger);
-          return;
-        }
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 30000)); // Check every 30s
-    }
-  }
-
-  private async executeRollback(deploymentId: string, trigger: RollbackTrigger): Promise<void> {
-    console.log(`Triggering rollback for deployment ${deploymentId}: ${trigger.metric} threshold exceeded`);
-    
-    // Notify stakeholders
-    await this.sendRollbackNotification(deploymentId, trigger);
-    
-    // Execute rollback
-    await this.performRollback(deploymentId);
-    
-    // Verify rollback success
-    await this.verifyRollbackSuccess();
-  }
+// コードはそのまま、機能だけOFF
+if (featureFlag.isEnabled('new-feature')) {
+  // 新機能（問題あればOFF）
+} else {
+  // 従来の処理
 }
 ```
 
-## Database Rollback Strategies
+**利点**: コードデプロイ不要、即座に無効化
+**欠点**: コード複雑化、フラグ管理必要
 
-```sql
--- Migration rollback system
-CREATE TABLE migration_history (
-    id SERIAL PRIMARY KEY,
-    version VARCHAR(50) NOT NULL,
-    applied_at TIMESTAMP DEFAULT NOW(),
-    rollback_script TEXT,
-    data_snapshot_path VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'applied'
-);
+## 自動ロールバック
 
--- Safe rollback procedure
-CREATE OR REPLACE FUNCTION rollback_to_version(target_version VARCHAR(50))
-RETURNS VOID AS $$
-DECLARE
-    migration_record RECORD;
-    current_version VARCHAR(50);
-BEGIN
-    -- Get current version
-    SELECT version INTO current_version 
-    FROM migration_history 
-    WHERE status = 'applied' 
-    ORDER BY applied_at DESC LIMIT 1;
-    
-    -- Validate rollback path
-    IF target_version >= current_version THEN
-        RAISE EXCEPTION 'Cannot rollback to newer or same version';
-    END IF;
-    
-    -- Create backup before rollback
-    PERFORM create_data_backup(current_version);
-    
-    -- Execute rollback scripts in reverse order
-    FOR migration_record IN
-        SELECT * FROM migration_history 
-        WHERE version > target_version 
-        AND status = 'applied'
-        ORDER BY applied_at DESC
-    LOOP
-        -- Execute rollback script
-        EXECUTE migration_record.rollback_script;
-        
-        -- Mark as rolled back
-        UPDATE migration_history 
-        SET status = 'rolled_back' 
-        WHERE id = migration_record.id;
-    END LOOP;
-    
-    -- Verify data integrity
-    PERFORM verify_data_integrity();
-END;
-$$ LANGUAGE plpgsql;
-```
-
-## Infrastructure Rollback
-
-```bash
-#!/bin/bash
-# infrastructure-rollback.sh
-
-rollback_infrastructure() {
-    local target_version=$1
-    local environment=$2
-    
-    echo "Rolling back infrastructure to version $target_version in $environment"
-    
-    # Create infrastructure snapshot
-    create_infrastructure_snapshot $environment
-    
-    # Rollback Terraform state
-    terraform workspace select $environment
-    terraform plan -var="version=$target_version" -out=rollback.plan
-    
-    if terraform apply rollback.plan; then
-        echo "Infrastructure rollback successful"
-        
-        # Wait for infrastructure to stabilize
-        wait_for_infrastructure_ready $environment
-        
-        # Verify rollback
-        verify_infrastructure_health $environment
-    else
-        echo "Infrastructure rollback failed, restoring snapshot"
-        restore_infrastructure_snapshot $environment
-    fi
-}
-
-verify_infrastructure_health() {
-    local environment=$1
-    local max_attempts=30
-    local attempt=1
-    
-    while [[ $attempt -le $max_attempts ]]; do
-        if check_all_services_healthy $environment; then
-            echo "Infrastructure health verified"
-            return 0
-        fi
-        
-        echo "Attempt $attempt/$max_attempts: Infrastructure not ready"
-        sleep 30
-        ((attempt++))
-    done
-    
-    echo "Infrastructure health check failed"
-    return 1
-}
-```
-
-## Application Rollback Patterns
-
+### メトリクスベース
 ```yaml
-# Kubernetes rollback configuration
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: app-deployment
-  annotations:
-    deployment.kubernetes.io/revision: "3"
-spec:
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-      maxSurge: 1
-  template:
-    spec:
-      containers:
-      - name: app
-        image: myapp:v1.2.3
-        readinessProbe:
-          httpGet:
-            path: /health/ready
-            port: 8080
-          initialDelaySeconds: 10
-          failureThreshold: 3
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: 8080
-          initialDelaySeconds: 30
-          failureThreshold: 5
-
----
-# Automatic rollback on failure
-apiVersion: argoproj.io/v1alpha1
-kind: Rollout
-metadata:
-  name: app-rollout
-spec:
-  replicas: 5
-  strategy:
-    canary:
-      analysis:
-        templates:
-        - templateName: error-rate-analysis
-        args:
-        - name: service-name
-          value: app-service
-      steps:
-      - setWeight: 20
-      - pause: {duration: 300s}
-      - analysis:
-          templates:
-          - templateName: error-rate-analysis
-      - setWeight: 50
-      - pause: {duration: 300s}
-  revisionHistoryLimit: 10
+# Flagger自動ロールバック設定
+analysis:
+  interval: 30s
+  threshold: 5
+  metrics:
+    - name: error-rate
+      threshold: 1  # エラー率1%超で自動ロールバック
+    - name: latency-p99
+      threshold: 500  # P99レイテンシ500ms超で自動ロールバック
 ```
 
-## Data Backup Integration
-
+### ヘルスチェック
 ```javascript
-class BackupManager {
-  async createPreDeploymentBackup(deploymentId) {
-    const timestamp = new Date().toISOString();
-    const backupId = `${deploymentId}-${timestamp}`;
-    
-    // Database backup
-    await this.createDatabaseBackup(backupId);
-    
-    // File system backup
-    await this.createFileSystemBackup(backupId);
-    
-    // Configuration backup
-    await this.createConfigurationBackup(backupId);
-    
-    // Store backup metadata
-    await this.storeBackupMetadata({
-      backupId,
-      deploymentId,
-      timestamp,
-      type: 'pre-deployment',
-      retention: '30d'
-    });
-    
-    return backupId;
-  }
-
-  async restoreFromBackup(backupId) {
-    const metadata = await this.getBackupMetadata(backupId);
-    
-    if (!metadata) {
-      throw new Error(`Backup ${backupId} not found`);
-    }
-    
-    // Create current state backup before restore
-    const currentBackupId = await this.createPreDeploymentBackup('emergency');
-    
-    try {
-      // Restore database
-      await this.restoreDatabase(backupId);
-      
-      // Restore file system
-      await this.restoreFileSystem(backupId);
-      
-      // Restore configuration
-      await this.restoreConfiguration(backupId);
-      
-      // Verify restore
-      await this.verifyRestoreIntegrity(backupId);
-      
-    } catch (error) {
-      // If restore fails, restore current state
-      await this.restoreFromBackup(currentBackupId);
-      throw error;
-    }
-  }
-}
-```
-
-## Disaster Recovery Procedures
-
-```yaml
-# Disaster recovery playbook
-disaster_recovery:
-  rto: 4h  # Recovery Time Objective
-  rpo: 1h  # Recovery Point Objective
+// 起動時ヘルスチェック失敗で自動ロールバック
+app.get('/health', (req, res) => {
+  const checks = {
+    database: await checkDatabase(),
+    cache: await checkRedis(),
+    external_api: await checkExternalAPI()
+  };
   
-  procedures:
-    total_outage:
-      steps:
-        - assess_damage
-        - activate_dr_site
-        - restore_from_backup
-        - redirect_traffic
-        - verify_functionality
-      
-    partial_outage:
-      steps:
-        - isolate_affected_components
-        - scale_healthy_components
-        - restore_affected_services
-        - gradual_traffic_restoration
-
-  communication:
-    stakeholders:
-      - engineering_team
-      - product_team
-      - customer_support
-      - executive_team
-    
-    templates:
-      incident_start: |
-        INCIDENT: Production system experiencing issues
-        Start Time: {{ start_time }}
-        Impact: {{ impact_description }}
-        ETA for Updates: {{ next_update_time }}
-      
-      resolution: |
-        RESOLVED: Production system restored
-        Resolution Time: {{ resolution_time }}
-        Root Cause: {{ root_cause }}
-        Next Steps: {{ follow_up_actions }}
+  if (!Object.values(checks).every(v => v)) {
+    return res.status(503).json({ status: 'unhealthy', checks });
+  }
+  res.json({ status: 'healthy' });
+});
 ```
 
-## Rollback Testing
+## データベースロールバック
+
+### スキーマ変更戦略
+```sql
+-- 前方互換性を保つ変更
+-- Step 1: カラム追加（NULL許可）
+ALTER TABLE users ADD COLUMN new_field VARCHAR(255);
+
+-- Step 2: アプリ更新（新旧両対応）
+-- Step 3: データ移行
+UPDATE users SET new_field = old_field WHERE new_field IS NULL;
+
+-- Step 4: 制約追加（ロールバック可能期間後）
+ALTER TABLE users ALTER COLUMN new_field SET NOT NULL;
+```
+
+### バックアップ戦略
+```bash
+# デプロイ前の自動バックアップ
+pg_dump prod_db > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# ポイントインタイムリカバリ
+pg_restore --time="2024-01-15 14:30:00" prod_db
+```
+
+## Git戦略
+
+### Revert vs Reset
+```bash
+# Revert: 履歴を保持（推奨）
+git revert HEAD~3..HEAD
+git push origin main
+
+# Reset: 履歴を書き換え（緊急時のみ）
+git reset --hard HEAD~3
+git push --force-with-lease origin main
+```
+
+## Kubernetes ロールバック
 
 ```bash
-#!/bin/bash
-# rollback-testing.sh
+# 前バージョンへロールバック
+kubectl rollout undo deployment/api
 
-test_rollback_procedures() {
-    local test_environment="staging-rollback"
-    
-    echo "Starting rollback procedure testing"
-    
-    # Deploy current version
-    deploy_version "v2.0.0" $test_environment
-    wait_for_deployment_ready $test_environment
-    
-    # Create test data
-    populate_test_data $test_environment
-    
-    # Deploy newer version
-    deploy_version "v2.1.0" $test_environment
-    wait_for_deployment_ready $test_environment
-    
-    # Test rollback
-    echo "Testing automatic rollback..."
-    trigger_simulated_failure $test_environment
-    
-    # Verify rollback occurred
-    if verify_version "v2.0.0" $test_environment; then
-        echo "✓ Automatic rollback successful"
-    else
-        echo "✗ Automatic rollback failed"
-        exit 1
-    fi
-    
-    # Verify data integrity
-    if verify_test_data_integrity $test_environment; then
-        echo "✓ Data integrity maintained"
-    else
-        echo "✗ Data integrity compromised"
-        exit 1
-    fi
-    
-    # Test manual rollback
-    echo "Testing manual rollback..."
-    manual_rollback "v1.9.0" $test_environment
-    
-    if verify_version "v1.9.0" $test_environment; then
-        echo "✓ Manual rollback successful"
-    else
-        echo "✗ Manual rollback failed"
-        exit 1
-    fi
-    
-    echo "All rollback tests passed"
-}
+# 特定リビジョンへ
+kubectl rollout undo deployment/api --to-revision=3
+
+# 履歴確認
+kubectl rollout history deployment/api
 ```
 
-## Best Practices
+## ロールバック手順書
 
-1. **Automated Triggers**: Set clear, measurable rollback criteria
-2. **Data Safety**: Always backup before deployment and rollback
-3. **Fast Recovery**: Optimize for speed while maintaining safety
-4. **Communication**: Keep stakeholders informed during incidents
-5. **Testing**: Regularly test rollback procedures in non-production
-6. **Documentation**: Maintain clear rollback runbooks
-7. **Monitoring**: Track rollback success rates and improve procedures
+### 1. 即座の対応（5分以内）
+1. インシデント宣言
+2. 影響範囲確認
+3. ロールバック判定
+4. 実行（自動/手動）
+
+### 2. ロールバックチェックリスト
+- [ ] 現在のバージョン記録
+- [ ] データバックアップ確認
+- [ ] 依存サービス互換性確認
+- [ ] ロールバック実行
+- [ ] 動作確認
+- [ ] ステークホルダー通知
+
+### 3. 事後対応
+- RCA（根本原因分析）実施
+- ランブック更新
+- 自動化の改善
+- 再発防止策の実装
+
+## テスト戦略
+
+### ロールバックテスト
+```yaml
+# 定期的なロールバック訓練
+chaos_engineering:
+  schedule: "0 2 * * 1"  # 毎週月曜AM2時
+  scenarios:
+    - deploy_bad_version
+    - trigger_auto_rollback
+    - verify_recovery_time
+```
+
+## 監視とアラート
+
+### 主要メトリクス
+- **デプロイ成功率**: 95%以上
+- **ロールバック頻度**: 月1回以下
+- **MTTR**: 30分以内
+- **影響ユーザー数**: 1%未満
+
+### アラート設定
+```yaml
+alerts:
+  - name: high_rollback_rate
+    expr: rate(deployments_rolled_back[1h]) > 0.1
+    severity: critical
+    action: page_oncall
+```
+
+## ベストプラクティス
+
+✅ **推奨**:
+- 前方互換性の維持
+- 小さなリリース
+- カナリーデプロイメント
+- 自動ロールバック設定
+- 定期的な訓練
+
+❌ **避けるべき**:
+- 破壊的変更の直接適用
+- テストなしのロールバック
+- 手動のみの手順
+- バックアップなしの変更
+- ロールバック手順の未文書化

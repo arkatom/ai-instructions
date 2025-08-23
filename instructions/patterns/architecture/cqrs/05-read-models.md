@@ -1,313 +1,223 @@
 # Read Models
 
-## Read Model Design Patterns
+## 読み込みモデル設計
 
+### 基本概念
+- **目的**: クエリに最適化されたデータ構造
+- **特徴**: 非正規化、事前計算、キャッシュ友好的
+- **更新**: イベントドリブンまたはバッチ処理
+
+## 実装パターン
+
+### プロジェクション
 ```typescript
-// Denormalized read model
-interface DenormalizedOrderView {
-  orderId: string;
-  orderNumber: string;
-  customerId: string;
-  customerName: string;
-  customerEmail: string;
-  items: Array<{
-    productId: string;
-    productName: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-  }>;
-  shippingAddress: Address;
-  billingAddress: Address;
-  totalAmount: number;
-  status: OrderStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Document-based read model
-class DocumentReadModel {
-  constructor(private documentStore: DocumentStore) {}
-
-  async save(id: string, document: any): Promise<void> {
-    await this.documentStore.upsert(id, {
-      ...document,
-      _metadata: {
-        version: document.version || 1,
-        updatedAt: new Date(),
-        projectionName: this.constructor.name
-      }
-    });
-  }
-
-  async findById(id: string): Promise<any> {
-    return this.documentStore.findById(id);
-  }
-
-  async findByQuery(query: any): Promise<any[]> {
-    return this.documentStore.query(query);
-  }
-}
-```
-
-## Projection Builders
-
-```typescript
-class ReadModelProjector {
-  private builders: Map<string, ReadModelBuilder> = new Map();
-
-  register(eventType: string, builder: ReadModelBuilder): void {
-    this.builders.set(eventType, builder);
-  }
-
-  async project(event: DomainEvent): Promise<void> {
-    const builder = this.builders.get(event.type);
-    
-    if (!builder) {
-      console.log(`No builder registered for ${event.type}`);
-      return;
-    }
-
-    await builder.build(event);
-  }
-}
-
-// Specialized builders
-class OrderViewBuilder implements ReadModelBuilder {
-  constructor(
-    private readDb: Database,
-    private cache: Cache
-  ) {}
-
-  async build(event: DomainEvent): Promise<void> {
-    switch (event.type) {
+class OrderProjection {
+  async handle(event: DomainEvent): Promise<void> {
+    switch(event.type) {
       case 'OrderCreated':
-        await this.createOrderView(event as OrderCreatedEvent);
+        await this.createOrderView(event);
         break;
       case 'OrderItemAdded':
-        await this.addItemToView(event as OrderItemAddedEvent);
+        await this.updateOrderItems(event);
         break;
-      case 'OrderStatusChanged':
-        await this.updateStatus(event as OrderStatusChangedEvent);
+      case 'OrderShipped':
+        await this.updateOrderStatus(event);
         break;
     }
-
-    // Invalidate cache
-    await this.cache.invalidate(`order:${event.aggregateId}`);
   }
-
+  
   private async createOrderView(event: OrderCreatedEvent): Promise<void> {
-    const customer = await this.getCustomerDetails(event.customerId);
-    
-    await this.readDb.query(
-      `INSERT INTO order_views (
-        order_id, order_number, customer_id, customer_name,
-        customer_email, status, created_at, total_amount
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        event.orderId, event.orderNumber, customer.id,
-        customer.name, customer.email, 'PENDING',
-        event.timestamp, 0
-      ]
-    );
-  }
-
-  private async addItemToView(event: OrderItemAddedEvent): Promise<void> {
-    const product = await this.getProductDetails(event.productId);
-    
-    await this.readDb.query(
-      `INSERT INTO order_item_views (
-        order_id, product_id, product_name, quantity,
-        unit_price, total
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        event.orderId, product.id, product.name,
-        event.quantity, event.unitPrice,
-        event.quantity * event.unitPrice
-      ]
-    );
-
-    // Update order total
-    await this.readDb.query(
-      `UPDATE order_views 
-       SET total_amount = total_amount + $1
-       WHERE order_id = $2`,
-      [event.quantity * event.unitPrice, event.orderId]
-    );
+    await this.db.query(`
+      INSERT INTO order_views (id, customer_id, status, created_at)
+      VALUES ($1, $2, $3, $4)
+    `, [event.orderId, event.customerId, 'PENDING', event.timestamp]);
   }
 }
 ```
 
-## Multiple Read Models
+### 非正規化ビュー
+```sql
+-- 結合を事前計算
+CREATE MATERIALIZED VIEW order_summary_view AS
+SELECT 
+  o.id,
+  o.status,
+  c.name as customer_name,
+  c.email as customer_email,
+  SUM(oi.quantity * oi.price) as total,
+  COUNT(oi.id) as item_count,
+  o.created_at
+FROM orders o
+JOIN customers c ON o.customer_id = c.id
+LEFT JOIN order_items oi ON o.id = oi.order_id
+GROUP BY o.id, c.name, c.email;
 
-```typescript
-class MultipleReadModelManager {
-  private models: ReadModel[] = [];
-
-  register(...models: ReadModel[]): void {
-    this.models.push(...models);
-  }
-
-  async projectEvent(event: DomainEvent): Promise<void> {
-    // Project to all read models in parallel
-    await Promise.all(
-      this.models.map(model => 
-        this.safeProject(model, event)
-      )
-    );
-  }
-
-  private async safeProject(model: ReadModel, event: DomainEvent): Promise<void> {
-    try {
-      await model.project(event);
-    } catch (error) {
-      console.error(`Projection failed for ${model.name}:`, error);
-      // Continue with other projections
-    }
-  }
-}
-
-// Different read models for different purposes
-class SearchIndexProjection implements ReadModel {
-  name = 'SearchIndex';
-  
-  constructor(private searchEngine: SearchEngine) {}
-
-  async project(event: DomainEvent): Promise<void> {
-    if (event.type === 'ProductCreated') {
-      await this.searchEngine.index({
-        id: event.aggregateId,
-        type: 'product',
-        name: event.payload.name,
-        description: event.payload.description,
-        price: event.payload.price,
-        tags: event.payload.tags
-      });
-    }
-  }
-}
-
-class ReportingProjection implements ReadModel {
-  name = 'Reporting';
-  
-  constructor(private reportDb: Database) {}
-
-  async project(event: DomainEvent): Promise<void> {
-    if (event.type === 'OrderCompleted') {
-      await this.updateSalesMetrics(event as OrderCompletedEvent);
-    }
-  }
-
-  private async updateSalesMetrics(event: OrderCompletedEvent): Promise<void> {
-    await this.reportDb.query(
-      `INSERT INTO sales_metrics (date, revenue, order_count)
-       VALUES ($1, $2, 1)
-       ON CONFLICT (date) DO UPDATE
-       SET revenue = sales_metrics.revenue + $2,
-           order_count = sales_metrics.order_count + 1`,
-      [event.timestamp.toDateString(), event.totalAmount]
-    );
-  }
-}
+-- インデックス追加
+CREATE INDEX idx_order_summary_customer ON order_summary_view(customer_email);
+CREATE INDEX idx_order_summary_date ON order_summary_view(created_at DESC);
 ```
 
-## Read Model Optimization
+## 更新戦略
 
+### イベントドリブン更新
 ```typescript
-class OptimizedReadModelStore {
-  constructor(
-    private primaryDb: Database,
-    private cache: Redis,
-    private cdn: CDN
-  ) {}
-
-  async get(key: string): Promise<any> {
-    // Try CDN first for static content
-    if (this.isStaticContent(key)) {
-      const cdnResult = await this.cdn.get(key);
-      if (cdnResult) return cdnResult;
-    }
-
-    // Try cache
-    const cached = await this.cache.get(key);
-    if (cached) return JSON.parse(cached);
-
-    // Load from database
-    const result = await this.primaryDb.query(
-      'SELECT * FROM read_models WHERE key = $1',
-      [key]
-    );
-
-    if (result.rows.length > 0) {
-      // Cache for future requests
-      await this.cache.setex(key, 300, JSON.stringify(result.rows[0]));
-      return result.rows[0];
-    }
-
-    return null;
-  }
-
-  private isStaticContent(key: string): boolean {
-    return key.startsWith('catalog:') || key.startsWith('static:');
-  }
-}
-
-// Materialized view management
-class MaterializedViewManager {
-  async refresh(viewName: string): Promise<void> {
-    await this.db.query(`REFRESH MATERIALIZED VIEW CONCURRENTLY ${viewName}`);
-  }
-
-  async scheduleRefresh(viewName: string, intervalMs: number): void {
-    setInterval(() => this.refresh(viewName), intervalMs);
-  }
-}
-```
-
-## Read Model Rebuild
-
-```typescript
-class ReadModelRebuilder {
+class EventProjector {
   constructor(
     private eventStore: EventStore,
-    private projectionEngine: ProjectionEngine
+    private projections: Projection[]
   ) {}
-
-  async rebuild(projectionName: string): Promise<void> {
-    console.log(`Starting rebuild of ${projectionName}`);
+  
+  async start(): Promise<void> {
+    // イベントストリームを購読
+    const stream = await this.eventStore.subscribe('$all');
     
-    // Clear existing read model
-    await this.clearReadModel(projectionName);
-    
-    // Reset checkpoint
-    await this.resetCheckpoint(projectionName);
-    
-    // Replay all events
-    const events = await this.eventStore.getAllEvents();
-    
-    for (const event of events) {
-      await this.projectionEngine.projectSingle(projectionName, event);
+    for await (const event of stream) {
+      await this.projectEvent(event);
     }
-    
-    console.log(`Rebuild of ${projectionName} completed`);
   }
-
-  private async clearReadModel(projectionName: string): Promise<void> {
-    // Implementation depends on storage type
-    await this.readDb.query(`TRUNCATE TABLE ${projectionName}_view`);
-  }
-
-  private async resetCheckpoint(projectionName: string): Promise<void> {
-    await this.checkpointStore.reset(projectionName);
+  
+  private async projectEvent(event: DomainEvent): Promise<void> {
+    // 並列でプロジェクション更新
+    await Promise.all(
+      this.projections.map(p => p.handle(event))
+    );
   }
 }
 ```
 
-## Best Practices
+### スナップショット戦略
+```typescript
+class SnapshotProjection {
+  async rebuild(fromEventNumber: number = 0): Promise<void> {
+    // 既存データクリア
+    await this.db.query('TRUNCATE TABLE read_model');
+    
+    // イベントから再構築
+    const events = await this.eventStore.getEvents(fromEventNumber);
+    
+    for (const batch of this.chunk(events, 1000)) {
+      await this.processBatch(batch);
+    }
+    
+    // スナップショット作成
+    await this.createSnapshot();
+  }
+}
+```
 
-1. **Denormalization**: Optimize read models for specific query patterns
-2. **Multiple Models**: Create different read models for different use cases
-3. **Caching**: Implement multi-level caching for performance
-4. **Rebuild Strategy**: Design read models to be rebuildable from events
-5. **Monitoring**: Track projection lag and performance metrics
-6. **Testing**: Test projections with event replay scenarios
+## データストア選択
+
+### 用途別選択
+| 用途 | データストア | 理由 |
+|------|------------|------|
+| 全文検索 | Elasticsearch | 高速検索、ファセット |
+| リアルタイム集計 | Redis | 低レイテンシ、カウンター |
+| 複雑なクエリ | PostgreSQL | SQL、トランザクション |
+| グラフ探索 | Neo4j | 関係性クエリ |
+| 時系列データ | InfluxDB | 時系列最適化 |
+
+## 一貫性管理
+
+### 結果整合性
+```typescript
+class EventuallyConsistentProjection {
+  async handle(event: DomainEvent): Promise<void> {
+    const maxRetries = 3;
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        await this.updateReadModel(event);
+        await this.markEventProcessed(event.id);
+        return;
+      } catch (error) {
+        if (i === maxRetries - 1) {
+          await this.sendToDeadLetter(event, error);
+        }
+        await this.delay(Math.pow(2, i) * 1000);
+      }
+    }
+  }
+}
+```
+
+## パフォーマンス最適化
+
+### インデックス設計
+```sql
+-- 複合インデックス
+CREATE INDEX idx_orders_multi ON orders(customer_id, status, created_at DESC);
+
+-- 部分インデックス
+CREATE INDEX idx_active_orders ON orders(created_at) 
+WHERE status IN ('PENDING', 'PROCESSING');
+
+-- カバリングインデックス
+CREATE INDEX idx_order_covering ON orders(id, customer_id, total) 
+INCLUDE (status, created_at);
+```
+
+### キャッシング
+```typescript
+class CachedReadModel {
+  constructor(
+    private cache: Cache,
+    private db: Database
+  ) {}
+  
+  async get(id: string): Promise<any> {
+    // L1キャッシュ: アプリケーション
+    const cached = await this.cache.get(id);
+    if (cached) return cached;
+    
+    // L2キャッシュ: Redis
+    const redis = await this.redis.get(id);
+    if (redis) {
+      await this.cache.set(id, redis);
+      return redis;
+    }
+    
+    // DB読み込み
+    const data = await this.db.findById(id);
+    await this.cache.set(id, data, 300);
+    await this.redis.setex(id, 3600, data);
+    return data;
+  }
+}
+```
+
+## 監視
+
+### メトリクス
+```typescript
+class MonitoredProjection {
+  async handle(event: DomainEvent): Promise<void> {
+    const timer = this.metrics.timer('projection.latency');
+    
+    try {
+      await this.project(event);
+      this.metrics.increment('projection.success');
+    } catch (error) {
+      this.metrics.increment('projection.error');
+      throw error;
+    } finally {
+      timer.end();
+    }
+  }
+}
+```
+
+## ベストプラクティス
+
+✅ **推奨**:
+- イベント順序の保証
+- イデンポテント更新
+- 定期的な整合性チェック
+- 適切なインデックス設計
+- バージョニング戦略
+
+❌ **避けるべき**:
+- 同期的な更新要求
+- 無制限のデータ成長
+- 複雑なビジネスロジック
+- トランザクション依存
+- リアルタイム一貫性の期待

@@ -1,301 +1,230 @@
 # Performance Optimization
 
-## Query Performance Optimization
+## パフォーマンス戦略
 
+### 測定指標
+- **コマンド処理**: < 100ms（P99）
+- **クエリ応答**: < 50ms（P99）
+- **イベント投影遅延**: < 1秒
+- **スループット**: 10,000 req/s
+
+## クエリ最適化
+
+### インデックス戦略
+```sql
+-- 複合インデックス（頻繁なフィルタ条件）
+CREATE INDEX idx_orders_filter ON orders(status, customer_id, created_at DESC);
+
+-- カバリングインデックス（SELECT句を含む）
+CREATE INDEX idx_orders_covering ON orders(id) INCLUDE (total, status);
+
+-- 部分インデックス（特定条件のみ）
+CREATE INDEX idx_pending_orders ON orders(created_at) WHERE status = 'PENDING';
+```
+
+### クエリ実行計画
 ```typescript
 class QueryOptimizer {
-  private queryCache: LRUCache<string, any>;
-  private queryPlanner: QueryPlanner;
-
-  constructor(cacheSize: number = 1000) {
-    this.queryCache = new LRUCache({ max: cacheSize });
-    this.queryPlanner = new QueryPlanner();
-  }
-
-  async optimizeQuery<T>(query: Query): Promise<T> {
-    // Check cache first
-    const cacheKey = this.generateCacheKey(query);
-    const cached = this.queryCache.get(cacheKey);
+  async analyzeQuery(sql: string): Promise<void> {
+    const plan = await this.db.query(`EXPLAIN ANALYZE ${sql}`);
     
-    if (cached && !this.isStale(cached)) {
-      return cached.data;
+    if (plan.cost > 1000) {
+      this.logger.warn('Expensive query detected', { sql, plan });
     }
-
-    // Optimize query execution
-    const optimizedQuery = this.queryPlanner.optimize(query);
-    const result = await this.executeOptimized(optimizedQuery);
-    
-    // Cache result
-    this.queryCache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now()
-    });
-
-    return result;
-  }
-
-  private async executeOptimized(query: OptimizedQuery): Promise<any> {
-    // Use parallel execution for independent sub-queries
-    if (query.parallelizable) {
-      const results = await Promise.all(
-        query.subQueries.map(sq => this.executeSubQuery(sq))
-      );
-      return this.mergeResults(results);
-    }
-
-    // Use indexed access
-    if (query.useIndex) {
-      return this.executeWithIndex(query);
-    }
-
-    // Default execution
-    return this.executeDefault(query);
   }
 }
 ```
 
-## Command Processing Optimization
+## キャッシング
 
+### 多層キャッシュ
 ```typescript
-class CommandBatchProcessor {
-  private batchQueue: Command[] = [];
-  private batchSize: number = 100;
-  private flushInterval: number = 100; // ms
-
-  constructor(private commandBus: CommandBus) {
-    this.startBatchProcessor();
-  }
-
-  async enqueue(command: Command): Promise<void> {
-    this.batchQueue.push(command);
+class MultiLayerCache {
+  async get(key: string): Promise<any> {
+    // L1: プロセスメモリ（5MB、100ms TTL）
+    let value = this.memoryCache.get(key);
+    if (value) return value;
     
-    if (this.batchQueue.length >= this.batchSize) {
-      await this.flush();
+    // L2: Redis（1GB、5分 TTL）
+    value = await this.redis.get(key);
+    if (value) {
+      this.memoryCache.set(key, value, 100);
+      return value;
     }
+    
+    // L3: DB
+    value = await this.db.findOne(key);
+    await this.warmCache(key, value);
+    return value;
   }
+}
+```
 
-  private async flush(): Promise<void> {
-    if (this.batchQueue.length === 0) return;
+### キャッシュ無効化
+```typescript
+class CacheInvalidation {
+  @EventHandler(EntityUpdated)
+  async invalidate(event: EntityUpdatedEvent): Promise<void> {
+    // 特定キー無効化
+    await this.cache.delete(`entity:${event.entityId}`);
+    
+    // パターンマッチ無効化
+    await this.cache.deletePattern(`list:*:${event.entityType}`);
+  }
+}
+```
 
-    const batch = this.batchQueue.splice(0, this.batchSize);
+## 非同期処理
+
+### コマンドキューイング
+```typescript
+class CommandQueue {
+  async enqueue(command: Command): Promise<string> {
+    const jobId = uuid();
     
-    // Process commands in parallel where possible
-    const groups = this.groupByAggregate(batch);
+    await this.queue.add('commands', {
+      id: jobId,
+      command,
+      priority: this.getPriority(command),
+      timestamp: Date.now()
+    });
     
+    return jobId; // 即座にジョブID返却
+  }
+}
+```
+
+### バッチ処理
+```typescript
+class BatchProcessor {
+  async processBatch(events: Event[]): Promise<void> {
+    // イベントをタイプ別にグループ化
+    const grouped = this.groupBy(events, 'type');
+    
+    // 並列処理
     await Promise.all(
-      Object.entries(groups).map(([aggregateId, commands]) =>
-        this.processAggregateCommands(aggregateId, commands)
+      Object.entries(grouped).map(([type, batch]) =>
+        this.processTypeBatch(type, batch)
       )
     );
   }
-
-  private groupByAggregate(commands: Command[]): Record<string, Command[]> {
-    return commands.reduce((groups, cmd) => {
-      const key = cmd.aggregateId;
-      groups[key] = groups[key] || [];
-      groups[key].push(cmd);
-      return groups;
-    }, {} as Record<string, Command[]>);
-  }
-
-  private async processAggregateCommands(
-    aggregateId: string,
-    commands: Command[]
-  ): Promise<void> {
-    // Process commands for same aggregate sequentially
-    for (const command of commands) {
-      await this.commandBus.send(command);
-    }
-  }
-
-  private startBatchProcessor(): void {
-    setInterval(() => this.flush(), this.flushInterval);
-  }
-}
-```
-
-## Read Model Optimization
-
-```typescript
-class OptimizedReadModelProjector {
-  private projectionBuffer: Map<string, DomainEvent[]> = new Map();
-  private bufferSize: number = 1000;
-
-  async project(event: DomainEvent): Promise<void> {
-    // Buffer events for batch processing
-    const key = event.aggregateId;
-    
-    if (!this.projectionBuffer.has(key)) {
-      this.projectionBuffer.set(key, []);
-    }
-    
-    this.projectionBuffer.get(key)!.push(event);
-    
-    // Flush when buffer is full
-    if (this.getTotalBufferedEvents() >= this.bufferSize) {
-      await this.flushBuffer();
-    }
-  }
-
-  private async flushBuffer(): Promise<void> {
-    const bulkOperations: BulkOperation[] = [];
-    
-    for (const [aggregateId, events] of this.projectionBuffer) {
-      const operations = this.createBulkOperations(aggregateId, events);
-      bulkOperations.push(...operations);
-    }
-    
-    // Execute all operations in single batch
-    await this.executeBulk(bulkOperations);
-    
-    // Clear buffer
-    this.projectionBuffer.clear();
-  }
-
-  private createBulkOperations(
-    aggregateId: string,
-    events: DomainEvent[]
-  ): BulkOperation[] {
-    return events.map(event => ({
-      type: 'upsert',
-      collection: 'read_models',
-      filter: { aggregateId },
-      update: this.createUpdateFromEvent(event),
-      options: { upsert: true }
-    }));
-  }
-}
-```
-
-## Caching Strategy
-
-```typescript
-class MultiTierCache {
-  private l1Cache: InMemoryCache;  // Hot data
-  private l2Cache: RedisCache;     // Warm data
-  private l3Cache: CDNCache;       // Static data
-
-  async get(key: string): Promise<any> {
-    // Try L1 cache (microseconds)
-    let value = await this.l1Cache.get(key);
-    if (value) return value;
-
-    // Try L2 cache (milliseconds)
-    value = await this.l2Cache.get(key);
-    if (value) {
-      await this.l1Cache.set(key, value, 60); // Promote to L1
-      return value;
-    }
-
-    // Try L3 cache (network latency)
-    value = await this.l3Cache.get(key);
-    if (value) {
-      await this.promoteToUpperTiers(key, value);
-      return value;
-    }
-
-    return null;
-  }
-
-  private async promoteToUpperTiers(key: string, value: any): Promise<void> {
-    await Promise.all([
-      this.l2Cache.set(key, value, 300),  // 5 minutes in L2
-      this.l1Cache.set(key, value, 60)    // 1 minute in L1
-    ]);
-  }
-}
-
-// Intelligent cache invalidation
-class CacheInvalidator {
-  constructor(
-    private cache: MultiTierCache,
-    private dependencyTracker: DependencyTracker
-  ) {}
-
-  async invalidate(event: DomainEvent): Promise<void> {
-    // Get affected cache keys
-    const affectedKeys = await this.dependencyTracker.getAffectedKeys(event);
-    
-    // Invalidate in parallel
-    await Promise.all(
-      affectedKeys.map(key => this.cache.invalidate(key))
+  
+  private async processTypeBatch(type: string, events: Event[]): Promise<void> {
+    // バルクインサート
+    await this.db.bulkInsert(
+      'projections',
+      events.map(e => this.toProjection(e))
     );
   }
 }
 ```
 
-## Scaling Strategies
+## データベース最適化
 
+### コネクションプール
 ```typescript
-class CQRSScaler {
-  async scaleReadSide(metrics: PerformanceMetrics): Promise<void> {
-    if (metrics.queryLatencyP99 > 100) {
-      // Add read replicas
-      await this.addReadReplica();
-    }
+const dbConfig = {
+  connectionLimit: 100,     // 最大接続数
+  queueLimit: 0,           // キュー無制限
+  waitForConnections: true,
+  acquireTimeout: 60000,   // 接続取得タイムアウト
+  idleTimeout: 60000       // アイドルタイムアウト
+};
+```
 
-    if (metrics.cacheHitRate < 0.8) {
-      // Increase cache size
-      await this.increaseCacheSize();
-    }
-  }
+### パーティショニング
+```sql
+-- 時系列パーティション
+CREATE TABLE events (
+  id UUID,
+  created_at TIMESTAMP,
+  data JSONB
+) PARTITION BY RANGE (created_at);
 
-  async scaleWriteSide(metrics: PerformanceMetrics): Promise<void> {
-    if (metrics.commandQueueDepth > 1000) {
-      // Add command processors
-      await this.addCommandProcessor();
-    }
+CREATE TABLE events_2024_01 PARTITION OF events
+  FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
+```
 
-    if (metrics.eventStoreLatency > 50) {
-      // Partition event store
-      await this.partitionEventStore();
-    }
-  }
+## 読み込み最適化
 
-  private async addReadReplica(): Promise<void> {
-    // Implementation for adding database read replica
-    console.log('Adding read replica');
-  }
-
-  private async partitionEventStore(): Promise<void> {
-    // Implementation for event store partitioning
-    console.log('Partitioning event store');
+### 投影の事前計算
+```typescript
+class PrecomputedProjection {
+  async rebuild(): Promise<void> {
+    // バックグラウンドで新バージョン構築
+    await this.buildNewVersion();
+    
+    // アトミックスワップ
+    await this.db.transaction(async tx => {
+      await tx.query('ALTER TABLE projection_v2 RENAME TO projection');
+      await tx.query('ALTER TABLE projection RENAME TO projection_old');
+      await tx.query('DROP TABLE projection_old');
+    });
   }
 }
 ```
 
-## Performance Monitoring
+## 監視とプロファイリング
 
+### APMインテグレーション
 ```typescript
 class PerformanceMonitor {
-  private metrics: MetricsCollector;
-
-  trackQueryPerformance(query: Query, duration: number): void {
-    this.metrics.histogram('query.duration', duration, {
-      type: query.type,
-      complexity: this.calculateComplexity(query)
-    });
-  }
-
-  trackCommandPerformance(command: Command, duration: number): void {
-    this.metrics.histogram('command.duration', duration, {
-      type: command.type
-    });
-  }
-
-  trackProjectionLag(projectionName: string, lag: number): void {
-    this.metrics.gauge('projection.lag', lag, {
-      projection: projectionName
-    });
+  @Trace()
+  async handleCommand(command: Command): Promise<void> {
+    const span = this.apm.startSpan('command.handle');
+    
+    try {
+      await this.handler.handle(command);
+    } finally {
+      span.addTags({
+        'command.type': command.type,
+        'command.size': JSON.stringify(command).length
+      });
+      span.finish();
+    }
   }
 }
 ```
 
-## Best Practices
+### メトリクス収集
+```yaml
+metrics:
+  - name: command_latency
+    type: histogram
+    labels: [command_type]
+  - name: query_latency
+    type: histogram
+    labels: [query_type]
+  - name: cache_hit_rate
+    type: gauge
+    labels: [cache_layer]
+```
 
-1. **Batch Processing**: Group operations for better throughput
-2. **Caching**: Implement multi-tier caching strategy
-3. **Async Processing**: Use asynchronous command processing
-4. **Connection Pooling**: Optimize database connections
-5. **Index Optimization**: Create appropriate indexes for queries
-6. **Monitoring**: Track key performance metrics continuously
+## スケーリング戦略
+
+### 水平スケーリング
+- **読み込み**: リードレプリカ追加
+- **書き込み**: シャーディング
+- **キャッシュ**: Redis Cluster
+- **メッセージング**: Kafka パーティション
+
+### 垂直スケーリング
+- **CPU**: イベント処理の並列化
+- **メモリ**: キャッシュサイズ拡大
+- **I/O**: NVMe SSD、高速ネットワーク
+
+## ベストプラクティス
+
+✅ **推奨**:
+- 適切なインデックス設計
+- 積極的なキャッシング
+- 非同期処理の活用
+- バッチ処理の実装
+- 継続的なパフォーマンス監視
+
+❌ **避けるべき**:
+- N+1クエリ問題
+- 同期的な重い処理
+- 無制限のデータ取得
+- キャッシュの過信
+- 最適化の推測

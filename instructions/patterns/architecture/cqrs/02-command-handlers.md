@@ -1,330 +1,233 @@
 # Command Handlers
 
-## Command Bus Implementation
+## コマンドハンドラー設計
 
+### 基本構造
 ```typescript
-interface CommandBus {
-  send<T extends Command>(command: T): Promise<void>;
-  register<T extends Command>(
-    commandType: string,
-    handler: CommandHandler<T>
-  ): void;
+interface Command {
+  readonly type: string;
+  readonly aggregateId: string;
+  readonly payload: any;
+  readonly metadata: CommandMetadata;
 }
 
-class InMemoryCommandBus implements CommandBus {
-  private handlers = new Map<string, CommandHandler<any>>();
-  private middleware: CommandMiddleware[] = [];
-
-  register<T extends Command>(
-    commandType: string,
-    handler: CommandHandler<T>
-  ): void {
-    if (this.handlers.has(commandType)) {
-      throw new Error(`Handler already registered for ${commandType}`);
-    }
-    this.handlers.set(commandType, handler);
-  }
-
-  async send<T extends Command>(command: T): Promise<void> {
-    const handler = this.handlers.get(command.type);
-    if (!handler) {
-      throw new Error(`No handler registered for ${command.type}`);
-    }
-
-    // Execute middleware pipeline
-    const pipeline = this.buildPipeline(handler, command);
-    await pipeline(command);
-  }
-
-  use(middleware: CommandMiddleware): void {
-    this.middleware.push(middleware);
-  }
-
-  private buildPipeline(
-    handler: CommandHandler<any>,
-    command: Command
-  ): (cmd: Command) => Promise<void> {
-    let pipeline = (cmd: Command) => handler.handle(cmd);
-
-    for (let i = this.middleware.length - 1; i >= 0; i--) {
-      const middleware = this.middleware[i];
-      const next = pipeline;
-      pipeline = (cmd: Command) => middleware.execute(cmd, next);
-    }
-
-    return pipeline;
-  }
+abstract class CommandHandler<T extends Command> {
+  abstract handle(command: T): Promise<void>;
 }
 ```
 
-## Command Validation
+## 実装パターン
 
+### シンプルなハンドラー
 ```typescript
-interface CommandValidator<T extends Command> {
-  validate(command: T): ValidationResult;
-}
-
-class ValidationResult {
+class CreateOrderHandler extends CommandHandler<CreateOrderCommand> {
   constructor(
-    public readonly isValid: boolean,
-    public readonly errors: ValidationError[] = []
+    private repository: OrderRepository,
+    private eventBus: EventBus
   ) {}
 
-  static success(): ValidationResult {
-    return new ValidationResult(true);
-  }
-
-  static failure(errors: ValidationError[]): ValidationResult {
-    return new ValidationResult(false, errors);
-  }
-}
-
-// Decorator-based validation
-function ValidateCommand<T extends Command>(
-  validator: CommandValidator<T>
-): MethodDecorator {
-  return (target, propertyKey, descriptor: PropertyDescriptor) => {
-    const originalMethod = descriptor.value;
-
-    descriptor.value = async function(command: T) {
-      const validation = validator.validate(command);
-      if (!validation.isValid) {
-        throw new ValidationException(validation.errors);
-      }
-      return originalMethod.apply(this, [command]);
-    };
-
-    return descriptor;
-  };
-}
-
-// Example validator
-class CreateOrderValidator implements CommandValidator<CreateOrderCommand> {
-  validate(command: CreateOrderCommand): ValidationResult {
-    const errors: ValidationError[] = [];
-
-    if (!command.customerId) {
-      errors.push({
-        field: 'customerId',
-        message: 'Customer ID is required'
-      });
-    }
-
-    if (!command.items || command.items.length === 0) {
-      errors.push({
-        field: 'items',
-        message: 'Order must contain at least one item'
-      });
-    }
-
-    command.items?.forEach((item, index) => {
-      if (item.quantity <= 0) {
-        errors.push({
-          field: `items[${index}].quantity`,
-          message: 'Quantity must be positive'
-        });
-      }
-      if (item.price < 0) {
-        errors.push({
-          field: `items[${index}].price`,
-          message: 'Price cannot be negative'
-        });
-      }
-    });
-
-    return errors.length > 0 
-      ? ValidationResult.failure(errors)
-      : ValidationResult.success();
-  }
-}
-```
-
-## Middleware Patterns
-
-```typescript
-interface CommandMiddleware {
-  execute(
-    command: Command,
-    next: (command: Command) => Promise<void>
-  ): Promise<void>;
-}
-
-// Logging middleware
-class LoggingMiddleware implements CommandMiddleware {
-  constructor(private logger: Logger) {}
-
-  async execute(
-    command: Command,
-    next: (command: Command) => Promise<void>
-  ): Promise<void> {
-    const startTime = Date.now();
+  async handle(command: CreateOrderCommand): Promise<void> {
+    // 1. ビジネスルール検証
+    await this.validateBusinessRules(command);
     
-    this.logger.info('Command received', {
-      type: command.type,
-      commandId: command.metadata.commandId,
-      userId: command.metadata.userId
-    });
-
-    try {
-      await next(command);
-      
-      this.logger.info('Command completed', {
-        type: command.type,
-        commandId: command.metadata.commandId,
-        duration: Date.now() - startTime
-      });
-    } catch (error) {
-      this.logger.error('Command failed', {
-        type: command.type,
-        commandId: command.metadata.commandId,
-        error: error.message,
-        duration: Date.now() - startTime
-      });
-      throw error;
-    }
-  }
-}
-
-// Transaction middleware
-class TransactionMiddleware implements CommandMiddleware {
-  constructor(private transactionManager: TransactionManager) {}
-
-  async execute(
-    command: Command,
-    next: (command: Command) => Promise<void>
-  ): Promise<void> {
-    await this.transactionManager.runInTransaction(async () => {
-      await next(command);
-    });
-  }
-}
-
-// Authorization middleware
-class AuthorizationMiddleware implements CommandMiddleware {
-  constructor(private authorizer: Authorizer) {}
-
-  async execute(
-    command: Command,
-    next: (command: Command) => Promise<void>
-  ): Promise<void> {
-    const isAuthorized = await this.authorizer.canExecute(
-      command.metadata.userId,
-      command.type
+    // 2. アグリゲート作成
+    const order = Order.create(
+      command.aggregateId,
+      command.payload.customerId,
+      command.payload.items
     );
-
-    if (!isAuthorized) {
-      throw new UnauthorizedException(
-        `User ${command.metadata.userId} cannot execute ${command.type}`
-      );
-    }
-
-    await next(command);
+    
+    // 3. 永続化
+    await this.repository.save(order);
+    
+    // 4. イベント発行
+    await this.eventBus.publishAll(order.getUncommittedEvents());
   }
 }
 ```
 
-## Advanced Handler Patterns
-
+### トランザクション管理
 ```typescript
-// Saga-based handler
-abstract class SagaCommandHandler<T extends Command> implements CommandHandler<T> {
-  protected abstract steps: SagaStep<T>[];
-
-  async handle(command: T): Promise<void> {
-    const executedSteps: SagaStep<T>[] = [];
-
+class TransactionalCommandHandler {
+  async handle(command: Command): Promise<void> {
+    const transaction = await this.db.beginTransaction();
+    
     try {
-      for (const step of this.steps) {
-        await step.execute(command);
-        executedSteps.push(step);
-      }
+      // ビジネスロジック実行
+      await this.innerHandler.handle(command);
+      
+      // アウトボックスパターンでイベント保存
+      await this.saveEventsToOutbox(command.events, transaction);
+      
+      await transaction.commit();
     } catch (error) {
-      // Compensate in reverse order
-      for (let i = executedSteps.length - 1; i >= 0; i--) {
-        try {
-          await executedSteps[i].compensate(command);
-        } catch (compensationError) {
-          console.error('Compensation failed:', compensationError);
-        }
-      }
+      await transaction.rollback();
       throw error;
     }
   }
 }
+```
 
-// Retry handler decorator
-class RetryableCommandHandler<T extends Command> implements CommandHandler<T> {
+## バリデーション
+
+### コマンド検証
+```typescript
+class ValidatingCommandHandler {
+  private validator = new CommandValidator();
+  
+  async handle(command: Command): Promise<void> {
+    // 構造検証
+    const errors = await this.validator.validate(command);
+    if (errors.length > 0) {
+      throw new ValidationError(errors);
+    }
+    
+    // ビジネスルール検証
+    await this.validateBusinessRules(command);
+    
+    // 実行
+    await this.innerHandler.handle(command);
+  }
+}
+```
+
+## イデンポテンシー
+
+### 重複実行防止
+```typescript
+class IdempotentCommandHandler {
+  async handle(command: Command): Promise<void> {
+    const idempotencyKey = command.metadata.idempotencyKey;
+    
+    // 処理済みチェック
+    const processed = await this.cache.get(idempotencyKey);
+    if (processed) return;
+    
+    // 処理実行
+    await this.innerHandler.handle(command);
+    
+    // 処理済みマーク（TTL付き）
+    await this.cache.setex(idempotencyKey, 86400, '1');
+  }
+}
+```
+
+## Saga実装
+
+### 分散トランザクション
+```typescript
+class OrderSaga {
   constructor(
-    private innerHandler: CommandHandler<T>,
-    private maxRetries: number = 3,
-    private retryDelay: number = 1000
+    private commandBus: CommandBus,
+    private eventStore: EventStore
   ) {}
+  
+  async handle(event: OrderCreatedEvent): Promise<void> {
+    const sagaId = event.orderId;
+    
+    try {
+      // 在庫予約
+      await this.commandBus.send(new ReserveInventoryCommand(event.items));
+      
+      // 支払い処理
+      await this.commandBus.send(new ProcessPaymentCommand(event.total));
+      
+      // 注文確定
+      await this.commandBus.send(new ConfirmOrderCommand(event.orderId));
+    } catch (error) {
+      // 補償トランザクション
+      await this.compensate(sagaId, error);
+    }
+  }
+  
+  private async compensate(sagaId: string, error: Error): Promise<void> {
+    // ロールバック処理
+    await this.commandBus.send(new CancelOrderCommand(sagaId));
+  }
+}
+```
 
-  async handle(command: T): Promise<void> {
+## 非同期処理
+
+### メッセージキュー統合
+```typescript
+class AsyncCommandHandler {
+  async handle(command: Command): Promise<void> {
+    // 即座にキューへ送信
+    await this.queue.send({
+      topic: 'commands',
+      key: command.aggregateId,
+      value: JSON.stringify(command),
+      headers: {
+        'command-type': command.type,
+        'correlation-id': command.metadata.correlationId
+      }
+    });
+    
+    // ACK返却（実際の処理は非同期）
+  }
+}
+```
+
+## エラーハンドリング
+
+### リトライ戦略
+```typescript
+class RetryableCommandHandler {
+  async handle(command: Command): Promise<void> {
+    const maxRetries = 3;
     let lastError: Error;
-
-    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+    
+    for (let i = 0; i < maxRetries; i++) {
       try {
         await this.innerHandler.handle(command);
         return;
       } catch (error) {
         lastError = error;
-        
-        if (attempt < this.maxRetries) {
-          await this.delay(this.retryDelay * attempt);
-        }
+        if (!this.isRetryable(error)) throw error;
+        await this.delay(Math.pow(2, i) * 1000); // 指数バックオフ
       }
     }
-
-    throw lastError!;
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    
+    throw lastError;
   }
 }
 ```
 
-## Command Dispatching Strategies
+## 監視とログ
 
 ```typescript
-// Async command processing
-class AsyncCommandDispatcher {
-  constructor(
-    private queue: MessageQueue,
-    private commandBus: CommandBus
-  ) {}
-
-  async dispatch(command: Command): Promise<void> {
-    await this.queue.publish('commands', command);
-  }
-
-  async processCommands(): Promise<void> {
-    await this.queue.subscribe('commands', async (command: Command) => {
-      try {
-        await this.commandBus.send(command);
-      } catch (error) {
-        await this.handleFailedCommand(command, error);
-      }
-    });
-  }
-
-  private async handleFailedCommand(command: Command, error: Error): Promise<void> {
-    // Implement dead letter queue or retry logic
-    await this.queue.publish('commands.dlq', {
-      command,
-      error: error.message,
-      timestamp: new Date()
-    });
+class MonitoredCommandHandler {
+  async handle(command: Command): Promise<void> {
+    const span = this.tracer.startSpan('command.handle');
+    span.setTag('command.type', command.type);
+    
+    try {
+      await this.innerHandler.handle(command);
+      this.metrics.increment('commands.success', { type: command.type });
+    } catch (error) {
+      this.metrics.increment('commands.failure', { type: command.type });
+      span.setTag('error', true);
+      throw error;
+    } finally {
+      span.finish();
+    }
   }
 }
 ```
 
-## Best Practices
+## ベストプラクティス
 
-1. **Single Responsibility**: Each handler should handle one command type
-2. **Idempotency**: Ensure commands can be safely retried
-3. **Validation**: Validate commands before processing
-4. **Error Handling**: Implement comprehensive error handling and compensation
-5. **Monitoring**: Track command execution metrics and failures
-6. **Testing**: Unit test handlers in isolation
+✅ **推奨**:
+- 単一責任の原則
+- イデンポテンシー保証
+- 適切なトランザクション境界
+- 包括的なエラーハンドリング
+- 非同期処理の活用
+
+❌ **避けるべき**:
+- 同期的な外部API呼び出し
+- トランザクション内でのイベント発行
+- ビジネスロジックの漏洩
+- 無制限のリトライ
+- コマンド内での読み込み操作

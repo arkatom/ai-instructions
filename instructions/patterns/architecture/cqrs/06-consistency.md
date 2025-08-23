@@ -1,306 +1,225 @@
 # Consistency Patterns
 
-## Eventual Consistency
+## 一貫性モデル
 
+### 結果整合性
+- **定義**: 最終的にすべてのノードが同じ状態に収束
+- **適用**: 読み込みモデル、分散システム
+- **SLA**: 通常数秒〜数分以内
+
+### 強一貫性領域
 ```typescript
-class EventualConsistencyManager {
-  constructor(
-    private eventBus: EventBus,
-    private projectionTracker: ProjectionTracker
-  ) {}
-
-  async waitForConsistency(
-    aggregateId: string,
-    eventId: string,
-    timeout: number = 5000
-  ): Promise<boolean> {
-    const deadline = Date.now() + timeout;
-    
-    while (Date.now() < deadline) {
-      if (await this.isProjected(aggregateId, eventId)) {
-        return true;
-      }
-      await this.delay(100);
+// アグリゲート内は強一貫性
+class Order {
+  private items: OrderItem[] = [];
+  
+  addItem(item: OrderItem): void {
+    // アグリゲート境界内は即座に一貫性保証
+    if (this.getTotalItems() + item.quantity > 100) {
+      throw new Error('Order limit exceeded');
     }
-    
-    return false;
-  }
-
-  private async isProjected(aggregateId: string, eventId: string): Promise<boolean> {
-    const status = await this.projectionTracker.getStatus(aggregateId);
-    return status.lastProcessedEventId >= eventId;
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-}
-
-// Consistency boundary enforcement
-class ConsistencyBoundary {
-  constructor(
-    private strongConsistencyAggregates: Set<string>,
-    private eventualConsistencyTimeout: number = 5000
-  ) {}
-
-  async enforceConsistency(
-    aggregateId: string,
-    operation: () => Promise<void>
-  ): Promise<void> {
-    if (this.requiresStrongConsistency(aggregateId)) {
-      await this.enforceStrongConsistency(operation);
-    } else {
-      await this.enforceEventualConsistency(operation);
-    }
-  }
-
-  private requiresStrongConsistency(aggregateId: string): boolean {
-    return this.strongConsistencyAggregates.has(aggregateId);
-  }
-
-  private async enforceStrongConsistency(operation: () => Promise<void>): Promise<void> {
-    // Use distributed lock for strong consistency
-    const lock = await this.acquireLock();
-    try {
-      await operation();
-      await this.waitForAllProjections();
-    } finally {
-      await lock.release();
-    }
-  }
-
-  private async enforceEventualConsistency(operation: () => Promise<void>): Promise<void> {
-    await operation();
-    // Don't wait for projections
+    this.items.push(item);
   }
 }
 ```
 
-## Saga Pattern for Consistency
+## Sagaパターン
+
+### コレオグラフィー型
+```typescript
+// イベント駆動で自律的に協調
+class InventorySaga {
+  @EventHandler(OrderCreated)
+  async handleOrderCreated(event: OrderCreatedEvent): Promise<void> {
+    try {
+      await this.reserveInventory(event.items);
+      await this.publish(new InventoryReservedEvent(event.orderId));
+    } catch (error) {
+      await this.publish(new InventoryReservationFailedEvent(event.orderId));
+    }
+  }
+}
+
+class PaymentSaga {
+  @EventHandler(InventoryReserved)
+  async handleInventoryReserved(event: InventoryReservedEvent): Promise<void> {
+    // 次のステップを自律的に実行
+    await this.processPayment(event.orderId);
+  }
+}
+```
+
+### オーケストレーション型
+```typescript
+class OrderSagaOrchestrator {
+  async execute(orderId: string): Promise<void> {
+    const saga = new SagaDefinition()
+      .step('reserve-inventory', ReserveInventoryCommand)
+      .compensate('cancel-reservation', CancelReservationCommand)
+      .step('process-payment', ProcessPaymentCommand)
+      .compensate('refund-payment', RefundPaymentCommand)
+      .step('ship-order', ShipOrderCommand);
+    
+    await this.sagaExecutor.run(saga, { orderId });
+  }
+}
+```
+
+## 補償トランザクション
 
 ```typescript
-abstract class Saga {
-  protected steps: SagaStep[] = [];
-  protected compensations: CompensationStep[] = [];
-
-  async execute(context: SagaContext): Promise<void> {
-    const executedSteps: SagaStep[] = [];
-
+class CompensatingTransaction {
+  async execute(actions: Action[]): Promise<void> {
+    const executed: Action[] = [];
+    
     try {
-      for (const step of this.steps) {
-        await step.execute(context);
-        executedSteps.push(step);
+      for (const action of actions) {
+        await action.execute();
+        executed.push(action);
       }
     } catch (error) {
-      // Compensate in reverse order
-      await this.compensate(executedSteps.reverse(), context);
+      // 実行済みアクションを逆順で補償
+      for (const action of executed.reverse()) {
+        await action.compensate();
+      }
       throw error;
     }
   }
-
-  private async compensate(steps: SagaStep[], context: SagaContext): Promise<void> {
-    for (const step of steps) {
-      try {
-        await step.compensate(context);
-      } catch (error) {
-        console.error('Compensation failed:', error);
-        // Log to compensation failure queue
-      }
-    }
-  }
-}
-
-// Cross-aggregate consistency saga
-class OrderFulfillmentSaga extends Saga {
-  constructor(
-    private orderService: OrderService,
-    private inventoryService: InventoryService,
-    private paymentService: PaymentService
-  ) {
-    super();
-    this.initializeSteps();
-  }
-
-  private initializeSteps(): void {
-    this.steps = [
-      {
-        name: 'ReserveInventory',
-        execute: async (ctx) => {
-          ctx.reservationId = await this.inventoryService.reserve(ctx.items);
-        },
-        compensate: async (ctx) => {
-          await this.inventoryService.cancelReservation(ctx.reservationId);
-        }
-      },
-      {
-        name: 'ProcessPayment',
-        execute: async (ctx) => {
-          ctx.paymentId = await this.paymentService.charge(ctx.amount);
-        },
-        compensate: async (ctx) => {
-          await this.paymentService.refund(ctx.paymentId);
-        }
-      },
-      {
-        name: 'ConfirmOrder',
-        execute: async (ctx) => {
-          await this.orderService.confirm(ctx.orderId);
-        },
-        compensate: async (ctx) => {
-          await this.orderService.cancel(ctx.orderId);
-        }
-      }
-    ];
-  }
 }
 ```
 
-## Read After Write Consistency
+## 冪等性保証
 
 ```typescript
-class ReadAfterWriteConsistency {
-  constructor(
-    private commandBus: CommandBus,
-    private queryBus: QueryBus,
-    private consistencyTracker: ConsistencyTracker
-  ) {}
-
-  async executeWithReadAfterWrite<T>(
-    command: Command,
-    query: Query
-  ): Promise<T> {
-    // Execute command
-    await this.commandBus.send(command);
-    
-    // Get version/timestamp from command execution
-    const writeVersion = await this.getWriteVersion(command);
-    
-    // Wait for read model to catch up
-    await this.waitForReadModelSync(writeVersion);
-    
-    // Execute query
-    return this.queryBus.ask<Query, T>(query);
-  }
-
-  private async getWriteVersion(command: Command): Promise<number> {
-    return this.consistencyTracker.getLatestVersion(command.aggregateId);
-  }
-
-  private async waitForReadModelSync(targetVersion: number): Promise<void> {
-    const maxRetries = 50;
-    const retryDelay = 100;
-
-    for (let i = 0; i < maxRetries; i++) {
-      const currentVersion = await this.consistencyTracker.getReadModelVersion();
-      
-      if (currentVersion >= targetVersion) {
-        return;
-      }
-      
-      await this.delay(retryDelay);
-    }
-
-    throw new Error('Read model sync timeout');
-  }
-}
-```
-
-## Conflict Resolution
-
-```typescript
-class ConflictResolver {
-  async resolve(conflicts: Conflict[]): Promise<Resolution[]> {
-    const resolutions: Resolution[] = [];
-
-    for (const conflict of conflicts) {
-      const resolution = await this.resolveConflict(conflict);
-      resolutions.push(resolution);
-    }
-
-    return resolutions;
-  }
-
-  private async resolveConflict(conflict: Conflict): Promise<Resolution> {
-    switch (conflict.type) {
-      case 'CONCURRENT_UPDATE':
-        return this.resolveConcurrentUpdate(conflict);
-      case 'DUPLICATE_EVENT':
-        return this.resolveDuplicateEvent(conflict);
-      case 'OUT_OF_ORDER':
-        return this.resolveOutOfOrder(conflict);
-      default:
-        return this.defaultResolution(conflict);
-    }
-  }
-
-  private resolveConcurrentUpdate(conflict: Conflict): Resolution {
-    // Last-write-wins strategy
-    const events = conflict.events.sort((a, b) => 
-      b.timestamp.getTime() - a.timestamp.getTime()
+class IdempotentEventHandler {
+  async handle(event: DomainEvent): Promise<void> {
+    // イベントIDで処理済みチェック
+    const processed = await this.db.exists(
+      'processed_events',
+      { event_id: event.id }
     );
     
-    return {
-      type: 'ACCEPT_LATEST',
-      acceptedEvent: events[0],
-      rejectedEvents: events.slice(1)
-    };
-  }
-
-  private resolveDuplicateEvent(conflict: Conflict): Resolution {
-    // Idempotency check
-    return {
-      type: 'IGNORE_DUPLICATE',
-      acceptedEvent: conflict.events[0],
-      rejectedEvents: conflict.events.slice(1)
-    };
+    if (processed) return;
+    
+    await this.db.transaction(async (tx) => {
+      // ビジネスロジック実行
+      await this.processEvent(event, tx);
+      
+      // 処理済みマーク
+      await tx.insert('processed_events', {
+        event_id: event.id,
+        processed_at: new Date()
+      });
+    });
   }
 }
 ```
 
-## Consistency Monitoring
+## バージョン管理
+
+### 楽観的ロック
+```typescript
+class OptimisticLocking {
+  async update(aggregate: Aggregate): Promise<void> {
+    const currentVersion = await this.getVersion(aggregate.id);
+    
+    if (currentVersion !== aggregate.version) {
+      throw new ConcurrencyException('Version mismatch');
+    }
+    
+    aggregate.incrementVersion();
+    await this.save(aggregate);
+  }
+}
+```
+
+## 同期化パターン
+
+### Pull型同期
+```typescript
+class PullSynchronization {
+  async sync(): Promise<void> {
+    const lastSync = await this.getLastSyncTime();
+    const events = await this.eventStore.getEventsSince(lastSync);
+    
+    for (const event of events) {
+      await this.projection.handle(event);
+    }
+    
+    await this.updateLastSyncTime(new Date());
+  }
+}
+```
+
+### Push型同期
+```typescript
+class PushSynchronization {
+  constructor(private subscribers: Subscriber[]) {}
+  
+  async publishEvent(event: DomainEvent): Promise<void> {
+    // 全サブスクライバーに並列プッシュ
+    await Promise.allSettled(
+      this.subscribers.map(s => s.notify(event))
+    );
+  }
+}
+```
+
+## 整合性チェック
 
 ```typescript
-class ConsistencyMonitor {
-  private metrics: MetricsCollector;
-  
-  async checkConsistency(): Promise<ConsistencyReport> {
-    const checks = await Promise.all([
-      this.checkProjectionLag(),
-      this.checkEventOrder(),
-      this.checkDataIntegrity()
-    ]);
-
+class ConsistencyChecker {
+  async validateConsistency(): Promise<ConsistencyReport> {
+    const writeData = await this.getWriteModelState();
+    const readData = await this.getReadModelState();
+    
+    const discrepancies = [];
+    
+    for (const entity of writeData) {
+      const readEntity = readData.find(r => r.id === entity.id);
+      
+      if (!readEntity || !this.isConsistent(entity, readEntity)) {
+        discrepancies.push({
+          entityId: entity.id,
+          writeState: entity,
+          readState: readEntity
+        });
+      }
+    }
+    
     return {
-      timestamp: new Date(),
-      projectionLag: checks[0],
-      eventOrdering: checks[1],
-      dataIntegrity: checks[2],
-      overallHealth: this.calculateHealth(checks)
-    };
-  }
-
-  private async checkProjectionLag(): Promise<LagReport> {
-    const writeHead = await this.getWriteHead();
-    const readHead = await this.getReadHead();
-    const lag = writeHead - readHead;
-
-    this.metrics.gauge('consistency.projection.lag', lag);
-
-    return {
-      writePosition: writeHead,
-      readPosition: readHead,
-      lagInEvents: lag,
-      isAcceptable: lag < 100
+      totalEntities: writeData.length,
+      discrepancies,
+      consistencyRate: 1 - (discrepancies.length / writeData.length)
     };
   }
 }
 ```
 
-## Best Practices
+## 監視とアラート
 
-1. **Define Boundaries**: Clearly define consistency boundaries
-2. **Choose Strategy**: Select appropriate consistency model per use case
-3. **Monitor Lag**: Track and alert on consistency lag
-4. **Implement Compensation**: Design compensation logic for failures
-5. **Test Scenarios**: Test various consistency failure scenarios
-6. **Document Trade-offs**: Document consistency trade-offs clearly
+```yaml
+alerts:
+  - name: high_consistency_lag
+    expr: consistency_lag_seconds > 60
+    severity: warning
+  - name: saga_failure_rate
+    expr: rate(saga_failures[5m]) > 0.01
+    severity: critical
+```
+
+## ベストプラクティス
+
+✅ **推奨**:
+- アグリゲート境界の明確化
+- 冪等性の保証
+- 補償処理の実装
+- 一貫性SLAの定義
+- 定期的な整合性検証
+
+❌ **避けるべき**:
+- 分散トランザクション
+- 同期的な全体更新
+- 無限リトライ
+- バージョン管理の欠如
+- 補償処理なしのSaga
