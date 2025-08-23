@@ -124,25 +124,50 @@ class OrderSaga {
   
   async handle(event: OrderCreatedEvent): Promise<void> {
     const sagaId = event.orderId;
+    const sagaState = new SagaState(sagaId);
     
     try {
-      // 在庫予約
-      await this.commandBus.send(new ReserveInventoryCommand(event.items));
+      // Step 1: Reserve inventory
+      await this.commandBus.send(new ReserveInventoryCommand({
+        orderId: event.orderId,
+        items: event.items,
+        sagaId
+      }));
+      sagaState.markCompleted('inventory-reserved');
       
-      // 支払い処理
-      await this.commandBus.send(new ProcessPaymentCommand(event.total));
+      // Step 2: Process payment
+      await this.commandBus.send(new ProcessPaymentCommand({
+        orderId: event.orderId,
+        amount: event.total,
+        customerId: event.customerId,
+        sagaId
+      }));
+      sagaState.markCompleted('payment-processed');
       
-      // 注文確定
-      await this.commandBus.send(new ConfirmOrderCommand(event.orderId));
+      // Step 3: Confirm order
+      await this.commandBus.send(new ConfirmOrderCommand({
+        orderId: event.orderId,
+        sagaId
+      }));
+      sagaState.markCompleted('order-confirmed');
+      
     } catch (error) {
-      // 補償トランザクション
-      await this.compensate(sagaId, error);
+      // Compensate in reverse order
+      await this.compensate(sagaState, error);
     }
   }
   
-  private async compensate(sagaId: string, error: Error): Promise<void> {
-    // ロールバック処理
-    await this.commandBus.send(new CancelOrderCommand(sagaId));
+  private async compensate(state: SagaState, error: Error): Promise<void> {
+    if (state.isCompleted('payment-processed')) {
+      await this.commandBus.send(new RefundPaymentCommand(state.sagaId));
+    }
+    
+    if (state.isCompleted('inventory-reserved')) {
+      await this.commandBus.send(new ReleaseInventoryCommand(state.sagaId));
+    }
+    
+    await this.commandBus.send(new CancelOrderCommand(state.sagaId));
+    await this.eventStore.publish(new SagaFailedEvent(state.sagaId, error));
   }
 }
 ```

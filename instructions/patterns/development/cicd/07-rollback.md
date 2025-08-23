@@ -2,7 +2,7 @@
 
 ## ロールバック戦略
 
-### 1. Blue-Green Deployment
+### 1. Blue-Greenデプロイメント
 ```yaml
 # 即座に旧バージョンへ切り替え
 deployment:
@@ -14,7 +14,7 @@ deployment:
 **利点**: 即座の切り替え、ゼロダウンタイム
 **欠点**: リソース2倍必要、DBスキーマ変更が困難
 
-### 2. Canary Deployment
+### 2. カナリーデプロイメント
 ```yaml
 # 段階的にトラフィックを戻す
 rollback_stages:
@@ -25,7 +25,7 @@ rollback_stages:
 **利点**: リスク最小化、段階的検証
 **欠点**: 複雑な設定、部分的影響
 
-### 3. Feature Flags
+### 3. フィーチャーフラグ
 ```typescript
 // コードはそのまま、機能だけOFF
 if (featureFlag.isEnabled('new-feature')) {
@@ -97,7 +97,7 @@ pg_restore --time="2024-01-15 14:30:00" prod_db
 
 ## Git戦略
 
-### Revert vs Reset
+### RevertとReset
 ```bash
 # Revert: 履歴を保持（推奨）
 git revert HEAD~3..HEAD
@@ -108,7 +108,7 @@ git reset --hard HEAD~3
 git push --force-with-lease origin main
 ```
 
-## Kubernetes ロールバック
+## Kubernetesロールバック
 
 ```bash
 # 前バージョンへロールバック

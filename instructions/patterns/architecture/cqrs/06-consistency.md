@@ -25,7 +25,7 @@ class Order {
 
 ## Sagaパターン
 
-### コレオグラフィー型
+### コレオグラフィー型（イベント駆動）
 ```typescript
 // イベント駆動で自律的に協調
 class InventorySaga {
@@ -49,18 +49,44 @@ class PaymentSaga {
 }
 ```
 
-### オーケストレーション型
+### オーケストレーション型（中央制御）
 ```typescript
 class OrderSagaOrchestrator {
+  private steps: SagaStep[] = [];
+  private completedSteps: string[] = [];
+  
   async execute(orderId: string): Promise<void> {
+    // Define saga workflow
     const saga = new SagaDefinition()
       .step('reserve-inventory', ReserveInventoryCommand)
       .compensate('cancel-reservation', CancelReservationCommand)
       .step('process-payment', ProcessPaymentCommand)
       .compensate('refund-payment', RefundPaymentCommand)
-      .step('ship-order', ShipOrderCommand);
+      .step('confirm-shipping', ConfirmShippingCommand)
+      .compensate('cancel-shipping', CancelShippingCommand);
     
-    await this.sagaExecutor.run(saga, { orderId });
+    try {
+      // Execute each step with state tracking
+      for (const step of saga.getSteps()) {
+        await this.executeStep(step, orderId);
+        this.completedSteps.push(step.name);
+      }
+      
+      // Saga completed successfully
+      await this.publishSagaCompleted(orderId);
+      
+    } catch (error) {
+      // Rollback completed steps in reverse order
+      await this.rollbackCompletedSteps(orderId);
+      throw new SagaExecutionError(orderId, error);
+    }
+  }
+  
+  private async rollbackCompletedSteps(orderId: string): Promise<void> {
+    for (const stepName of this.completedSteps.reverse()) {
+      const compensatingAction = this.getCompensatingAction(stepName);
+      await this.executeCompensation(compensatingAction, orderId);
+    }
   }
 }
 ```

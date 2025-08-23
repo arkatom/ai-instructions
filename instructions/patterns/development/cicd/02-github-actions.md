@@ -146,14 +146,14 @@ steps:
 ## アーティファクト管理
 
 ```yaml
-# アップロード
+# Upload artifacts
 - uses: actions/upload-artifact@v4
   with:
     name: build-output
     path: dist/
     retention-days: 30
 
-# ダウンロード
+# Download artifacts
 - uses: actions/download-artifact@v4
   with:
     name: build-output
