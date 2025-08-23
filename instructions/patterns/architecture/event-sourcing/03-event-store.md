@@ -256,44 +256,21 @@ stream_patterns:
 class OptimizedEventStore extends PostgreSQLEventStore {
   private cache = new Map<string, DomainEvent[]>();
   
-  async getEvents(
-    streamId: string,
-    fromVersion?: number,
-    toVersion?: number
-  ): Promise<DomainEvent[]> {
-    // Check cache first
+  async getEvents(streamId: string, fromVersion?: number, toVersion?: number): Promise<DomainEvent[]> {
     const cacheKey = `${streamId}:${fromVersion}:${toVersion}`;
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey)!;
-    }
+    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey)!;
     
     const events = await super.getEvents(streamId, fromVersion, toVersion);
-    
-    // Cache immutable past events
-    if (toVersion !== undefined) {
-      this.cache.set(cacheKey, events);
-    }
+    if (toVersion !== undefined) this.cache.set(cacheKey, events);
     
     return events;
   }
   
-  // Batch event writing
-  async appendBatch(
-    operations: Array<{
-      streamId: string;
-      events: DomainEvent[];
-      expectedVersion?: number;
-    }>
-  ): Promise<void> {
+  async appendBatch(operations: Array<{streamId: string; events: DomainEvent[]; expectedVersion?: number}>): Promise<void> {
     const client = await this.pool.connect();
-    
     try {
       await client.query('BEGIN');
-      
-      for (const op of operations) {
-        await this.appendToStream(client, op);
-      }
-      
+      for (const op of operations) await this.appendToStream(client, op);
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');

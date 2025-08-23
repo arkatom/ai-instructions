@@ -140,35 +140,29 @@ class DistributedDataProcessor:
     """Distributed data processing"""
     def __init__(self, n_workers: int = 4):
         self.n_workers = n_workers
-        self.result_queue = queue.Queue()
     
     def map_reduce_processing(self, data_partitions: List[Any], map_func: callable, reduce_func: callable) -> Any:
         """Map-Reduce processing"""
-        def map_worker(partition): return map_func(partition)
-        
         with concurrent.futures.ProcessPoolExecutor(max_workers=self.n_workers) as executor:
-            map_results = list(executor.map(map_worker, data_partitions))
+            map_results = list(executor.map(map_func, data_partitions))
         
         result = map_results[0]
-        for map_result in map_results[1:]:
-            result = reduce_func(result, map_result)
+        for r in map_results[1:]:
+            result = reduce_func(result, r)
         return result
     
-    def parallel_file_processing(self, file_paths: List[str], processing_func: callable, combine_func: callable = None) -> Any:
+    def parallel_file_processing(self, file_paths: List[str], processing_func: callable) -> List[Any]:
         """Parallel file processing"""
         def process_file(file_path):
             try:
-                df = pd.read_csv(file_path)
-                return processing_func(df)
+                return processing_func(pd.read_csv(file_path))
             except Exception as e:
-                print(f"Error processing {file_path}: {e}")
+                print(f"Error: {e}")
                 return None
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.n_workers) as executor:
             results = list(executor.map(process_file, file_paths))
-        
-        valid_results = [r for r in results if r is not None]
-        return combine_func(valid_results) if combine_func and valid_results else valid_results
+        return [r for r in results if r is not None]
 
 class DataLakeManager:
     """Data lake management"""
@@ -193,34 +187,18 @@ class DataLakeManager:
         with open(self.catalog_file, 'w') as f:
             json.dump(self.catalog, f, indent=2)
     
-    def register_dataset(
-        self, 
-        dataset_name: str,
-        file_pattern: str,
-        format_type: str = 'parquet',
-        partitions: List[str] = None,
-        metadata: Dict[str, Any] = None
-    ):
+    def register_dataset(self, dataset_name: str, file_pattern: str, format_type: str = 'parquet',
+                        partitions: List[str] = None, metadata: Dict[str, Any] = None):
         """Register dataset"""
-        
         self.catalog[dataset_name] = {
-            'file_pattern': file_pattern,
-            'format_type': format_type,
-            'partitions': partitions or [],
-            'metadata': metadata or {},
+            'file_pattern': file_pattern, 'format_type': format_type,
+            'partitions': partitions or [], 'metadata': metadata or {},
             'created_at': pd.Timestamp.now().isoformat()
         }
-        
         self._save_catalog()
     
-    def read_dataset(
-        self, 
-        dataset_name: str,
-        partition_filter: Dict[str, Any] = None,
-        columns: List[str] = None
-    ) -> pd.DataFrame:
+    def read_dataset(self, dataset_name: str, partition_filter: Dict[str, Any] = None, columns: List[str] = None) -> pd.DataFrame:
         """Read dataset"""
-        
         if dataset_name not in self.catalog:
             raise ValueError(f"Dataset {dataset_name} not found")
         
@@ -228,37 +206,23 @@ class DataLakeManager:
         file_pattern = os.path.join(self.base_path, dataset_info['file_pattern'])
         
         if dataset_info['format_type'] == 'parquet':
-            filters = []
-            if partition_filter:
-                for col, value in partition_filter.items():
-                    filters.append((col, '==', value))
-            
-            if filters:
-                table = pq.read_table(file_pattern, filters=filters, columns=columns)
-            else:
-                table = pq.read_table(file_pattern, columns=columns)
-            
+            filters = [(col, '==', val) for col, val in (partition_filter or {}).items()]
+            table = pq.read_table(file_pattern, filters=filters or None, columns=columns)
             return table.to_pandas()
         
         elif dataset_info['format_type'] == 'csv':
             import glob
-            csv_files = glob.glob(file_pattern)
-            
             dataframes = []
-            for csv_file in csv_files:
+            for csv_file in glob.glob(file_pattern):
                 df = pd.read_csv(csv_file, usecols=columns)
-                
                 if partition_filter:
-                    for col, value in partition_filter.items():
+                    for col, val in partition_filter.items():
                         if col in df.columns:
-                            df = df[df[col] == value]
-                
+                            df = df[df[col] == val]
                 dataframes.append(df)
-            
             return pd.concat(dataframes, ignore_index=True)
         
-        else:
-            raise ValueError(f"Unsupported format: {dataset_info['format_type']}")
+        raise ValueError(f"Unsupported format: {dataset_info['format_type']}")
     
     def write_dataset(self, df: pd.DataFrame, dataset_name: str, partition_cols: List[str] = None, format_type: str = 'parquet'):
         """Write dataset"""
@@ -275,11 +239,8 @@ class DataLakeManager:
         elif format_type == 'csv':
             if partition_cols:
                 for partition_values, group in df.groupby(partition_cols):
-                    if isinstance(partition_values, tuple):
-                        partition_path = '/'.join(f"{col}={val}" for col, val in zip(partition_cols, partition_values))
-                    else:
-                        partition_path = f"{partition_cols[0]}={partition_values}"
-                    
+                    vals = partition_values if isinstance(partition_values, tuple) else [partition_values]
+                    partition_path = '/'.join(f"{c}={v}" for c, v in zip(partition_cols, vals))
                     full_path = os.path.join(dataset_path, partition_path)
                     os.makedirs(full_path, exist_ok=True)
                     group.to_csv(os.path.join(full_path, 'data.csv'), index=False)
@@ -289,30 +250,18 @@ class DataLakeManager:
         self.register_dataset(dataset_name, f"{dataset_name}/**/*.{format_type}", format_type, partition_cols, 
                             {'rows': len(df), 'columns': list(df.columns), 'size_mb': df.memory_usage(deep=True).sum() / 1024 / 1024})
 
-# Usage examples
+# Usage example
 def large_dataset_example():
     """Large dataset processing example"""
-    def data_generator():
-        for i in range(10):
-            yield np.random.randn(1000, 50)
-    
     handler = LargeDatasetHandler()
-    handler.create_hdf5_dataset('large_dataset.h5', data_generator(), chunk_size=(1000, 50))
-    
-    chunk_shapes = [chunk.shape for chunk in handler.read_hdf5_chunks('large_dataset.h5', chunk_size=2000)]
-    
-    sample_df = pd.DataFrame({'A': np.random.randn(10000), 'B': np.random.randn(10000), 'C': np.random.choice(['X', 'Y', 'Z'], 10000)})
-    
-    columnar_processor = ColumnOrientedProcessor()
-    columnar_processor.create_columnar_store(sample_df, 'sample_store')
-    
     data_lake = DataLakeManager('data_lake')
+    sample_df = pd.DataFrame({
+        'A': np.random.randn(10000), 'B': np.random.randn(10000), 
+        'C': np.random.choice(['X', 'Y', 'Z'], 10000)
+    })
     data_lake.write_dataset(sample_df, 'sample_dataset', partition_cols=['C'])
-    filtered_data = data_lake.read_dataset('sample_dataset', partition_filter={'C': 'X'}, columns=['A', 'B'])
-    
-    os.remove('large_dataset.h5')
-    
-    return {'hdf5_chunk_shapes': chunk_shapes, 'filtered_data_shape': filtered_data.shape}
+    filtered_data = data_lake.read_dataset('sample_dataset', partition_filter={'C': 'X'})
+    return {'filtered_data_shape': filtered_data.shape}
 ```
 
 ## Best Practices
