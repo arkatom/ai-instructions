@@ -21,6 +21,11 @@ class MemoryEfficientProcessor:
         self.memory_threshold = memory_threshold
         self.temp_files = []
     
+    def __del__(self):
+        for f in self.temp_files:
+            try: os.remove(f)
+            except: pass
+    
     @contextmanager
     def memory_monitor(self):
         """Memory monitoring context"""
@@ -83,7 +88,7 @@ class MemoryEfficientProcessor:
                 f.write(','.join(current_rows[0].index.tolist()) + '\n')
                 while current_rows:
                     min_idx = min(range(len(current_rows)), 
-                                 key=lambda i: [current_rows[i][col] for col in sort_columns])
+                                 key=lambda i: tuple(current_rows[i][col] for col in sort_columns))
                     f.write(','.join(str(val) for val in current_rows[min_idx].values) + '\n')
                     try:
                         current_rows[min_idx] = next(file_iterators[min_idx]).iloc[0]

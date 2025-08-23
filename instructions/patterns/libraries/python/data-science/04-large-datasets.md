@@ -255,18 +255,12 @@ def large_dataset_example():
     """Large dataset processing example"""
     handler = LargeDatasetHandler()
     data_lake = DataLakeManager('data_lake')
-    
-    # Create sample data
     sample_df = pd.DataFrame({
-        'A': np.random.randn(10000), 
-        'B': np.random.randn(10000), 
+        'A': np.random.randn(10000), 'B': np.random.randn(10000), 
         'C': np.random.choice(['X', 'Y', 'Z'], 10000)
     })
-    
-    # Write and read partitioned dataset
     data_lake.write_dataset(sample_df, 'sample_dataset', partition_cols=['C'])
     filtered_data = data_lake.read_dataset('sample_dataset', partition_filter={'C': 'X'})
-    
     return {'filtered_data_shape': filtered_data.shape}
 ```
 
