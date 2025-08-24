@@ -1,6 +1,6 @@
-# Event-Driven Architecture Basics
+# Event-Driven アーキテクチャ
 
-Essential patterns for event-driven systems.
+イベント駆動システムの設計パターン。
 
 ## イベント設計
 
@@ -190,6 +190,63 @@ class Order {
 }
 ```
 
+## CQRS
+
+### Command Side
+```typescript
+class CommandHandler {
+  constructor(
+    private eventStore: EventStore,
+    private repository: Repository
+  ) {}
+  
+  async handle(command: CreateOrderCommand) {
+    // ビジネスロジック実行
+    const order = Order.create(command);
+    
+    // イベント永続化
+    await this.eventStore.append(order.getUncommittedEvents());
+    
+    return order.id;
+  }
+}
+```
+
+### Query Side
+```typescript
+class ReadModelProjection {
+  async handle(event: DomainEvent) {
+    switch(event.type) {
+      case 'ORDER_CREATED':
+        await this.db.orderReadModel.create({
+          data: {
+            id: event.aggregateId,
+            customerId: event.payload.customerId,
+            total: event.payload.total,
+            status: 'PENDING'
+          }
+        });
+        break;
+        
+      case 'ORDER_CONFIRMED':
+        await this.db.orderReadModel.update({
+          where: { id: event.aggregateId },
+          data: { status: 'CONFIRMED' }
+        });
+        break;
+    }
+  }
+}
+
+// Query Handler
+class QueryHandler {
+  async getOrders(customerId: string) {
+    return this.db.orderReadModel.findMany({
+      where: { customerId }
+    });
+  }
+}
+```
 
 ## Eventual Consistency
 
