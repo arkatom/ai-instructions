@@ -1,359 +1,203 @@
 # SQLAlchemy 2.0 リレーションシップローディング
 
-SQLAlchemy 2.0における遅延読み込み戦略とパフォーマンス最適化。N+1問題の徹底解決とクエリ最適化パターン。
+遅延読み込み戦略とN+1問題の解決パターン。
 
-## ⚡ 遅延読み込み戦略
-
-### 効率的なLazy Loading設定
+## ⚡ ローディング戦略
 
 ```python
-# models/optimized_relationships.py
-from sqlalchemy.orm import relationship, selectinload, joinedload, contains_eager
-from sqlalchemy import select
+# models/relationships.py
+from sqlalchemy.orm import relationship, selectinload, joinedload
 
-class OptimizedUser(Base):
-    """最適化されたユーザーモデル"""
+class User(Base):
+    """最適化されたリレーションシップ設定"""
     __tablename__ = "users"
     
-    # ... 基本フィールド ...
-    
-    # 戦略別リレーションシップ設定
-    
-    # 即座に読み込み（小さくて常に必要）
-    profile: Mapped[Optional["UserProfile"]] = relationship(
-        "UserProfile",
-        back_populates="user",
-        lazy="selectin",  # 常に1対1で読み込み
-        uselist=False,
-        init=False
+    # 即座に読み込み（常に必要な小データ）
+    profile: Mapped["UserProfile"] = relationship(
+        lazy="selectin",  # 別クエリで即読み込み
+        uselist=False
     )
     
-    # 必要時のみ読み込み（大量データ）
+    # 動的読み込み（大量データ）
     posts: Mapped[List["Post"]] = relationship(
-        "Post",
-        back_populates="author",
         lazy="dynamic",  # クエリオブジェクトとして返す
-        cascade="all, delete-orphan",
-        init=False
+        cascade="all, delete-orphan"
     )
     
-    # JOINで一度に読み込み（小〜中規模データ）
+    # 条件付きリレーション（特定条件のみ）
     recent_posts: Mapped[List["Post"]] = relationship(
-        "Post",
-        primaryjoin="and_(User.id == Post.author_id, Post.created_at >= text('NOW() - INTERVAL 30 DAY'))",
+        primaryjoin="and_(User.id == Post.author_id, "
+                   "Post.created_at >= func.date_sub(func.now(), text('INTERVAL 30 DAY')))",
         lazy="selectin",
-        viewonly=True,  # 読み取り専用
-        init=False
-    )
-    
-    # 条件付きリレーションシップ
-    published_posts: Mapped[List["Post"]] = relationship(
-        "Post",
-        primaryjoin="and_(User.id == Post.author_id, Post.is_published == True)",
-        lazy="selectin",
-        viewonly=True,
-        init=False
+        viewonly=True  # 読み取り専用
     )
 
+# ローディング戦略:
+# - lazy="select": デフォルト、アクセス時に読み込み（N+1注意）
+# - lazy="selectin": IN句で一括読み込み（推奨）
+# - lazy="joined": JOINで一度に読み込み
+# - lazy="subquery": サブクエリで読み込み
+# - lazy="dynamic": クエリオブジェクトを返す
+# - lazy="noload": 読み込まない
+```
+
+## 🎯 N+1問題の解決
+
+```python
+# repositories/optimized_repository.py
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload, joinedload, contains_eager
 
 class PostRepository:
-    """投稿リポジトリ - 最適化されたクエリ"""
-    
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    """最適化されたクエリパターン"""
     
     async def get_posts_with_related(
         self,
         include_author: bool = True,
         include_comments: bool = False,
-        include_tags: bool = True,
         limit: int = 10
     ) -> List[Post]:
         """関連データを含む投稿取得"""
         
-        # 動的なeager loading
+        # 動的オプション構築
         options = []
         
         if include_author:
+            # selectinload: 別クエリで効率的に取得
             options.append(selectinload(Post.author))
         
         if include_comments:
-            options.extend([
-                selectinload(Post.comments),
-                selectinload(Post.comments).selectinload(Comment.author)
-            ])
-        
-        if include_tags:
-            options.append(selectinload(Post.tags))
+            # ネストした関連も一括取得
+            options.append(
+                selectinload(Post.comments)
+                .selectinload(Comment.author)
+            )
         
         stmt = (
             select(Post)
             .options(*options)
             .where(Post.is_published == True)
-            .where(Post.is_deleted == False)
-            .order_by(Post.created_at.desc())
             .limit(limit)
         )
         
         result = await self.session.execute(stmt)
         return result.scalars().all()
     
-    async def get_post_with_nested_comments(self, post_id: int) -> Optional[Post]:
-        """ネストしたコメントを含む投稿取得"""
+    async def get_posts_with_stats(self) -> List[Post]:
+        """統計情報付き投稿取得（JOIN使用）"""
+        
         stmt = (
-            select(Post)
-            .options(
-                selectinload(Post.author),
-                selectinload(Post.comments.and_(Comment.parent_id.is_(None))),
-                selectinload(Post.comments).selectinload(Comment.replies),
-                selectinload(Post.comments).selectinload(Comment.author),
-                selectinload(Post.tags)
-            )
-            .where(Post.id == post_id)
-            .where(Post.is_deleted == False)
+            select(Post, func.count(Comment.id).label("comment_count"))
+            .outerjoin(Comment)
+            .options(contains_eager(Post.comments))  # JOINしたデータを活用
+            .group_by(Post.id)
+            .limit(10)
         )
         
         result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.all()
 ```
 
-## 🚀 高度なクエリパターン
-
-### JOINとサブクエリの最適化
+## 🔄 動的ローディング
 
 ```python
-# repositories/advanced_queries.py
-from sqlalchemy import select, func, and_, or_, case, exists, text
-from sqlalchemy.orm import contains_eager, Load
-from typing import List, Dict, Any
-
-
-class AdvancedPostRepository:
-    """高度なクエリパターン実装"""
+class DynamicLoader:
+    """動的ローディングパターン"""
     
-    def __init__(self, session: AsyncSession):
-        self.session = session
-    
-    async def get_posts_with_counts(self) -> List[Dict[str, Any]]:
-        """カウント付き投稿一覧"""
-        stmt = (
-            select(
-                Post,
-                func.count(Comment.id).label("comment_count"),
-                func.count(PostLike.id).label("like_count")
-            )
-            .outerjoin(Comment, and_(
-                Comment.post_id == Post.id,
-                Comment.is_deleted == False
-            ))
-            .outerjoin(PostLike)
-            .where(Post.is_published == True)
-            .where(Post.is_deleted == False)
-            .group_by(Post.id)
-            .order_by(Post.created_at.desc())
-        )
-        
-        result = await self.session.execute(stmt)
-        
-        posts_with_counts = []
-        for row in result:
-            posts_with_counts.append({
-                "post": row.Post,
-                "comment_count": row.comment_count,
-                "like_count": row.like_count
-            })
-        
-        return posts_with_counts
-    
-    async def get_popular_posts_by_period(
-        self,
-        days: int = 30,
-        min_likes: int = 5
-    ) -> List[Post]:
-        """期間内の人気投稿"""
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
-        
-        # サブクエリでいいね数を計算
-        like_count_subq = (
-            select(
-                PostLike.post_id,
-                func.count(PostLike.id).label("total_likes")
-            )
-            .where(PostLike.liked_at >= cutoff_date)
-            .group_by(PostLike.post_id)
-            .subquery()
-        )
-        
-        stmt = (
-            select(Post)
-            .join(like_count_subq, Post.id == like_count_subq.c.post_id)
-            .options(
-                selectinload(Post.author),
-                selectinload(Post.tags)
-            )
-            .where(like_count_subq.c.total_likes >= min_likes)
-            .where(Post.is_published == True)
-            .where(Post.is_deleted == False)
-            .order_by(like_count_subq.c.total_likes.desc())
-        )
-        
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-    
-    async def get_user_feed(
+    async def load_user_with_options(
         self,
         user_id: int,
-        limit: int = 20
-    ) -> List[Dict[str, Any]]:
-        """ユーザーフィード（フォロー中のユーザーの投稿）"""
+        load_posts: bool = False,
+        load_followers: bool = False,
+        posts_limit: int = 10
+    ) -> User:
+        """必要なデータのみ動的に読み込み"""
         
-        # フォロー中のユーザーIDを取得するサブクエリ
-        following_subq = (
-            select(UserFollow.following_id)
-            .where(UserFollow.follower_id == user_id)
-            .subquery()
-        )
+        # ベースクエリ
+        stmt = select(User).where(User.id == user_id)
         
-        stmt = (
-            select(
-                Post,
-                User.username.label("author_username"),
-                User.avatar_url.label("author_avatar"),
-                func.count(Comment.id).label("comment_count"),
-                case(
-                    (exists().where(
-                        and_(
-                            PostLike.post_id == Post.id,
-                            PostLike.user_id == user_id
-                        )
-                    ), True),
-                    else_=False
-                ).label("is_liked_by_user")
+        # 条件に応じてローディング戦略を追加
+        if load_posts:
+            stmt = stmt.options(
+                selectinload(User.posts).options(
+                    selectinload(Post.tags),
+                    selectinload(Post.category)
+                )
             )
-            .join(User, Post.author_id == User.id)
-            .outerjoin(Comment, and_(
-                Comment.post_id == Post.id,
-                Comment.is_deleted == False
-            ))
-            .where(Post.author_id.in_(following_subq))
-            .where(Post.is_published == True)
-            .where(Post.is_deleted == False)
-            .group_by(Post.id, User.username, User.avatar_url)
-            .order_by(Post.created_at.desc())
-            .limit(limit)
-        )
+        
+        if load_followers:
+            stmt = stmt.options(
+                selectinload(User.followers).selectinload(UserFollow.follower)
+            )
         
         result = await self.session.execute(stmt)
+        user = result.scalar_one()
         
-        feed_items = []
-        for row in result:
-            feed_items.append({
-                "post": row.Post,
-                "author_username": row.author_username,
-                "author_avatar": row.author_avatar,
-                "comment_count": row.comment_count,
-                "is_liked_by_user": row.is_liked_by_user
-            })
+        # 動的リレーションシップの処理
+        if user.posts.options(lazyload='dynamic'):
+            # 動的クエリで条件付き取得
+            user.recent_posts = await self.session.execute(
+                user.posts.filter(Post.created_at >= thirty_days_ago)
+                .limit(posts_limit)
+            ).scalars().all()
         
-        return feed_items
+        return user
 ```
 
-## 🎯 パフォーマンス最適化
-
-### N+1問題の徹底解決
+## 📊 ローディング最適化
 
 ```python
-# repositories/optimized_repository.py
-from sqlalchemy.orm import selectinload, joinedload, subqueryload
+class LoadingOptimizer:
+    """ローディング最適化ヘルパー"""
+    
+    @staticmethod
+    def optimize_query(base_query, relationships: dict):
+        """関連データのローディング最適化"""
+        
+        for rel_name, strategy in relationships.items():
+            if strategy == "select":
+                # 個別クエリ（大量データ用）
+                base_query = base_query.options(selectinload(rel_name))
+            elif strategy == "join":
+                # JOIN（小データ用）
+                base_query = base_query.options(joinedload(rel_name))
+            elif strategy == "subquery":
+                # サブクエリ（中規模データ用）
+                base_query = base_query.options(subqueryload(rel_name))
+            elif strategy == "none":
+                # 読み込まない
+                base_query = base_query.options(noload(rel_name))
+        
+        return base_query
 
+# 使用例
+relationships = {
+    "author": "select",      # 別クエリで取得
+    "tags": "join",          # JOINで取得
+    "comments": "none"       # 読み込まない
+}
 
-class OptimizedRepository:
-    """N+1問題を回避する最適化されたリポジトリ"""
-    
-    def __init__(self, session: AsyncSession):
-        self.session = session
-    
-    async def get_posts_optimized(self, limit: int = 10) -> List[Post]:
-        """最適化された投稿取得（N+1回避）"""
-        
-        # selectinload使用パターン
-        stmt = (
-            select(Post)
-            .options(
-                # 著者情報を一度に取得
-                selectinload(Post.author),
-                
-                # タグ情報を一度に取得
-                selectinload(Post.tags),
-                
-                # カテゴリ情報を一度に取得
-                selectinload(Post.category),
-                
-                # コメントと作成者を一度に取得
-                selectinload(Post.comments).selectinload(Comment.author)
-            )
-            .where(Post.is_published == True)
-            .order_by(Post.created_at.desc())
-            .limit(limit)
-        )
-        
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-    
-    async def get_posts_with_join(self, limit: int = 10) -> List[Post]:
-        """JOIN使用パターン"""
-        
-        stmt = (
-            select(Post)
-            .join(User, Post.author_id == User.id)
-            .outerjoin(Category, Post.category_id == Category.id)
-            .options(
-                # JOINしたデータを活用
-                contains_eager(Post.author),
-                contains_eager(Post.category),
-                
-                # 別途取得が必要なもの
-                selectinload(Post.tags)
-            )
-            .where(Post.is_published == True)
-            .order_by(Post.created_at.desc())
-            .limit(limit)
-        )
-        
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
-    
-    async def get_nested_comments_optimized(self, post_id: int) -> List[Comment]:
-        """ネストコメントの最適化取得"""
-        
-        # 全コメントを一度に取得
-        stmt = (
-            select(Comment)
-            .options(
-                selectinload(Comment.author),
-                selectinload(Comment.replies).selectinload(Comment.author)
-            )
-            .where(Comment.post_id == post_id)
-            .where(Comment.is_deleted == False)
-            .order_by(Comment.created_at.asc())
-        )
-        
-        result = await self.session.execute(stmt)
-        all_comments = result.scalars().all()
-        
-        # Pythonでツリー構造を構築
-        comment_dict = {comment.id: comment for comment in all_comments}
-        root_comments = []
-        
-        for comment in all_comments:
-            if comment.parent_id is None:
-                root_comments.append(comment)
-            else:
-                parent = comment_dict.get(comment.parent_id)
-                if parent:
-                    if not hasattr(parent, '_nested_replies'):
-                        parent._nested_replies = []
-                    parent._nested_replies.append(comment)
-        
-        return root_comments
+query = LoadingOptimizer.optimize_query(select(Post), relationships)
 ```
+
+## 💡 ベストプラクティス
+
+### ローディング戦略選択
+| データ量 | 関係性 | 推奨戦略 |
+|---------|--------|----------|
+| 小（1-10） | 1対1 | joinedload |
+| 中（10-100） | 1対多 | selectinload |
+| 大（100+） | 1対多 | dynamic/select |
+| 巨大 | 多対多 | 明示的クエリ |
+
+### パフォーマンス最適化
+- **selectinload優先**: ほとんどの場合で最適
+- **joinedload注意**: 重複データに注意
+- **dynamic活用**: 大量データには必須
+- **バッチサイズ調整**: selectinloadのIN句サイズ
+
+### N+1問題チェックリスト
+1. ループ内でのリレーション アクセス確認
+2. 適切なローディング戦略選択
+3. クエリログで実行回数確認
+4. 必要最小限のデータ取得

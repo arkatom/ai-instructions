@@ -1,37 +1,15 @@
 # SQLAlchemy 2.0 ユーザーモデル実装
 
-SQLAlchemy 2.0のMapped型とMappedAsDataclassを活用したユーザーモデル実装。認証、プロフィール、権限管理を統合した包括的なユーザーシステム。
+Mapped型とMappedAsDataclassを活用した認証・権限管理システム。
 
-## 🏗️ 基底クラスとミックスイン
-
-### 基本ミックスイン定義
+## 🏗️ 基底ミックスイン
 
 ```python
 # models/base.py
-from sqlalchemy.orm import (
-    Mapped, 
-    mapped_column, 
-    DeclarativeBase,
-    MappedAsDataclass,
-    relationship
-)
-from sqlalchemy import (
-    Integer, 
-    String, 
-    DateTime, 
-    Boolean, 
-    Text,
-    func,
-    Index,
-    UniqueConstraint,
-    CheckConstraint
-)
+from sqlalchemy.orm import Mapped, mapped_column, MappedAsDataclass
+from sqlalchemy import DateTime, Boolean, Integer, func
 from datetime import datetime
 from typing import Optional
-import uuid
-
-from database.types import GUID
-
 
 class TimestampMixin(MappedAsDataclass):
     """タイムスタンプミックスイン"""
@@ -48,280 +26,186 @@ class TimestampMixin(MappedAsDataclass):
         init=False
     )
 
-
 class SoftDeleteMixin(MappedAsDataclass):
     """論理削除ミックスイン"""
     is_deleted: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        init=False,
-        index=True
+        Boolean, default=False, init=False, index=True
     )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        default=None,
-        init=False
+        DateTime(timezone=True), default=None, init=False
     )
-
 
 class AuditMixin(MappedAsDataclass):
     """監査ミックスイン"""
-    created_by_id: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        default=None,
-        init=False
-    )
-    updated_by_id: Mapped[Optional[int]] = mapped_column(
-        Integer, 
-        default=None,
-        init=False
-    )
-    version: Mapped[int] = mapped_column(
-        Integer,
-        default=1,
-        init=False
-    )
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, init=False)
+    updated_by_id: Mapped[Optional[int]] = mapped_column(Integer, init=False)
+    version: Mapped[int] = mapped_column(Integer, default=1, init=False)
 ```
 
-## 👤 高度なユーザーモデル
-
-### 包括的なユーザーモデル定義
+## 👤 ユーザーモデル
 
 ```python
 # models/user.py
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Boolean, Text, Enum, ForeignKey, Index
+from sqlalchemy import String, Boolean, Enum, Index
 from sqlalchemy.ext.hybrid import hybrid_property
 from enum import Enum as PyEnum
-from typing import List, Optional
-from datetime import datetime
-
-from models.base import Base, TimestampMixin, SoftDeleteMixin, AuditMixin
-from database.types import GUID, JSONType
-
 
 class UserRole(PyEnum):
-    """ユーザー権限列挙型"""
     USER = "user"
     MODERATOR = "moderator"
     ADMIN = "admin"
-    SUPERUSER = "superuser"
-
 
 class UserStatus(PyEnum):
-    """ユーザー状態列挙型"""
     PENDING = "pending"
     ACTIVE = "active"
     SUSPENDED = "suspended"
-    DEACTIVATED = "deactivated"
-
 
 class User(Base, TimestampMixin, SoftDeleteMixin, AuditMixin):
-    """ユーザーモデル"""
+    """包括的ユーザーモデル"""
     __tablename__ = "users"
     
     # 基本フィールド
     id: Mapped[int] = mapped_column(primary_key=True, init=False)
-    uuid: Mapped[str] = mapped_column(
-        GUID,
-        default_factory=uuid.uuid4,
-        unique=True,
-        index=True,
-        init=False
-    )
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), init=False)
     
-    # 認証情報
-    username: Mapped[str] = mapped_column(
-        String(50),
-        unique=True,
-        index=True
-    )
-    email: Mapped[str] = mapped_column(
-        String(255),
-        unique=True,
-        index=True
-    )
-    hashed_password: Mapped[str] = mapped_column(String(255))
+    # プロフィール
+    first_name: Mapped[Optional[str]] = mapped_column(String(50))
+    last_name: Mapped[Optional[str]] = mapped_column(String(50))
+    bio: Mapped[Optional[str]] = mapped_column(Text)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500))
     
-    # プロフィール情報
-    first_name: Mapped[str] = mapped_column(String(50))
-    last_name: Mapped[str] = mapped_column(String(50))
-    display_name: Mapped[Optional[str]] = mapped_column(String(100), default=None)
-    bio: Mapped[Optional[str]] = mapped_column(Text, default=None)
-    avatar_url: Mapped[Optional[str]] = mapped_column(String(255), default=None)
-    
-    # ステータス
+    # 権限管理
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole),
-        default=UserRole.USER
+        Enum(UserRole), default=UserRole.USER, index=True
     )
     status: Mapped[UserStatus] = mapped_column(
-        Enum(UserStatus),
-        default=UserStatus.PENDING,
-        index=True
+        Enum(UserStatus), default=UserStatus.PENDING, index=True
     )
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     
-    # メタデータ
-    settings: Mapped[Optional[dict]] = mapped_column(
-        JSONType,
-        default_factory=dict
-    )
-    last_login_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        default=None
-    )
-    login_count: Mapped[int] = mapped_column(Integer, default=0)
+    # 認証追跡
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(init=False)
+    login_count: Mapped[int] = mapped_column(Integer, default=0, init=False)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, init=False)
+    
+    # JSON設定
+    settings: Mapped[dict] = mapped_column(JSONType, default_factory=dict)
     
     # リレーションシップ
+    profile: Mapped[Optional["UserProfile"]] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
     posts: Mapped[List["Post"]] = relationship(
-        "Post",
-        back_populates="author",
-        cascade="all, delete-orphan",
-        lazy="selectin",  # N+1問題回避
-        init=False
-    )
-    
-    comments: Mapped[List["Comment"]] = relationship(
-        "Comment",
-        back_populates="author",
-        cascade="all, delete-orphan",
-        lazy="dynamic",  # 大量データの場合
-        init=False
-    )
-    
-    followers: Mapped[List["UserFollow"]] = relationship(
-        "UserFollow",
-        foreign_keys="UserFollow.following_id",
-        back_populates="following_user",
-        cascade="all, delete-orphan",
-        init=False
-    )
-    
-    following: Mapped[List["UserFollow"]] = relationship(
-        "UserFollow",
-        foreign_keys="UserFollow.follower_id",
-        back_populates="follower_user",
-        cascade="all, delete-orphan",
-        init=False
-    )
-    
-    # インデックス定義
-    __table_args__ = (
-        Index("idx_users_email_status", "email", "status"),
-        Index("idx_users_role_active", "role", "is_active"),
-        Index("idx_users_created_at_status", "created_at", "status"),
-        CheckConstraint("email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'"),
-        CheckConstraint("username ~ '^[a-zA-Z0-9_]{3,50}$'"),
+        back_populates="author", cascade="all, delete-orphan"
     )
     
     # ハイブリッドプロパティ
     @hybrid_property
     def full_name(self) -> str:
-        """フルネーム取得"""
-        return f"{self.first_name} {self.last_name}".strip()
-    
-    @full_name.expression
-    def full_name(cls):
-        """SQLクエリ用フルネーム式"""
-        return func.concat(cls.first_name, ' ', cls.last_name)
-    
-    @hybrid_property
-    def follower_count(self) -> int:
-        """フォロワー数（プロパティアクセス時）"""
-        return len(self.followers)
-    
-    @follower_count.expression
-    def follower_count(cls):
-        """フォロワー数（クエリ時）"""
-        return (
-            select(func.count(UserFollow.id))
-            .where(UserFollow.following_id == cls.id)
-            .correlate(cls)
-            .scalar_subquery()
-        )
+        return f"{self.first_name or ''} {self.last_name or ''}".strip()
     
     @hybrid_property
     def is_admin(self) -> bool:
-        """管理者権限チェック"""
-        return self.role in (UserRole.ADMIN, UserRole.SUPERUSER)
+        return self.role in [UserRole.ADMIN, UserRole.MODERATOR]
     
-    @is_admin.expression
-    def is_admin(cls):
-        """管理者権限チェック（クエリ時）"""
-        return cls.role.in_([UserRole.ADMIN, UserRole.SUPERUSER])
-    
-    def __repr__(self) -> str:
-        return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
+    # インデックス
+    __table_args__ = (
+        Index('idx_users_search', 'email', 'username'),
+        Index('idx_users_active_verified', 'is_active', 'is_verified'),
+        Index('idx_users_role_status', 'role', 'status'),
+    )
 ```
 
-## 🛡️ セキュリティとプライバシー
-
-### データマスキングとプライバシー
+## 🔑 認証プロフィール
 
 ```python
-# models/privacy.py
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy import func
-import hashlib
-
-
-class PrivacyMixin:
-    """プライバシー保護ミックスイン"""
+# models/user_profile.py
+class UserProfile(Base, TimestampMixin):
+    """ユーザープロフィール拡張"""
+    __tablename__ = "user_profiles"
     
-    @hybrid_property
-    def masked_email(self) -> str:
-        """マスクされたメールアドレス"""
-        if '@' in self.email:
-            local, domain = self.email.split('@', 1)
-            if len(local) <= 2:
-                masked_local = local[0] + '*'
-            else:
-                masked_local = local[0] + '*' * (len(local) - 2) + local[-1]
-            return f"{masked_local}@{domain}"
-        return "*****"
+    id: Mapped[int] = mapped_column(primary_key=True, init=False)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+    )
     
-    @masked_email.expression
-    def masked_email(cls):
-        """マスクされたメールアドレス（クエリ用）"""
-        return func.regexp_replace(
-            cls.email,
-            r'^(.).*(@.*)$',
-            r'\1****\2'
-        )
+    # 詳細情報
+    phone: Mapped[Optional[str]] = mapped_column(String(20))
+    address: Mapped[Optional[str]] = mapped_column(Text)
+    birth_date: Mapped[Optional[date]] = mapped_column(Date)
     
-    @property
-    def email_hash(self) -> str:
-        """メールアドレスのハッシュ（統計用）"""
-        return hashlib.sha256(self.email.encode()).hexdigest()[:16]
-
-
-# 改良されたUserモデル
-class User(Base, TimestampMixin, SoftDeleteMixin, PrivacyMixin):
-    # ... 既存の定義 ...
+    # ソーシャル
+    twitter: Mapped[Optional[str]] = mapped_column(String(100))
+    github: Mapped[Optional[str]] = mapped_column(String(100))
+    website: Mapped[Optional[str]] = mapped_column(String(255))
     
-    def to_public_dict(self) -> dict:
-        """公開用辞書（機密情報除外）"""
-        return {
-            'id': self.id,
-            'uuid': self.uuid,
-            'username': self.username,
-            'display_name': self.display_name,
-            'full_name': self.full_name,
-            'avatar_url': self.avatar_url,
-            'is_verified': self.is_verified,
-            'created_at': self.created_at,
-            'follower_count': self.follower_count
-        }
+    # 設定
+    theme: Mapped[str] = mapped_column(String(20), default="light")
+    language: Mapped[str] = mapped_column(String(10), default="ja")
+    timezone: Mapped[str] = mapped_column(String(50), default="Asia/Tokyo")
     
-    def to_private_dict(self) -> dict:
-        """プライベート用辞書（所有者のみ）"""
-        return {
-            **self.to_public_dict(),
-            'email': self.masked_email,  # マスク済み
-            'settings': self.settings,
-            'last_login_at': self.last_login_at,
-            'login_count': self.login_count
-        }
+    # 通知設定
+    email_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
+    push_notifications: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # リレーション
+    user: Mapped["User"] = relationship(back_populates="profile")
 ```
+
+## 🔐 フォロー関係
+
+```python
+# models/user_follow.py
+class UserFollow(Base, TimestampMixin):
+    """ユーザーフォロー関係"""
+    __tablename__ = "user_follows"
+    
+    follower_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    following_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    
+    # フォロー関係メタデータ
+    is_mutual: Mapped[bool] = mapped_column(Boolean, default=False)
+    notification_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # リレーション
+    follower: Mapped["User"] = relationship(
+        foreign_keys=[follower_id],
+        backref="following_relationships"
+    )
+    following: Mapped["User"] = relationship(
+        foreign_keys=[following_id],
+        backref="follower_relationships"
+    )
+    
+    __table_args__ = (
+        UniqueConstraint('follower_id', 'following_id'),
+        Index('idx_follow_mutual', 'is_mutual'),
+    )
+```
+
+## 💡 実装のポイント
+
+### モデル設計原則
+- **Mapped型**: 型安全性の確保
+- **MappedAsDataclass**: データクラス機能統合
+- **init=False**: 自動生成フィールド
+- **インデックス**: 検索性能最適化
+
+### セキュリティ
+- パスワードは常にハッシュ化
+- 論理削除でデータ保護
+- 監査ログで変更追跡
+- ロールベースアクセス制御
+
+### パフォーマンス
+- 適切なインデックス設定
+- JSONフィールドでの柔軟な設定管理
+- リレーションシップの最適化
+- ハイブリッドプロパティの活用

@@ -1,381 +1,234 @@
 # SQLAlchemy 2.0 イベントと制約
 
-SQLAlchemy 2.0におけるカスケード操作、イベントリスナー、制約管理。データ整合性とライフサイクル管理の高度な実装パターン。
+カスケード操作、イベントリスナー、制約管理によるデータ整合性の実装パターン。
 
 ## 🔄 カスケード操作
-
-### 効率的なカスケード設定
 
 ```python
 # models/cascading.py
 from sqlalchemy.orm import relationship
-from sqlalchemy import ForeignKey, event
-from sqlalchemy.orm.events import InstanceEvents
+from sqlalchemy import event, text
 
-
-class UserWithCascading(Base, TimestampMixin):
-    """カスケード操作を含むユーザーモデル"""
+class User(Base):
+    """カスケード設定パターン"""
     __tablename__ = "users"
     
-    id: Mapped[int] = mapped_column(primary_key=True, init=False)
-    username: Mapped[str] = mapped_column(String(50), unique=True)
-    
-    # カスケード設定パターン
-    
-    # 1. 削除時に子レコードも削除
+    # 削除時に子レコードも削除
     posts: Mapped[List["Post"]] = relationship(
         "Post",
-        back_populates="author",
         cascade="all, delete-orphan",  # ユーザー削除時に投稿も削除
         passive_deletes=True,  # DB側のON DELETE CASCADEを使用
-        init=False
     )
     
-    # 2. 削除時にNULLを設定
+    # 削除時にNULLを設定
     moderated_posts: Mapped[List["Post"]] = relationship(
         "Post",
         foreign_keys="Post.moderator_id",
         cascade="save-update",  # 削除はカスケードしない
-        passive_deletes=True,
-        init=False
     )
     
-    # 3. 論理削除のカスケード
+    # 論理削除のカスケード
     comments: Mapped[List["Comment"]] = relationship(
         "Comment",
-        back_populates="author",
-        cascade="save-update, merge",
-        init=False
+        cascade="save-update, merge",  # 物理削除はしない
     )
 
-
-@event.listens_for(UserWithCascading, 'before_delete')
-def before_user_delete(mapper, connection, target):
-    """ユーザー削除前の処理"""
-    # 論理削除のカスケード
-    connection.execute(
-        text("UPDATE comments SET is_deleted = true WHERE author_id = :user_id"),
-        {"user_id": target.id}
-    )
-    
-    # 統計情報の更新
-    connection.execute(
-        text("UPDATE posts SET author_display_name = :name WHERE author_id = :user_id"),
-        {"name": f"削除されたユーザー({target.username})", "user_id": target.id}
-    )
-
-
-class SoftDeleteCascade:
-    """論理削除のカスケード処理"""
-    
-    @staticmethod
-    async def soft_delete_user(session: AsyncSession, user_id: int):
-        """ユーザーの論理削除（関連データも含む）"""
-        # ユーザーの論理削除
-        await session.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(is_deleted=True, deleted_at=func.now())
-        )
-        
-        # 関連する投稿の論理削除
-        await session.execute(
-            update(Post)
-            .where(Post.author_id == user_id)
-            .values(is_deleted=True, deleted_at=func.now())
-        )
-        
-        # 関連するコメントの論理削除
-        await session.execute(
-            update(Comment)
-            .where(Comment.author_id == user_id)
-            .values(is_deleted=True, deleted_at=func.now())
-        )
-        
-        await session.commit()
+# カスケードオプション:
+# - all: 全操作をカスケード
+# - delete: 削除のみカスケード
+# - delete-orphan: 親から切り離された子を削除
+# - save-update: 保存・更新のみ
+# - merge: マージ操作のみ
+# - refresh-expire: リフレッシュのみ
 ```
 
-## 🎯 イベントリスナーとライフサイクル
-
-### モデルライフサイクル管理
+## 🎯 イベントリスナー
 
 ```python
 # models/events.py
 from sqlalchemy import event
 from sqlalchemy.orm import Session
-from datetime import datetime
-import logging
 
-logger = logging.getLogger(__name__)
-
-
+# イベントタイプ別リスナー
 @event.listens_for(User, 'before_insert')
-def receive_before_insert(mapper, connection, target):
-    """ユーザー挿入前処理"""
-    # UUID生成
-    if not target.uuid:
-        target.uuid = str(uuid.uuid4())
-    
-    # パスワードハッシュ化
+def user_before_insert(mapper, connection, target):
+    """挿入前処理"""
+    target.uuid = str(uuid.uuid4())
     if hasattr(target, '_plain_password'):
-        target.hashed_password = hash_password(target._plain_password)
-        delattr(target, '_plain_password')
-    
-    logger.info(f"Creating new user: {target.username}")
+        target.password = hash_password(target._plain_password)
 
-
-@event.listens_for(User, 'before_update')
-def receive_before_update(mapper, connection, target):
-    """ユーザー更新前処理"""
-    target.updated_at = datetime.utcnow()
-    target.version += 1
-    
-    logger.info(f"Updating user: {target.username}")
-
+@event.listens_for(User, 'before_delete')
+def user_before_delete(mapper, connection, target):
+    """削除前処理 - 論理削除のカスケード"""
+    # 関連データの論理削除
+    connection.execute(
+        text("UPDATE posts SET is_deleted = true WHERE author_id = :id"),
+        {"id": target.id}
+    )
 
 @event.listens_for(Post, 'after_insert')
-def receive_post_after_insert(mapper, connection, target):
-    """投稿挿入後処理"""
-    # 通知送信、インデックス更新など
-    logger.info(f"New post created: {target.title} by user {target.author_id}")
-
+def post_after_insert(mapper, connection, target):
+    """挿入後処理 - カウンター更新"""
+    connection.execute(
+        text("UPDATE users SET post_count = post_count + 1 WHERE id = :id"),
+        {"id": target.author_id}
+    )
 
 @event.listens_for(Session, 'before_commit')
-def receive_before_commit(session):
-    """コミット前の最終検証"""
-    for instance in session.new:
-        if hasattr(instance, 'validate_before_save'):
-            instance.validate_before_save()
+def session_before_commit(session):
+    """コミット前検証"""
+    for instance in session.new | session.dirty:
+        if hasattr(instance, 'validate'):
+            instance.validate()
+
+# イベント応用パターン
+class AuditEventListener:
+    """監査ログリスナー"""
     
-    for instance in session.dirty:
-        if hasattr(instance, 'validate_before_update'):
-            instance.validate_before_update()
-
-
-@event.listens_for(Session, 'after_commit')
-def receive_after_commit(session):
-    """コミット後の処理"""
-    # キャッシュクリア、通知送信など
-    for instance in session.identity_map.all_states():
-        if hasattr(instance.object, 'after_commit_hook'):
-            instance.object.after_commit_hook()
+    @staticmethod
+    def register(model_class):
+        """モデルに監査イベントを登録"""
+        
+        @event.listens_for(model_class, 'after_insert')
+        def audit_insert(mapper, connection, target):
+            connection.execute(
+                text("""
+                    INSERT INTO audit_logs (table_name, action, record_id, changes)
+                    VALUES (:table, 'INSERT', :id, :changes)
+                """),
+                {
+                    "table": model_class.__tablename__,
+                    "id": target.id,
+                    "changes": json.dumps(target.to_dict())
+                }
+            )
+        
+        @event.listens_for(model_class, 'after_update')
+        def audit_update(mapper, connection, target):
+            # 変更されたフィールドのみ記録
+            changes = {}
+            for attr in target.__mapper__.attrs:
+                hist = attr.history
+                if hist.has_changes():
+                    changes[attr.key] = {
+                        "old": hist.deleted[0] if hist.deleted else None,
+                        "new": hist.added[0] if hist.added else None
+                    }
+            
+            if changes:
+                connection.execute(
+                    text("""
+                        INSERT INTO audit_logs (table_name, action, record_id, changes)
+                        VALUES (:table, 'UPDATE', :id, :changes)
+                    """),
+                    {
+                        "table": model_class.__tablename__,
+                        "id": target.id,
+                        "changes": json.dumps(changes)
+                    }
+                )
 ```
 
-## 🛡️ 制約管理とバリデーション
-
-### 高度な制約パターン
+## 🔒 制約管理
 
 ```python
 # models/constraints.py
-from sqlalchemy import CheckConstraint, UniqueConstraint, Index, func
-from sqlalchemy.schema import DDL
-from sqlalchemy.orm import validates
+from sqlalchemy import UniqueConstraint, CheckConstraint, Index
 
-
-class AdvancedConstraintsModel(Base, TimestampMixin):
-    """高度な制約を含むモデル"""
-    __tablename__ = "advanced_model"
+class Post(Base):
+    """制約定義パターン"""
+    __tablename__ = "posts"
     
-    id: Mapped[int] = mapped_column(primary_key=True, init=False)
+    # カラム定義
+    slug: Mapped[str] = mapped_column(String(100))
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    published_at: Mapped[datetime] = mapped_column(nullable=True)
     
-    # 基本フィールド
-    email: Mapped[str] = mapped_column(String(255))
-    age: Mapped[int] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(String(20))
-    priority: Mapped[int] = mapped_column(Integer)
-    score: Mapped[float] = mapped_column(Float)
-    
-    # 複雑な制約定義
+    # テーブル制約
     __table_args__ = (
-        # 複合制約
-        CheckConstraint(
-            "age >= 0 AND age <= 150",
-            name="check_valid_age"
-        ),
-        
-        # 条件付き制約
-        CheckConstraint(
-            "CASE WHEN status = 'active' THEN priority > 0 ELSE true END",
-            name="check_active_priority"
-        ),
-        
-        # 正規表現制約
-        CheckConstraint(
-            "email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'",
-            name="check_email_format"
-        ),
-        
         # 複合ユニーク制約
-        UniqueConstraint("email", "status", name="uq_email_status"),
+        UniqueConstraint('author_id', 'slug', name='uq_author_slug'),
         
-        # 部分インデックス（PostgreSQL）
-        Index(
-            "idx_active_high_priority", 
-            "priority", 
-            postgresql_where=(status == 'active')
-        ),
+        # チェック制約
+        CheckConstraint('published_at IS NULL OR published_at <= NOW()', 
+                       name='ck_published_date'),
         
-        # 式ベースのインデックス
-        Index(
-            "idx_email_domain",
-            func.split_part(email, '@', 2)
-        ),
+        # 条件付きユニークインデックス
+        Index('idx_unique_published_slug', 'slug',
+              unique=True,
+              postgresql_where='is_published = true'),
     )
-    
-    @validates('email')
-    def validate_email(self, key, email):
-        """メールアドレス検証"""
-        import re
-        pattern = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
-        if not re.match(pattern, email):
-            raise ValueError("Invalid email format")
-        return email.lower()
-    
-    @validates('age')
-    def validate_age(self, key, age):
-        """年齢検証"""
-        if not 0 <= age <= 150:
-            raise ValueError("Age must be between 0 and 150")
-        return age
-    
-    @validates('status')
-    def validate_status(self, key, status):
-        """ステータス検証"""
-        valid_statuses = ['active', 'inactive', 'pending', 'suspended']
-        if status not in valid_statuses:
-            raise ValueError(f"Status must be one of: {valid_statuses}")
-        return status
 
-
-# データベース関数とトリガー
-create_audit_trigger = DDL("""
-CREATE OR REPLACE FUNCTION audit_trigger_function()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF TG_OP = 'INSERT' THEN
-        INSERT INTO audit_log (table_name, operation, new_values, timestamp)
-        VALUES (TG_TABLE_NAME, TG_OP, row_to_json(NEW), NOW());
-        RETURN NEW;
-    ELSIF TG_OP = 'UPDATE' THEN
-        INSERT INTO audit_log (table_name, operation, old_values, new_values, timestamp)
-        VALUES (TG_TABLE_NAME, TG_OP, row_to_json(OLD), row_to_json(NEW), NOW());
-        RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO audit_log (table_name, operation, old_values, timestamp)
-        VALUES (TG_TABLE_NAME, TG_OP, row_to_json(OLD), NOW());
-        RETURN OLD;
-    END IF;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-""")
-
-# テーブル作成後にトリガーを作成
-@event.listens_for(AdvancedConstraintsModel.__table__, 'after_create')
-def create_audit_trigger_for_table(target, connection, **kw):
-    """監査トリガーの作成"""
-    create_audit_trigger.execute(connection)
+# 動的制約管理
+class ConstraintManager:
+    """制約の動的管理"""
     
-    trigger_sql = f"""
-    CREATE TRIGGER audit_trigger_{target.name}
-    AFTER INSERT OR UPDATE OR DELETE ON {target.name}
-    FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
-    """
+    @staticmethod
+    async def add_constraint(session: AsyncSession, constraint_sql: str):
+        """制約追加"""
+        await session.execute(text(constraint_sql))
+        await session.commit()
     
-    connection.execute(text(trigger_sql))
+    @staticmethod
+    async def validate_constraint(session: AsyncSession, table: str, constraint: str):
+        """既存データの制約チェック"""
+        result = await session.execute(
+            text(f"""
+                SELECT COUNT(*) as violations
+                FROM {table}
+                WHERE NOT ({constraint})
+            """)
+        )
+        violations = result.scalar()
+        if violations > 0:
+            raise ValueError(f"{violations} rows violate constraint")
 ```
 
-## ⚙️ カスタムイベントハンドラー
-
-### 高度なイベント処理
+## 🔄 論理削除パターン
 
 ```python
-# events/handlers.py
-from sqlalchemy import event
-from sqlalchemy.pool import Pool
-from sqlalchemy.engine import Engine
-import logging
-import asyncio
-from datetime import datetime
-
-logger = logging.getLogger(__name__)
-
-
-class EventHandlers:
-    """カスタムイベントハンドラー集約"""
+class SoftDeleteMixin:
+    """論理削除ミックスイン"""
     
-    def __init__(self):
-        self.performance_stats = {
-            'query_count': 0,
-            'slow_queries': 0,
-            'connection_count': 0
-        }
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     
-    def setup_all_handlers(self, engine: Engine):
-        """全イベントハンドラーの設定"""
-        self.setup_connection_handlers(engine)
-        self.setup_query_handlers(engine)
-        self.setup_model_handlers()
+    async def soft_delete(self, session: AsyncSession):
+        """論理削除実行"""
+        self.is_deleted = True
+        self.deleted_at = func.now()
+        
+        # カスケード処理
+        await self._cascade_soft_delete(session)
+        
+        await session.commit()
     
-    def setup_connection_handlers(self, engine: Engine):
-        """接続関連ハンドラー"""
-        
-        @event.listens_for(Pool, "connect")
-        def on_connect(dbapi_connection, connection_record):
-            """接続時の処理"""
-            self.performance_stats['connection_count'] += 1
-            logger.debug(f"New connection established. Total: {self.performance_stats['connection_count']}")
-        
-        @event.listens_for(Pool, "checkout")
-        def on_checkout(dbapi_connection, connection_record, connection_proxy):
-            """接続チェックアウト時の処理"""
-            connection_proxy.info['checkout_time'] = datetime.utcnow()
-        
-        @event.listens_for(Pool, "checkin")
-        def on_checkin(dbapi_connection, connection_record):
-            """接続チェックイン時の処理"""
-            if 'checkout_time' in connection_record.info:
-                usage_time = datetime.utcnow() - connection_record.info['checkout_time']
-                if usage_time.total_seconds() > 30:  # 30秒以上の長時間使用
-                    logger.warning(f"Long connection usage: {usage_time}")
-    
-    def setup_query_handlers(self, engine: Engine):
-        """クエリ関連ハンドラー"""
-        
-        @event.listens_for(engine, "before_cursor_execute")
-        def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-            """クエリ実行前の処理"""
-            context._query_start_time = datetime.utcnow()
-            self.performance_stats['query_count'] += 1
-        
-        @event.listens_for(engine, "after_cursor_execute")
-        def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-            """クエリ実行後の処理"""
-            total_time = datetime.utcnow() - context._query_start_time
-            
-            if total_time.total_seconds() > 1.0:  # 1秒以上のクエリ
-                self.performance_stats['slow_queries'] += 1
-                logger.warning(f"Slow query ({total_time.total_seconds():.2f}s): {statement[:100]}")
-    
-    def setup_model_handlers(self):
-        """モデル関連ハンドラー"""
-        
-        @event.listens_for(User, "load")
-        def user_load_handler(target, context):
-            """ユーザーロード時の処理"""
-            # キャッシュ更新、統計更新など
-            logger.debug(f"User loaded: {target.username}")
-        
-        @event.listens_for(Post, "before_insert")
-        def post_before_insert(mapper, connection, target):
-            """投稿挿入前の処理"""
-            # 自動タグ付け、スパム検出など
-            if not target.excerpt and target.content:
-                target.excerpt = target.content[:200] + "..." if len(target.content) > 200 else target.content
-        
-        @event.listens_for(Post, "after_update")
-        def post_after_update(mapper, connection, target):
-            """投稿更新後の処理"""
-            # 検索インデックス更新、通知送信など
-            logger.info(f"Post updated: {target.title}")
+    async def _cascade_soft_delete(self, session: AsyncSession):
+        """子レコードの論理削除"""
+        # 各リレーションに対して論理削除を実行
+        for rel in self.__mapper__.relationships:
+            if rel.cascade.delete:
+                children = getattr(self, rel.key)
+                if children:
+                    for child in children:
+                        if hasattr(child, 'soft_delete'):
+                            await child.soft_delete(session)
 ```
+
+## 💡 ベストプラクティス
+
+### カスケード戦略
+- **親子関係明確化**: 所有関係がある場合のみdelete-orphan使用
+- **論理削除優先**: 物理削除より論理削除を選択
+- **DB制約活用**: passive_deletes=TrueでDB側のカスケード利用
+
+### イベント活用
+- **自動処理**: UUID生成、タイムスタンプ、ハッシュ化
+- **監査ログ**: 全変更の自動記録
+- **検証**: コミット前の整合性チェック
+- **統計更新**: カウンターの自動更新
+
+### 制約設計
+- **DB側制約**: パフォーマンスと確実性のため
+- **アプリ側検証**: ユーザーフレンドリーなエラー
+- **条件付き制約**: ビジネスロジックの表現
