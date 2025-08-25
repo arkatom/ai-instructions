@@ -1,6 +1,6 @@
-# SQLAlchemy 2.0 基本設定
+# SQLAlchemy 2.0 データベース設定
 
-SQLAlchemy 2.0における基本的なセットアップパターン。非同期エンジンとセッション設定、カスタム型定義を中心とした実装指針。
+SQLAlchemy 2.0における非同期エンジンとデータベース設定。プロダクション環境での最適化、監視、カスタム型定義を重視した実装指針。
 
 ## 🔧 SQLAlchemy 2.0 基本設定
 
@@ -123,21 +123,6 @@ class DatabaseManager:
             """トランザクション終了後のログ"""
             if transaction.is_active:
                 logging.debug("Transaction committed successfully")
-    
-    @asynccontextmanager
-    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
-        """セッション取得（コンテキストマネージャー）"""
-        if not self.session_factory:
-            raise RuntimeError("Database not initialized")
-        
-        async with self.session_factory() as session:
-            try:
-                yield session
-            except Exception:
-                await session.rollback()
-                raise
-            finally:
-                await session.close()
     
     async def create_tables(self):
         """テーブル作成"""
@@ -386,124 +371,4 @@ class DatabaseMonitor:
 # 使用例
 monitor = DatabaseMonitor()
 monitor.setup_monitoring(engine)
-```
-
-## 🚀 実装のベストプラクティス
-
-### 1. 非同期セッション管理
-
-```python
-# repository/base.py
-from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Type, Optional, List
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
-from sqlalchemy.exc import SQLAlchemyError
-
-T = TypeVar('T')
-
-class AsyncRepository(Generic[T], ABC):
-    """非同期リポジトリ基底クラス"""
-    
-    def __init__(self, session: AsyncSession, model_class: Type[T]):
-        self.session = session
-        self.model_class = model_class
-    
-    async def get_by_id(self, id: int) -> Optional[T]:
-        """IDによる取得"""
-        try:
-            result = await self.session.execute(
-                select(self.model_class).where(self.model_class.id == id)
-            )
-            return result.scalar_one_or_none()
-        except SQLAlchemyError as e:
-            logger.error(f"Error fetching {self.model_class.__name__} by id {id}: {e}")
-            raise
-    
-    async def create(self, entity: T) -> T:
-        """エンティティ作成"""
-        try:
-            self.session.add(entity)
-            await self.session.flush()
-            await self.session.refresh(entity)
-            return entity
-        except SQLAlchemyError as e:
-            logger.error(f"Error creating {self.model_class.__name__}: {e}")
-            await self.session.rollback()
-            raise
-    
-    async def update(self, entity: T) -> T:
-        """エンティティ更新"""
-        try:
-            await self.session.merge(entity)
-            await self.session.flush()
-            await self.session.refresh(entity)
-            return entity
-        except SQLAlchemyError as e:
-            logger.error(f"Error updating {self.model_class.__name__}: {e}")
-            await self.session.rollback()
-            raise
-    
-    async def delete(self, id: int) -> bool:
-        """エンティティ削除"""
-        try:
-            result = await self.session.execute(
-                delete(self.model_class).where(self.model_class.id == id)
-            )
-            return result.rowcount > 0
-        except SQLAlchemyError as e:
-            logger.error(f"Error deleting {self.model_class.__name__} with id {id}: {e}")
-            await self.session.rollback()
-            raise
-```
-
-### 2. トランザクション管理
-
-```python
-# services/base.py
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError
-import logging
-
-logger = logging.getLogger(__name__)
-
-class TransactionManager:
-    """トランザクション管理"""
-    
-    def __init__(self, db_manager):
-        self.db_manager = db_manager
-    
-    @asynccontextmanager
-    async def transaction(self) -> AsyncGenerator[AsyncSession, None]:
-        """トランザクション管理コンテキスト"""
-        async with self.db_manager.get_session() as session:
-            try:
-                await session.begin()
-                yield session
-                await session.commit()
-                logger.debug("Transaction committed successfully")
-            except SQLAlchemyError as e:
-                await session.rollback()
-                logger.error(f"Transaction rolled back due to error: {e}")
-                raise
-            except Exception as e:
-                await session.rollback()
-                logger.error(f"Transaction rolled back due to unexpected error: {e}")
-                raise
-
-# 使用例
-async def transfer_funds(transaction_manager, from_account_id, to_account_id, amount):
-    """資金移動（トランザクション例）"""
-    async with transaction_manager.transaction() as session:
-        # 複数の操作を同一トランザクション内で実行
-        from_account = await account_repo.get_by_id(from_account_id)
-        to_account = await account_repo.get_by_id(to_account_id)
-        
-        from_account.balance -= amount
-        to_account.balance += amount
-        
-        await session.flush()  # 制約チェックを実行
-        # コミットはコンテキストマネージャーが自動実行
 ```
