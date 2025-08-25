@@ -47,7 +47,7 @@ class UserValidationMixin:
 class User(Base, TimestampMixin, UserValidationMixin):
     __tablename__ = 'users'
     
-    # カラム定義...
+    # 要実装: 必要なカラムを定義（id, created_at, updated_at等）
     
     def validate_before_save(self):
         """保存前の総合検証"""

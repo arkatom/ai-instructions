@@ -40,7 +40,7 @@ class Post(Base, TimestampMixin, SoftDeleteMixin):
     # Relationships
     author: Mapped["User"] = relationship("User", back_populates="posts", lazy="selectin", init=False)
     category: Mapped[Optional["Category"]] = relationship("Category", back_populates="posts", lazy="selectin", init=False)
-    comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="post", cascade="all, delete-orphan", lazy="dynamic", init=False)
+    comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="post", cascade="all, delete-orphan", lazy="selectin", init=False)
     
     # Strategic indexes for performance
     __table_args__ = (
@@ -53,7 +53,8 @@ class Post(Base, TimestampMixin, SoftDeleteMixin):
     @hybrid_property
     def comment_count(self) -> int:
         """Active comment count (instance access)"""
-        return self.comments.filter(Comment.is_deleted == False, Comment.is_approved == True).count()
+        # selectin loaderの場合はPythonで計算
+        return len([c for c in self.comments if not c.is_deleted and c.is_approved])
     
     @comment_count.expression
     def comment_count(cls):
@@ -97,7 +98,7 @@ class Category(Base, TimestampMixin):
     # Relationships
     parent: Mapped[Optional["Category"]] = relationship("Category", remote_side=[id], back_populates="children", lazy="selectin", init=False)
     children: Mapped[List["Category"]] = relationship("Category", back_populates="parent", cascade="all, delete-orphan", lazy="selectin", init=False)
-    posts: Mapped[List["Post"]] = relationship("Post", back_populates="category", lazy="dynamic", init=False)
+    posts: Mapped[List["Post"]] = relationship("Post", back_populates="category", lazy="selectin", init=False)
     
     __table_args__ = (
         Index("idx_categories_parent_active", "parent_id", "is_active"),
@@ -107,7 +108,8 @@ class Category(Base, TimestampMixin):
     @hybrid_property
     def post_count(self) -> int:
         """Published post count"""
-        return self.posts.filter(Post.is_published == True, Post.is_deleted == False).count()
+        # selectin loaderの場合はPythonで計算
+        return len([p for p in self.posts if p.is_published and not p.is_deleted])
     
     @hybrid_property
     def full_path(self) -> str:

@@ -52,10 +52,12 @@ from sqlalchemy.orm import Session
 # イベントタイプ別リスナー
 @event.listens_for(User, 'before_insert')
 def user_before_insert(mapper, connection, target):
-    """挿入前処理"""
+    """挿入前処理 
+    # 注: 非同期エンジン使用時は同期イベントも可（内部で自動処理）
+    """
     target.uuid = str(uuid.uuid4())
     if hasattr(target, '_plain_password'):
-        target.password = hash_password(target._plain_password)
+        target.password = hash_password(target._plain_password)  # 要実装: hash_password関数
 
 @event.listens_for(User, 'before_delete')
 def user_before_delete(mapper, connection, target):
@@ -99,7 +101,7 @@ class AuditEventListener:
                 {
                     "table": model_class.__tablename__,
                     "id": target.id,
-                    "changes": json.dumps(target.to_dict())
+                    "changes": json.dumps(target.to_dict())  # 要実装: to_dict()メソッド（モデルを辞書化）
                 }
             )
         
