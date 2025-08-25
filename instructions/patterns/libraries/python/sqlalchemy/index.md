@@ -1,56 +1,73 @@
-# SQLAlchemy 2.0 Advanced ORM パターン
+# SQLAlchemy 2.0 エンタープライズパターン
 
-> SQLAlchemy 2.0の最新機能を活用した高度なORM実装パターン集
+> SQLAlchemy 2.0の最新機能を活用した、プロダクション環境向けの高度なORMパターン集
 > 
-> **対象**: Python 3.10+, SQLAlchemy 2.0+
-> **重点**: 非同期処理、型安全性、パフォーマンス最適化
+> **対象**: Python 3.10+, SQLAlchemy 2.0+, PostgreSQL/MySQL
+> **重点**: 非同期処理、型安全性、パフォーマンス最適化、エンタープライズ機能
 
-## 📚 学習パス
+## 📚 ドキュメント構成
 
-### 初級者向け
-1. [基本設定](./01-setup.md) - 非同期エンジン、セッション管理
-2. [モデル定義](./02-models.md) - Mapped型、データクラス統合
-3. [リレーションシップ](./03-relationships.md) - 関連定義、遅延読み込み
+### 🔧 セットアップ（2ファイル）
+1. [データベース設定](./01-database-config.md) - 非同期エンジン、接続プール、カスタム型
+2. [セッション管理](./01-session-management.md) - トランザクション制御、ミドルウェア統合
 
-### 中級者向け
-4. [クエリパターン](./04-queries.md) - 複雑なクエリ、JOIN最適化
-5. [パフォーマンス最適化](./05-optimization.md) - N+1問題、バルク操作
+### 📝 モデル定義（3ファイル）
+3. [ユーザーモデル](./02-user-models.md) - 認証、権限、プロファイル管理
+4. [コンテンツモデル](./02-content-models.md) - 投稿、カテゴリ、コメント
+5. [モデルユーティリティ](./02-model-utilities.md) - バリデーション、イベント、ヘルパー
 
-### 上級者向け
-6. [テスト戦略](./06-testing.md) - 非同期テスト、モック、ファクトリー
-7. [高度なパターン](./07-patterns.md) - イベント、ハイブリッド属性、パーティショニング
+### 🔗 リレーションシップ（3ファイル）
+6. [関連テーブルパターン](./03-association-patterns.md) - 多対多、関連オブジェクト
+7. [ローディング戦略](./03-relationship-loading.md) - Lazy/Eager Loading、N+1問題
+8. [イベントと制約](./03-relationship-events.md) - カスケード、イベントリスナー
 
-## 🎯 タスク別クイックアクセス
+### 🔍 クエリパターン（4ファイル）
+9. [高度なクエリ](./04-advanced-queries.md) - 複雑なJOIN、サブクエリ、ネットワーク分析
+10. [ユーザー検索](./04-user-search.md) - 高度な検索条件、フィルタリング
+11. [エンゲージメント分析](./04-engagement-analytics.md) - 統計、推薦アルゴリズム
+12. [検索とダッシュボード](./04-search-dashboard.md) - 全文検索、ファセット検索
 
-### データベース接続
-- [非同期エンジン設定](./01-setup.md#async-engine)
-- [接続プール最適化](./01-setup.md#connection-pool)
-- [セッション管理](./01-setup.md#session-management)
+### ⚡ 最適化（2ファイル）
+13. [ローディング最適化](./05-loading-optimization.md) - N+1問題解決、バルク操作
+14. [キャッシング戦略](./05-caching-indexing.md) - Redis統合、インデックス最適化
 
-### モデル設計
-- [Mapped型アノテーション](./02-models.md#mapped-types)
-- [データクラス統合](./02-models.md#dataclass-integration)
-- [カスタムベースクラス](./02-models.md#custom-base)
+### 🧪 テスト（3ファイル）
+15. [テスト環境構築](./06-test-setup.md) - フィクスチャ、ファクトリー
+16. [リポジトリテスト](./06-repository-tests.md) - モック戦略、非同期テスト
+17. [統合テスト](./06-performance-integration.md) - パフォーマンステスト、CI/CD
 
-### リレーションシップ
-- [1対多・多対多](./03-relationships.md#basic-relationships)
-- [遅延読み込み戦略](./03-relationships.md#lazy-loading)
-- [カスケード設定](./03-relationships.md#cascading)
+### 📖 レガシーファイル（参考用）
+- [基本設定（旧版）](./01-setup.md) - SQLAlchemy基本設定
+- [モデル定義（旧版）](./02-models.md) - 基本的なモデル定義
+- [リレーションシップ（旧版）](./03-relationships.md) - 関連定義
+- [クエリパターン（旧版）](./04-queries.md) - クエリ実装
+- [最適化（旧版）](./05-optimization.md) - パフォーマンス改善
+- [テスト戦略（旧版）](./06-testing.md) - テスト実装
 
-### クエリ最適化
-- [select()構文](./04-queries.md#select-syntax)
-- [JOIN最適化](./04-queries.md#join-optimization)
-- [サブクエリ](./04-queries.md#subqueries)
+## 🎯 主要機能
 
-### パフォーマンス
-- [N+1問題解決](./05-optimization.md#n-plus-one)
-- [バルク操作](./05-optimization.md#bulk-operations)
-- [キャッシング](./05-optimization.md#caching)
+### SQLAlchemy 2.0の新機能
+- **非同期サポート**: asyncioベースの非同期処理
+- **新しいクエリ構文**: select()スタイルの直感的なクエリ
+- **型安全性**: Python 3.10+の型ヒント完全対応
+- **パフォーマンス向上**: コンパイル済みクエリキャッシュ
 
-### テスト
-- [非同期テスト](./06-testing.md#async-testing)
-- [ファクトリーパターン](./06-testing.md#factory-pattern)
-- [トランザクション管理](./06-testing.md#transaction-management)
+### エンタープライズ機能
+- 論理削除とソフトデリート
+- 監査ログとバージョニング
+- マルチテナント対応
+- 高度なキャッシング戦略
+- バルク操作とバッチ処理
+- 分散トランザクション管理
+
+## 💡 SQLAlchemy 2.0 主要変更点
+
+1. **型アノテーション**: `Mapped[]`による型安全な定義
+2. **データクラス統合**: `MappedAsDataclass`でシームレス統合
+3. **非同期ファースト**: `asyncio`完全対応
+4. **新クエリ構文**: `select()`中心の直感的な構文
+5. **パフォーマンス向上**: 内部最適化による高速化
+6. **型チェッカー対応**: mypy/pyright完全サポート
 
 ## 💡 SQLAlchemy 2.0 主要変更点
 
