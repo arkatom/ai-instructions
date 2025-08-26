@@ -1,6 +1,5 @@
 ---
 description: AI開発指示
-globs: ["**/*.md", "**/*.json", "**/*.yaml", "**/*.yml", "**/Dockerfile", "**/docker-compose.yml"]
 alwaysApply: true
 ---
 
@@ -15,7 +14,7 @@ alwaysApply: true
 
 ### 実行フロー
 1. **分析** → 要求の本質を理解
-2. **計画** → 最適なアプローチを選択  
+2. **計画** → 最適なアプローチを選択
 3. **実装** → 品質基準を満たす実行
 4. **検証** → 結果の妥当性を確認
 
@@ -31,6 +30,8 @@ alwaysApply: true
 | Git操作 | [Git運用](./instructions/workflows/git-complete.md) | commit/PR/branch操作時 |
 | TDD開発 | [TDD手法](./instructions/methodologies/tdd.md) | テスト駆動開発時 |
 | Issue管理 | [Issue駆動](./instructions/methodologies/github-idd.md) | Issue関連作業時 |
+| カスタムインストラクション記述ガイド | [カスタムインストラクション記述ガイド](./instructions/core/custom-instruction-writing-guide.md) | カスタムインストラクション追加・編集時 |
+| インストラクション vs リファレンスの分離指針 | [インストラクション vs リファレンスの分離指針](./instructions/core/instruction-vs-reference.md) | カスタムインストラクション追加・編集時 |
 
 ## 🔧 ツール活用
 
@@ -67,11 +68,22 @@ project/
 └── src/          # ソースコード
 ```
 
-## 🎨 patterns/について
+## 🎨 patterns/について（重要）
 
-`instructions/patterns/`配下のファイルは**開発者向けリファレンス**です。
-AIは必要と判断した場合のみ参照してください。
-過度な具体例への依存は創造性を制限します。
+### 現在の状態
+`instructions/patterns/`配下には304個のファイル（3.5MB）の実装例が存在します。
+これらは**開発者向けリファレンス**であり、カスタムインストラクションではありません。
+
+### 参照ルール
+- **デフォルト**: 参照しない（創造性優先）
+- **例外的に参照する場合**:
+  - ユーザーが特定フレームワーク/ライブラリの使用を明示
+  - 「既存パターンに従って」という指示がある場合
+  - 一貫性が創造性より重要な場合
+
+### 今後の移行計画
+Issue #118に基づき、`references/patterns/`へ移動予定。
+過度な具体例への依存は創造性を制限するため、慎重に利用すること。
 
 ---
 *コンテキスト効率: 100行以内で核心を伝達*
