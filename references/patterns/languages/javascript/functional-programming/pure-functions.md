@@ -1,35 +1,35 @@
-# 純粋関数と副作用
+# Pure Functions and Side Effects
 
-## 純粋関数の基本原則
+## Basic Principles of Pure Functions
 
 ```javascript
-// 純粋関数の例
+// Pure function examples
 const add = (a, b) => a + b;
 const multiply = (x, y) => x * y;
 const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 
-// 不純な関数とその純粋版
-// 不純: 外部状態に依存
+// Impure functions and their pure alternatives
+// Impure: depends on external state
 let counter = 0;
 const impureIncrement = () => ++counter;
 
-// 純粋: 新しい状態を返す
+// Pure: returns new state
 const pureIncrement = (count) => count + 1;
 
-// 不純: 入力を変更
+// Impure: modifies input
 const impurePush = (arr, item) => {
   arr.push(item);
   return arr;
 };
 
-// 純粋: 新しい配列を返す
+// Pure: returns new array
 const purePush = (arr, item) => [...arr, item];
 ```
 
-## 副作用の管理
+## Managing Side Effects
 
 ```javascript
-// 副作用を純粋関数で包む
+// Wrapping side effects with pure functions
 const createEffectWrapper = (sideEffect) => {
   return (pureFunction) => {
     return (...args) => {
@@ -45,7 +45,7 @@ const addWithLogging = logEffect(add);
 
 const result = addWithLogging(2, 3); // Logs: 5, Returns: 5
 
-// IO操作を純粋関数として表現
+// Expressing IO operations as pure functions
 const createIO = (effect) => ({
   effect,
   map: (fn) => createIO(() => fn(effect())),
@@ -66,10 +66,10 @@ const fileOperation = readFile('test.txt')
 console.log(fileOperation.run());
 ```
 
-## 状態管理パターン
+## State Management Patterns
 
 ```javascript
-// 状態更新を純粋関数で行う
+// State updates with pure functions
 const updateState = (state, action) => {
   switch (action.type) {
     case 'INCREMENT':
@@ -83,7 +83,7 @@ const updateState = (state, action) => {
   }
 };
 
-// レンズパターンで深いオブジェクトを操作
+// Lens pattern for deep object manipulation
 const lens = (getter, setter) => ({
   get: getter,
   set: setter,
@@ -103,7 +103,7 @@ const path = (keys) => keys.reduce((acc, key) =>
   lens(x => x, value => _ => value)
 );
 
-// 使用例
+// Usage example
 const user = { name: 'John', address: { city: 'Tokyo', zip: '123' } };
 const nameLens = prop('name');
 const cityLens = path(['address', 'city']);
@@ -112,10 +112,10 @@ const newUser = cityLens.set('Osaka')(user);
 const upperName = nameLens.over(str => str.toUpperCase())(user);
 ```
 
-## エラーハンドリング
+## Error Handling
 
 ```javascript
-// Result型でエラーを管理
+// Managing errors with Result type
 const Result = {
   Ok: (value) => ({ type: 'Ok', value }),
   Error: (error) => ({ type: 'Error', error }),
@@ -130,7 +130,7 @@ const Result = {
     result.type === 'Ok' ? result.value : defaultValue
 };
 
-// 純粋な計算でエラーハンドリング
+// Pure calculations with error handling
 const safeDivide = (a, b) => 
   b === 0 ? Result.Error('Division by zero') : Result.Ok(a / b);
 

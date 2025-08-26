@@ -1,6 +1,6 @@
 # Production Examples
 
-## 1. Web スクレイピングシステム
+## 1. Production-Ready Web Scraping System
 
 ```python
 import asyncio
@@ -9,9 +9,11 @@ import time
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import json
+import logging
 
 @dataclass
 class ScrapingResult:
+    """Container for web scraping results with comprehensive metadata"""
     url: str
     status_code: int
     content_length: int
@@ -20,7 +22,7 @@ class ScrapingResult:
     error: Optional[str] = None
 
 class ProductionWebScraper:
-    """本番環境用Webスクレイパー"""
+    """Enterprise-grade web scraper with rate limiting, error handling, and monitoring"""
     
     def __init__(
         self, 
@@ -35,7 +37,7 @@ class ProductionWebScraper:
         self.semaphore = asyncio.Semaphore(max_concurrent)
         self.session: Optional[aiohttp.ClientSession] = None
         
-        # エラーハンドリング
+        # Error handling system
         self.error_handler = ConcurrencyErrorHandler()
         self.error_handler.register_retry_strategy(
             aiohttp.ClientError,
@@ -44,13 +46,14 @@ class ProductionWebScraper:
             backoff_factor=2.0
         )
         
-        # レート制限
+        # Rate limiting
         self.last_request_time = 0
         
-        # 結果収集
+        # Results collection
         self.results: List[ScrapingResult] = []
         
     async def __aenter__(self):
+        """Initialize HTTP session with optimized settings"""
         connector = aiohttp.TCPConnector(
             limit=self.max_concurrent * 2,
             limit_per_host=self.max_concurrent,
@@ -75,14 +78,15 @@ class ProductionWebScraper:
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Clean up HTTP session"""
         if self.session:
             await self.session.close()
     
     async def scrape_url(self, url: str) -> ScrapingResult:
-        """単一URLのスクレイピング"""
+        """Scrape a single URL with comprehensive error handling and rate limiting"""
         
         async with self.semaphore:
-            # レート制限の実装
+            # Implement rate limiting
             current_time = time.time()
             time_since_last = current_time - self.last_request_time
             
@@ -98,7 +102,7 @@ class ProductionWebScraper:
                     content = await response.text()
                     processing_time = time.time() - start_time
                     
-                    # データの抽出（例：JSON API）
+                    # Extract structured data (example: JSON API)
                     data = None
                     if response.content_type == 'application/json':
                         try:
@@ -120,7 +124,7 @@ class ProductionWebScraper:
             except Exception as e:
                 processing_time = time.time() - start_time
                 
-                # エラーハンドリング
+                # Comprehensive error handling
                 self.error_handler.handle_error(
                     e, 
                     {"url": url}, 
@@ -139,13 +143,13 @@ class ProductionWebScraper:
                 return error_result
     
     async def scrape_batch(self, urls: List[str]) -> List[ScrapingResult]:
-        """バッチスクレイピング"""
+        """Execute batch scraping with concurrent processing"""
         
         tasks = [self.scrape_url(url) for url in urls]
         return await asyncio.gather(*tasks, return_exceptions=True)
     
     def get_statistics(self) -> Dict[str, Any]:
-        """統計情報の取得"""
+        """Generate comprehensive scraping statistics"""
         if not self.results:
             return {}
         
@@ -162,8 +166,9 @@ class ProductionWebScraper:
             "error_summary": self.error_handler.get_error_summary()
         }
 
-# 使用例
+# Usage Example
 async def scraping_example():
+    """Demonstration of production web scraping system"""
     urls = [
         "https://httpbin.org/json",
         "https://httpbin.org/delay/1",
@@ -178,7 +183,7 @@ async def scraping_example():
         timeout=10.0
     ) as scraper:
         
-        logger.info(f"Starting to scrape {len(urls)} URLs")
+        logging.info(f"🚀 Starting to scrape {len(urls)} URLs")
         start_time = time.time()
         
         results = await scraper.scrape_batch(urls)
@@ -186,13 +191,13 @@ async def scraping_example():
         total_time = time.time() - start_time
         stats = scraper.get_statistics()
         
-        logger.info(f"Scraping completed in {total_time:.2f} seconds")
-        logger.info(f"Statistics: {stats}")
+        logging.info(f"✅ Scraping completed in {total_time:.2f} seconds")
+        logging.info(f"📊 Statistics: {stats}")
         
         return results, stats
 ```
 
-## 2. 分散タスク処理システム
+## 2. Distributed Task Processing System
 
 ```python
 import asyncio
@@ -204,8 +209,11 @@ from dataclasses import dataclass, field
 from enum import Enum
 import hashlib
 import uuid
+import threading
+import logging
 
 class TaskStatus(Enum):
+    """Task execution status enumeration"""
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -214,6 +222,7 @@ class TaskStatus(Enum):
 
 @dataclass
 class Task:
+    """Comprehensive task representation with metadata and state tracking"""
     task_id: str
     function_name: str
     args: tuple
@@ -227,7 +236,7 @@ class Task:
     execution_time: float = 0.0
 
 class DistributedTaskProcessor:
-    """分散タスク処理システム"""
+    """High-performance distributed task processing system with monitoring and fault tolerance"""
     
     def __init__(
         self, 
@@ -239,30 +248,30 @@ class DistributedTaskProcessor:
         self.task_timeout = task_timeout
         self.result_ttl = result_ttl
         
-        # プロセス間通信
+        # Inter-process communication
         self.task_queue = multiprocessing.Queue()
         self.result_queue = multiprocessing.Queue()
         self.control_queue = multiprocessing.Queue()
         
-        # タスクとワーカーの管理
+        # Task and worker management
         self.tasks: Dict[str, Task] = {}
         self.workers: List[multiprocessing.Process] = []
         self.worker_stats: Dict[str, Dict[str, Any]] = {}
         
-        # 共有状態
+        # Shared state management
         self.manager = multiprocessing.Manager()
         self.shared_state = self.manager.dict()
         self.worker_heartbeats = self.manager.dict()
         
-        # 登録された関数
+        # Function registry
         self.registered_functions: Dict[str, Callable] = {}
         
-        # 監視スレッド
+        # Monitoring system
         self.monitor_active = threading.Event()
         self.monitor_thread: Optional[threading.Thread] = None
         
     def register_function(self, name: str, func: Callable):
-        """処理関数の登録"""
+        """Register function for distributed execution"""
         self.registered_functions[name] = func
         
     def submit_task(
@@ -273,7 +282,7 @@ class DistributedTaskProcessor:
         task_id: Optional[str] = None,
         **kwargs
     ) -> str:
-        """タスクの投入"""
+        """Submit task for distributed processing"""
         
         if func_name not in self.registered_functions:
             raise ValueError(f"Function {func_name} not registered")
@@ -299,7 +308,7 @@ class DistributedTaskProcessor:
         task_id: str, 
         timeout: Optional[float] = None
     ) -> Task:
-        """タスク結果の取得"""
+        """Retrieve task result with optional timeout"""
         
         if task_id not in self.tasks:
             raise ValueError(f"Task {task_id} not found")
@@ -316,7 +325,7 @@ class DistributedTaskProcessor:
         return task
     
     def cancel_task(self, task_id: str) -> bool:
-        """タスクのキャンセル"""
+        """Cancel pending or running task"""
         
         if task_id not in self.tasks:
             return False
@@ -327,14 +336,14 @@ class DistributedTaskProcessor:
             task.status = TaskStatus.CANCELLED
             return True
         elif task.status == TaskStatus.RUNNING:
-            # 実行中のタスクはワーカーに停止要求を送信
+            # Send cancellation request to worker
             self.control_queue.put(("cancel", task_id))
             return True
         
         return False
     
     def start_workers(self):
-        """ワーカープロセスの開始"""
+        """Start worker processes and monitoring system"""
         
         for i in range(self.num_workers):
             worker = multiprocessing.Process(
@@ -345,7 +354,7 @@ class DistributedTaskProcessor:
             worker.start()
             self.workers.append(worker)
         
-        # 監視スレッドの開始
+        # Start monitoring thread
         self.monitor_active.set()
         self.monitor_thread = threading.Thread(
             target=self._monitor_workers,
@@ -353,14 +362,14 @@ class DistributedTaskProcessor:
         )
         self.monitor_thread.start()
         
-        logger.info(f"Started {self.num_workers} worker processes")
+        logging.info(f"🚀 Started {self.num_workers} worker processes")
     
     def _worker_process(self, worker_id: str):
-        """ワーカープロセスのメインループ"""
+        """Main worker process loop with comprehensive error handling"""
         
-        logger.info(f"Worker {worker_id} started")
+        logging.info(f"👷 Worker {worker_id} started")
         
-        # ワーカー統計
+        # Worker statistics tracking
         stats = {
             "tasks_completed": 0,
             "tasks_failed": 0,
@@ -370,27 +379,27 @@ class DistributedTaskProcessor:
         
         while True:
             try:
-                # ハートビートの更新
+                # Update worker heartbeat
                 self.worker_heartbeats[worker_id] = time.time()
                 
-                # 制御メッセージのチェック
+                # Check for control messages
                 try:
                     command, data = self.control_queue.get_nowait()
                     if command == "shutdown":
                         break
                     elif command == "cancel":
-                        # キャンセル処理（実装は簡略化）
+                        # Handle task cancellation (simplified implementation)
                         continue
                 except:
                     pass
                 
-                # タスクの取得
+                # Get next task
                 try:
                     task = self.task_queue.get(timeout=1.0)
                 except:
                     continue
                 
-                # タスクの実行
+                # Execute task
                 task.status = TaskStatus.RUNNING
                 task.worker_id = worker_id
                 
@@ -409,28 +418,28 @@ class DistributedTaskProcessor:
                     task.status = TaskStatus.FAILED
                     stats["tasks_failed"] += 1
                     
-                    logger.error(f"Task {task.task_id} failed: {e}")
+                    logging.error(f"❌ Task {task.task_id} failed: {e}")
                 
                 finally:
                     task.execution_time = time.time() - start_time
                     stats["total_execution_time"] += task.execution_time
                     
-                    # 結果をメインプロセスに送信
+                    # Send result back to main process
                     self.result_queue.put(task)
                 
             except Exception as e:
-                logger.error(f"Worker {worker_id} error: {e}")
+                logging.error(f"💥 Worker {worker_id} error: {e}")
         
-        # 統計情報の保存
+        # Save worker statistics
         self.worker_stats[worker_id] = stats
-        logger.info(f"Worker {worker_id} stopped")
+        logging.info(f"👋 Worker {worker_id} stopped")
     
     def _monitor_workers(self):
-        """ワーカー監視スレッド"""
+        """Monitor worker processes and handle results"""
         
         while self.monitor_active.is_set():
             try:
-                # 結果の処理
+                # Process completed tasks
                 try:
                     while True:
                         task = self.result_queue.get_nowait()
@@ -438,52 +447,52 @@ class DistributedTaskProcessor:
                 except:
                     pass
                 
-                # ワーカーヘルスチェック
+                # Worker health check
                 current_time = time.time()
                 for worker_id, last_heartbeat in list(self.worker_heartbeats.items()):
-                    if current_time - last_heartbeat > 30.0:  # 30秒無応答
-                        logger.warning(f"Worker {worker_id} appears to be unresponsive")
+                    if current_time - last_heartbeat > 30.0:  # 30 second timeout
+                        logging.warning(f"⚠️ Worker {worker_id} appears to be unresponsive")
                 
-                # タスクタイムアウトのチェック
+                # Task timeout check
                 for task_id, task in self.tasks.items():
                     if (task.status == TaskStatus.RUNNING and 
                         current_time - task.created_at > self.task_timeout):
                         task.status = TaskStatus.FAILED
                         task.error = "Task timeout"
-                        logger.warning(f"Task {task_id} timed out")
+                        logging.warning(f"⏰ Task {task_id} timed out")
                 
             except Exception as e:
-                logger.error(f"Monitor error: {e}")
+                logging.error(f"📡 Monitor error: {e}")
                 
             time.sleep(1.0)
     
     def shutdown(self, timeout: float = 30.0):
-        """システムのシャットダウン"""
+        """Gracefully shutdown the distributed processing system"""
         
-        logger.info("Shutting down distributed task processor")
+        logging.info("🔄 Shutting down distributed task processor")
         
-        # 監視スレッドの停止
+        # Stop monitoring thread
         if self.monitor_active.is_set():
             self.monitor_active.clear()
             
         if self.monitor_thread:
             self.monitor_thread.join(timeout=5.0)
         
-        # ワーカーに停止命令
+        # Send shutdown command to workers
         for _ in range(self.num_workers):
             self.control_queue.put(("shutdown", None))
         
-        # ワーカープロセスの終了待機
+        # Wait for workers to terminate
         for worker in self.workers:
             worker.join(timeout=timeout / self.num_workers)
             
             if worker.is_alive():
-                logger.warning(f"Force terminating worker {worker.pid}")
+                logging.warning(f"⚡ Force terminating worker {worker.pid}")
                 worker.terminate()
                 worker.join(timeout=5.0)
     
     def get_system_stats(self) -> Dict[str, Any]:
-        """システム統計の取得"""
+        """Generate comprehensive system statistics"""
         
         total_tasks = len(self.tasks)
         completed = len([t for t in self.tasks.values() if t.status == TaskStatus.COMPLETED])
@@ -502,16 +511,16 @@ class DistributedTaskProcessor:
             "worker_stats": dict(self.worker_stats)
         }
 
-# 処理関数の例
+# Example processing functions
 def cpu_intensive_calculation(n: int) -> int:
-    """CPU集約的な計算"""
+    """CPU-intensive mathematical calculation for testing"""
     result = 0
     for i in range(n * 1000):
         result += i ** 0.5
     return int(result)
 
 def data_processing_task(data: List[int]) -> Dict[str, Any]:
-    """データ処理タスク"""
+    """Statistical data processing task"""
     import statistics
     
     return {
@@ -522,59 +531,106 @@ def data_processing_task(data: List[int]) -> Dict[str, Any]:
         "stdev": statistics.stdev(data) if len(data) > 1 else 0
     }
 
-# 使用例
+def advanced_text_processing(text: str, operations: List[str]) -> Dict[str, Any]:
+    """Advanced text processing with multiple operations"""
+    results = {
+        "original_length": len(text),
+        "word_count": len(text.split()),
+        "operations_applied": operations
+    }
+    
+    for operation in operations:
+        if operation == "uppercase":
+            text = text.upper()
+        elif operation == "reverse":
+            text = text[::-1]
+        elif operation == "remove_vowels":
+            text = ''.join([c for c in text if c.lower() not in 'aeiou'])
+    
+    results["processed_text"] = text
+    results["final_length"] = len(text)
+    
+    return results
+
+# Usage Example
 def distributed_processing_example():
+    """Comprehensive demonstration of distributed task processing"""
     processor = DistributedTaskProcessor(num_workers=4)
     
-    # 関数の登録
+    # Register processing functions
     processor.register_function("cpu_calc", cpu_intensive_calculation)
     processor.register_function("data_proc", data_processing_task)
+    processor.register_function("text_proc", advanced_text_processing)
     
-    # ワーカーの開始
+    # Start worker processes
     processor.start_workers()
     
-    # タスクの投入
+    # Submit various types of tasks
     task_ids = []
     
-    # CPU集約的タスク
+    print("📤 Submitting CPU-intensive tasks...")
+    # CPU-intensive tasks
     for i in range(10):
         task_id = processor.submit_task("cpu_calc", i + 1, priority=1)
         task_ids.append(task_id)
     
-    # データ処理タスク
+    print("📤 Submitting data processing tasks...")
+    # Data processing tasks
     import random
     for i in range(5):
         data = [random.randint(1, 100) for _ in range(50)]
         task_id = processor.submit_task("data_proc", data, priority=2)
         task_ids.append(task_id)
     
-    # 結果の取得
+    print("📤 Submitting text processing tasks...")
+    # Text processing tasks
+    sample_texts = [
+        "The quick brown fox jumps over the lazy dog",
+        "Lorem ipsum dolor sit amet consectetur adipiscing elit",
+        "Python concurrent programming with multiprocessing"
+    ]
+    
+    for text in sample_texts:
+        operations = ["uppercase", "reverse", "remove_vowels"]
+        task_id = processor.submit_task("text_proc", text, operations, priority=3)
+        task_ids.append(task_id)
+    
+    # Collect results
+    print(f"⏳ Waiting for {len(task_ids)} tasks to complete...")
     results = []
+    
     for task_id in task_ids:
         try:
             task = processor.get_task_result(task_id, timeout=60.0)
             results.append({
                 "task_id": task_id,
+                "function": task.function_name,
                 "status": task.status.value,
                 "result": task.result,
-                "execution_time": task.execution_time
+                "execution_time": task.execution_time,
+                "worker_id": task.worker_id
             })
+            print(f"✅ Task {task_id} completed in {task.execution_time:.3f}s")
         except Exception as e:
-            logger.error(f"Failed to get result for task {task_id}: {e}")
+            logging.error(f"❌ Failed to get result for task {task_id}: {e}")
     
-    # 統計の表示
+    # Display comprehensive statistics
     stats = processor.get_system_stats()
-    logger.info(f"System statistics: {stats}")
+    print(f"\n📊 System Statistics:")
+    print(f"  Total tasks: {stats['total_tasks']}")
+    print(f"  Success rate: {stats['success_rate']:.1f}%")
+    print(f"  Active workers: {stats['active_workers']}")
     
-    # システムのシャットダウン
+    # Shutdown system
     processor.shutdown()
     
     return results, stats
 
-# メイン実行
+# Main execution
 if __name__ == "__main__":
-    # 例の実行
+    # Execute comprehensive example
+    print("🚀 Starting distributed processing example...")
     results, stats = distributed_processing_example()
-    print(f"Processed {len(results)} tasks")
-    print(f"System stats: {stats}")
+    print(f"\n🎯 Processed {len(results)} tasks successfully")
+    print(f"📈 Final system stats: {stats}")
 ```

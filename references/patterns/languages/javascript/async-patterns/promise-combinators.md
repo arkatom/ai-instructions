@@ -1,6 +1,6 @@
-# Promise組み合わせパターン
+# Promise Combinator Patterns
 
-## Promise.allSettled拡張版
+## Enhanced Promise.allSettled
 
 ```javascript
 // Promise.all with error handling per promise
@@ -24,7 +24,7 @@ async function allSettledWithDetails(promises) {
 }
 ```
 
-## タイムアウト付きrace
+## Race with Timeout
 
 ```javascript
 // Promise.race with timeout
@@ -37,7 +37,7 @@ function raceWithTimeout(promises, timeoutMs, timeoutValue) {
 }
 ```
 
-## Promise.any詳細版
+## Enhanced Promise.any
 
 ```javascript
 // Promise.any with detailed error
@@ -55,7 +55,7 @@ async function anyWithDetails(promises) {
 }
 ```
 
-## 順次処理パターン
+## Sequential Processing Patterns
 
 ```javascript
 // Sequential processing with Promise.reduce equivalent
@@ -78,7 +78,7 @@ async function conditionalPromise(condition, promiseFn, fallbackValue) {
 }
 ```
 
-## Promiseパイプライン
+## Promise Pipeline
 
 ```javascript
 // Promise pipeline

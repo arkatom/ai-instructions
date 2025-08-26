@@ -1,6 +1,6 @@
 ## Integration & E2E Testing
 
-### 1. 統合テストパターン
+### 1. Integration Test Patterns
 
 ```python
 import pytest
@@ -16,9 +16,10 @@ import psycopg2
 import redis
 import tempfile
 import shutil
+import json
 
 class TestEnvironmentManager:
-    """テスト環境管理クラス"""
+    """Test environment management class"""
     
     def __init__(self):
         self.docker_client = docker.from_env()
@@ -27,9 +28,9 @@ class TestEnvironmentManager:
         self.temp_dirs = []
     
     def start_postgres(self, container_name: str = "test_postgres") -> Dict[str, Any]:
-        """PostgreSQLコンテナの起動"""
+        """Start PostgreSQL container"""
         try:
-            # 既存のコンテナを停止・削除
+            # Stop and remove existing container
             existing = self.docker_client.containers.get(container_name)
             existing.stop()
             existing.remove()
@@ -51,7 +52,7 @@ class TestEnvironmentManager:
         
         self.containers[container_name] = container
         
-        # 接続待機
+        # Wait for connection
         self._wait_for_postgres(container)
         
         port = container.attrs['NetworkSettings']['Ports']['5432/tcp'][0]['HostPort']
@@ -66,7 +67,7 @@ class TestEnvironmentManager:
         }
     
     def start_redis(self, container_name: str = "test_redis") -> Dict[str, Any]:
-        """Redisコンテナの起動"""
+        """Start Redis container"""
         try:
             existing = self.docker_client.containers.get(container_name)
             existing.stop()
@@ -84,7 +85,7 @@ class TestEnvironmentManager:
         
         self.containers[container_name] = container
         
-        # 接続待機
+        # Wait for connection
         self._wait_for_redis(container)
         
         port = container.attrs['NetworkSettings']['Ports']['6379/tcp'][0]['HostPort']
@@ -96,15 +97,15 @@ class TestEnvironmentManager:
         }
     
     def start_web_application(self, app_path: str, env_vars: Dict[str, str] = None) -> Dict[str, Any]:
-        """Webアプリケーションの起動"""
+        """Start web application"""
         if env_vars is None:
             env_vars = {}
         
-        # 環境変数の設定
+        # Set environment variables
         env = os.environ.copy()
         env.update(env_vars)
         
-        # アプリケーションの起動
+        # Start application
         process = subprocess.Popen(
             ["python", app_path],
             env=env,
@@ -114,7 +115,7 @@ class TestEnvironmentManager:
         
         self.processes["web_app"] = process
         
-        # アプリケーションの起動待機
+        # Wait for application startup
         self._wait_for_web_app("http://localhost:8000")
         
         return {
@@ -123,7 +124,7 @@ class TestEnvironmentManager:
         }
     
     def _wait_for_postgres(self, container, timeout: int = 30):
-        """PostgreSQL接続待機"""
+        """Wait for PostgreSQL connection"""
         port = container.attrs['NetworkSettings']['Ports']['5432/tcp'][0]['HostPort']
         
         for _ in range(timeout):
@@ -143,7 +144,7 @@ class TestEnvironmentManager:
         raise TimeoutError("PostgreSQL failed to start within timeout")
     
     def _wait_for_redis(self, container, timeout: int = 30):
-        """Redis接続待機"""
+        """Wait for Redis connection"""
         port = container.attrs['NetworkSettings']['Ports']['6379/tcp'][0]['HostPort']
         
         for _ in range(timeout):
@@ -157,7 +158,7 @@ class TestEnvironmentManager:
         raise TimeoutError("Redis failed to start within timeout")
     
     def _wait_for_web_app(self, base_url: str, timeout: int = 30):
-        """Webアプリケーション起動待機"""
+        """Wait for web application startup"""
         for _ in range(timeout):
             try:
                 response = requests.get(f"{base_url}/health", timeout=5)
@@ -169,14 +170,14 @@ class TestEnvironmentManager:
         raise TimeoutError("Web application failed to start within timeout")
     
     def create_temp_directory(self) -> Path:
-        """一時ディレクトリの作成"""
+        """Create temporary directory"""
         temp_dir = Path(tempfile.mkdtemp())
         self.temp_dirs.append(temp_dir)
         return temp_dir
     
     def cleanup(self):
-        """リソースのクリーンアップ"""
-        # プロセスの終了
+        """Clean up resources"""
+        # Terminate processes
         for name, process in self.processes.items():
             if process.poll() is None:
                 process.terminate()
@@ -185,7 +186,7 @@ class TestEnvironmentManager:
                 except subprocess.TimeoutExpired:
                     process.kill()
         
-        # コンテナの停止
+        # Stop containers
         for name, container in self.containers.items():
             try:
                 container.stop()
@@ -193,28 +194,28 @@ class TestEnvironmentManager:
             except docker.errors.NotFound:
                 pass
         
-        # 一時ディレクトリの削除
+        # Delete temporary directories
         for temp_dir in self.temp_dirs:
             if temp_dir.exists():
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
 @pytest.fixture(scope="session")
 def test_environment():
-    """テスト環境フィクスチャ"""
+    """Test environment fixture"""
     manager = TestEnvironmentManager()
     yield manager
     manager.cleanup()
 
 @pytest.fixture(scope="session")
 def integration_setup(test_environment):
-    """統合テスト環境のセットアップ"""
-    # PostgreSQLの起動
+    """Integration test environment setup"""
+    # Start PostgreSQL
     postgres_config = test_environment.start_postgres()
     
-    # Redisの起動
+    # Start Redis
     redis_config = test_environment.start_redis()
     
-    # 設定ファイルの作成
+    # Create configuration file
     config_dir = test_environment.create_temp_directory()
     config_file = config_dir / "test_config.json"
     
@@ -232,7 +233,7 @@ def integration_setup(test_environment):
     
     config_file.write_text(json.dumps(config_data, indent=2))
     
-    # Webアプリケーションの起動
+    # Start web application
     app_config = test_environment.start_web_application(
         "myapp/main.py",
         {
@@ -248,13 +249,13 @@ def integration_setup(test_environment):
         "config_file": config_file
     }
 
-# 統合テストケース
+# Integration test cases
 @pytest.mark.integration
 def test_user_registration_flow(integration_setup):
-    """ユーザー登録フローの統合テスト"""
+    """User registration flow integration test"""
     base_url = integration_setup["web_app"]["base_url"]
     
-    # 1. ユーザー登録
+    # 1. User registration
     user_data = {
         "username": "integration_user",
         "email": "integration@example.com",
@@ -270,7 +271,7 @@ def test_user_registration_flow(integration_setup):
     
     user_id = registration_result["user_id"]
     
-    # 2. ユーザーログイン
+    # 2. User login
     login_data = {
         "username": user_data["username"],
         "password": user_data["password"]
@@ -284,7 +285,7 @@ def test_user_registration_flow(integration_setup):
     
     access_token = login_result["access_token"]
     
-    # 3. 認証済みAPIアクセス
+    # 3. Authenticated API access
     headers = {"Authorization": f"Bearer {access_token}"}
     
     response = requests.get(f"{base_url}/api/profile", headers=headers)
@@ -294,7 +295,7 @@ def test_user_registration_flow(integration_setup):
     assert profile_data["user_id"] == user_id
     assert profile_data["username"] == user_data["username"]
     
-    # 4. プロフィール更新
+    # 4. Profile update
     update_data = {
         "email": "updated@example.com",
         "first_name": "Integration",
@@ -308,7 +309,7 @@ def test_user_registration_flow(integration_setup):
     )
     assert response.status_code == 200
     
-    # 5. 更新されたプロフィールの確認
+    # 5. Verify updated profile
     response = requests.get(f"{base_url}/api/profile", headers=headers)
     assert response.status_code == 200
     
@@ -318,10 +319,10 @@ def test_user_registration_flow(integration_setup):
 
 @pytest.mark.integration
 def test_data_consistency_across_services(integration_setup):
-    """サービス間でのデータ一貫性テスト"""
+    """Data consistency test across services"""
     base_url = integration_setup["web_app"]["base_url"]
     
-    # ユーザー作成
+    # Create user
     user_data = {
         "username": "consistency_user",
         "email": "consistency@example.com",
@@ -331,7 +332,7 @@ def test_data_consistency_across_services(integration_setup):
     response = requests.post(f"{base_url}/api/register", json=user_data)
     user_id = response.json()["user_id"]
     
-    # ログインしてトークン取得
+    # Login and get token
     login_response = requests.post(f"{base_url}/api/login", json={
         "username": user_data["username"],
         "password": user_data["password"]
@@ -340,7 +341,7 @@ def test_data_consistency_across_services(integration_setup):
     access_token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
     
-    # データベース直接アクセスでユーザー確認
+    # Verify user in database directly
     postgres_config = integration_setup["postgres"]
     conn = psycopg2.connect(postgres_config["connection_string"])
     cursor = conn.cursor()
@@ -351,7 +352,7 @@ def test_data_consistency_across_services(integration_setup):
     assert db_user[0] == user_data["username"]
     assert db_user[1] == user_data["email"]
     
-    # キャッシュでのユーザー情報確認
+    # Verify user info in cache
     redis_config = integration_setup["redis"]
     r = redis.Redis.from_url(redis_config["connection_string"])
     
@@ -363,27 +364,27 @@ def test_data_consistency_across_services(integration_setup):
         assert cached_user["username"] == user_data["username"]
         assert cached_user["email"] == user_data["email"]
     
-    # API経由での情報確認
+    # Verify info via API
     api_response = requests.get(f"{base_url}/api/profile", headers=headers)
     api_user = api_response.json()
     
     assert api_user["username"] == user_data["username"]
     assert api_user["email"] == user_data["email"]
     
-    # クリーンアップ
+    # Cleanup
     cursor.close()
     conn.close()
 
 @pytest.mark.integration
 def test_error_handling_across_services(integration_setup):
-    """サービス間でのエラーハンドリングテスト"""
+    """Error handling test across services"""
     base_url = integration_setup["web_app"]["base_url"]
     
-    # 1. 無効なデータでのユーザー登録
+    # 1. User registration with invalid data
     invalid_user_data = {
-        "username": "",  # 無効なユーザー名
-        "email": "invalid-email",  # 無効なメール形式
-        "password": "123"  # 短いパスワード
+        "username": "",  # Invalid username
+        "email": "invalid-email",  # Invalid email format
+        "password": "123"  # Short password
     }
     
     response = requests.post(f"{base_url}/api/register", json=invalid_user_data)
@@ -393,21 +394,21 @@ def test_error_handling_across_services(integration_setup):
     assert "errors" in error_response
     assert len(error_response["errors"]) > 0
     
-    # 2. 存在しないユーザーでのログイン
+    # 2. Login with non-existent user
     response = requests.post(f"{base_url}/api/login", json={
         "username": "nonexistent",
         "password": "password"
     })
     assert response.status_code == 401
     
-    # 3. 無効なトークンでのAPIアクセス
+    # 3. API access with invalid token
     invalid_headers = {"Authorization": "Bearer invalid_token"}
     
     response = requests.get(f"{base_url}/api/profile", headers=invalid_headers)
     assert response.status_code == 401
     
-    # 4. 権限のないリソースへのアクセス
-    # まず通常ユーザーを作成
+    # 4. Unauthorized resource access
+    # First create normal user
     user_data = {
         "username": "normal_user",
         "email": "normal@example.com",
@@ -424,12 +425,12 @@ def test_error_handling_across_services(integration_setup):
     user_token = login_response.json()["access_token"]
     user_headers = {"Authorization": f"Bearer {user_token}"}
     
-    # 管理者専用エンドポイントへのアクセス試行
+    # Attempt to access admin-only endpoint
     response = requests.get(f"{base_url}/api/admin/users", headers=user_headers)
     assert response.status_code == 403
 ```
 
-### 2. E2Eテストパターン
+### 2. E2E Test Patterns
 
 ```python
 import pytest
@@ -444,14 +445,14 @@ from typing import Dict, Any
 import os
 
 class WebDriverManager:
-    """WebDriverの管理クラス"""
+    """WebDriver management class"""
     
     def __init__(self, headless: bool = True):
         self.headless = headless
         self.driver = None
     
     def get_driver(self) -> webdriver.Chrome:
-        """WebDriverインスタンスの取得"""
+        """Get WebDriver instance"""
         if self.driver is None:
             chrome_options = Options()
             
@@ -468,13 +469,13 @@ class WebDriverManager:
         return self.driver
     
     def quit(self):
-        """WebDriverの終了"""
+        """Quit WebDriver"""
         if self.driver:
             self.driver.quit()
             self.driver = None
 
 class PageObjectModel:
-    """ページオブジェクトモデルの基底クラス"""
+    """Base class for Page Object Model"""
     
     def __init__(self, driver: webdriver.Chrome, base_url: str):
         self.driver = driver
@@ -482,52 +483,52 @@ class PageObjectModel:
         self.wait = WebDriverWait(driver, 10)
     
     def navigate_to(self, path: str = ""):
-        """ページへのナビゲーション"""
+        """Navigate to page"""
         url = f"{self.base_url}{path}"
         self.driver.get(url)
     
     def wait_for_element(self, locator, timeout: int = 10):
-        """要素の表示待機"""
+        """Wait for element to be present"""
         wait = WebDriverWait(self.driver, timeout)
         return wait.until(EC.presence_of_element_located(locator))
     
     def wait_for_clickable(self, locator, timeout: int = 10):
-        """要素のクリック可能待機"""
+        """Wait for element to be clickable"""
         wait = WebDriverWait(self.driver, timeout)
         return wait.until(EC.element_to_be_clickable(locator))
 
 class LoginPage(PageObjectModel):
-    """ログインページ"""
+    """Login page"""
     
-    # ロケーター
+    # Locators
     USERNAME_INPUT = (By.ID, "username")
     PASSWORD_INPUT = (By.ID, "password")
     LOGIN_BUTTON = (By.ID, "login-button")
     ERROR_MESSAGE = (By.CLASS_NAME, "error-message")
     
     def navigate(self):
-        """ログインページへの移動"""
+        """Navigate to login page"""
         self.navigate_to("/login")
     
     def enter_username(self, username: str):
-        """ユーザー名の入力"""
+        """Enter username"""
         username_field = self.wait_for_element(self.USERNAME_INPUT)
         username_field.clear()
         username_field.send_keys(username)
     
     def enter_password(self, password: str):
-        """パスワードの入力"""
+        """Enter password"""
         password_field = self.wait_for_element(self.PASSWORD_INPUT)
         password_field.clear()
         password_field.send_keys(password)
     
     def click_login(self):
-        """ログインボタンのクリック"""
+        """Click login button"""
         login_button = self.wait_for_clickable(self.LOGIN_BUTTON)
         login_button.click()
     
     def get_error_message(self) -> str:
-        """エラーメッセージの取得"""
+        """Get error message"""
         try:
             error_element = self.wait_for_element(self.ERROR_MESSAGE, timeout=5)
             return error_element.text
@@ -535,22 +536,22 @@ class LoginPage(PageObjectModel):
             return ""
     
     def login(self, username: str, password: str):
-        """ログイン実行"""
+        """Perform login"""
         self.enter_username(username)
         self.enter_password(password)
         self.click_login()
 
 class DashboardPage(PageObjectModel):
-    """ダッシュボードページ"""
+    """Dashboard page"""
     
-    # ロケーター
+    # Locators
     WELCOME_MESSAGE = (By.CLASS_NAME, "welcome-message")
     USER_MENU = (By.ID, "user-menu")
     LOGOUT_LINK = (By.ID, "logout-link")
     NAVIGATION_MENU = (By.CLASS_NAME, "nav-menu")
     
     def is_loaded(self) -> bool:
-        """ページ読み込み確認"""
+        """Check if page is loaded"""
         try:
             self.wait_for_element(self.WELCOME_MESSAGE, timeout=5)
             return True
@@ -558,12 +559,12 @@ class DashboardPage(PageObjectModel):
             return False
     
     def get_welcome_message(self) -> str:
-        """ウェルカムメッセージの取得"""
+        """Get welcome message"""
         welcome_element = self.wait_for_element(self.WELCOME_MESSAGE)
         return welcome_element.text
     
     def logout(self):
-        """ログアウト実行"""
+        """Perform logout"""
         user_menu = self.wait_for_clickable(self.USER_MENU)
         user_menu.click()
         
@@ -571,9 +572,9 @@ class DashboardPage(PageObjectModel):
         logout_link.click()
 
 class UserProfilePage(PageObjectModel):
-    """ユーザープロフィールページ"""
+    """User profile page"""
     
-    # ロケーター
+    # Locators
     EMAIL_INPUT = (By.ID, "email")
     FIRST_NAME_INPUT = (By.ID, "first-name")
     LAST_NAME_INPUT = (By.ID, "last-name")
@@ -581,11 +582,11 @@ class UserProfilePage(PageObjectModel):
     SUCCESS_MESSAGE = (By.CLASS_NAME, "success-message")
     
     def navigate(self):
-        """プロフィールページへの移動"""
+        """Navigate to profile page"""
         self.navigate_to("/profile")
     
     def update_profile(self, email: str = None, first_name: str = None, last_name: str = None):
-        """プロフィール更新"""
+        """Update profile"""
         if email:
             email_field = self.wait_for_element(self.EMAIL_INPUT)
             email_field.clear()
@@ -605,7 +606,7 @@ class UserProfilePage(PageObjectModel):
         save_button.click()
     
     def get_success_message(self) -> str:
-        """成功メッセージの取得"""
+        """Get success message"""
         try:
             success_element = self.wait_for_element(self.SUCCESS_MESSAGE, timeout=5)
             return success_element.text
@@ -614,47 +615,47 @@ class UserProfilePage(PageObjectModel):
 
 @pytest.fixture(scope="session")
 def webdriver_manager():
-    """WebDriverマネージャーフィクスチャ"""
+    """WebDriver manager fixture"""
     manager = WebDriverManager(headless=os.getenv("HEADLESS", "true").lower() == "true")
     yield manager
     manager.quit()
 
 @pytest.fixture
 def driver(webdriver_manager):
-    """WebDriverフィクスチャ"""
+    """WebDriver fixture"""
     return webdriver_manager.get_driver()
 
 @pytest.fixture
 def base_url():
-    """ベースURLフィクスチャ"""
+    """Base URL fixture"""
     return os.getenv("BASE_URL", "http://localhost:8000")
 
 @pytest.fixture
 def login_page(driver, base_url):
-    """ログインページフィクスチャ"""
+    """Login page fixture"""
     return LoginPage(driver, base_url)
 
 @pytest.fixture
 def dashboard_page(driver, base_url):
-    """ダッシュボードページフィクスチャ"""
+    """Dashboard page fixture"""
     return DashboardPage(driver, base_url)
 
 @pytest.fixture
 def profile_page(driver, base_url):
-    """プロフィールページフィクスチャ"""
+    """Profile page fixture"""
     return UserProfilePage(driver, base_url)
 
-# E2Eテストケース
+# E2E test cases
 @pytest.mark.e2e
 def test_user_login_flow(login_page, dashboard_page):
-    """ユーザーログインフローのE2Eテスト"""
-    # ログインページへの移動
+    """User login flow E2E test"""
+    # Navigate to login page
     login_page.navigate()
     
-    # ログイン実行
+    # Perform login
     login_page.login("testuser", "password123")
     
-    # ダッシュボードページの確認
+    # Verify dashboard page
     assert dashboard_page.is_loaded()
     
     welcome_message = dashboard_page.get_welcome_message()
@@ -663,53 +664,53 @@ def test_user_login_flow(login_page, dashboard_page):
 
 @pytest.mark.e2e
 def test_invalid_login(login_page):
-    """無効なログインのE2Eテスト"""
+    """Invalid login E2E test"""
     login_page.navigate()
     
-    # 無効な認証情報でログイン試行
+    # Attempt login with invalid credentials
     login_page.login("invalid_user", "wrong_password")
     
-    # エラーメッセージの確認
+    # Verify error message
     error_message = login_page.get_error_message()
     assert "Invalid username or password" in error_message
 
 @pytest.mark.e2e
 def test_profile_update_flow(login_page, dashboard_page, profile_page):
-    """プロフィール更新フローのE2Eテスト"""
-    # ログイン
+    """Profile update flow E2E test"""
+    # Login
     login_page.navigate()
     login_page.login("testuser", "password123")
     
-    # ダッシュボード確認
+    # Verify dashboard
     assert dashboard_page.is_loaded()
     
-    # プロフィールページへ移動
+    # Navigate to profile page
     profile_page.navigate()
     
-    # プロフィール更新
+    # Update profile
     profile_page.update_profile(
         email="updated@example.com",
         first_name="Updated",
         last_name="User"
     )
     
-    # 成功メッセージの確認
+    # Verify success message
     success_message = profile_page.get_success_message()
     assert "Profile updated successfully" in success_message
 
 @pytest.mark.e2e
 def test_complete_user_journey(login_page, dashboard_page, profile_page):
-    """完全なユーザージャーニーのE2Eテスト"""
-    # 1. ログイン
+    """Complete user journey E2E test"""
+    # 1. Login
     login_page.navigate()
     login_page.login("journey_user", "password123")
     assert dashboard_page.is_loaded()
     
-    # 2. ダッシュボードでの操作
+    # 2. Dashboard operations
     welcome_message = dashboard_page.get_welcome_message()
     assert "journey_user" in welcome_message
     
-    # 3. プロフィール編集
+    # 3. Profile editing
     profile_page.navigate()
     profile_page.update_profile(
         email="journey@example.com",
@@ -720,84 +721,84 @@ def test_complete_user_journey(login_page, dashboard_page, profile_page):
     success_message = profile_page.get_success_message()
     assert success_message != ""
     
-    # 4. ログアウト
+    # 4. Logout
     dashboard_page.navigate_to("/dashboard")
     dashboard_page.logout()
     
-    # 5. ログアウト後の確認（ログインページにリダイレクト）
-    time.sleep(2)  # リダイレクトを待機
+    # 5. Verify post-logout (redirect to login page)
+    time.sleep(2)  # Wait for redirect
     current_url = login_page.driver.current_url
     assert "/login" in current_url
 
-# モバイルブラウザでのE2Eテスト
+# Mobile browser E2E testing
 @pytest.mark.e2e
 @pytest.mark.mobile
 def test_mobile_responsive_design(driver, base_url):
-    """モバイルレスポンシブデザインのE2Eテスト"""
-    # モバイルサイズに変更
-    driver.set_window_size(375, 667)  # iPhone 6/7/8サイズ
+    """Mobile responsive design E2E test"""
+    # Change to mobile size
+    driver.set_window_size(375, 667)  # iPhone 6/7/8 size
     
-    # ページアクセス
+    # Access page
     driver.get(f"{base_url}/login")
     
-    # モバイル固有の要素確認
+    # Verify mobile-specific elements
     mobile_menu_button = driver.find_element(By.CLASS_NAME, "mobile-menu-toggle")
     assert mobile_menu_button.is_displayed()
     
-    # フォームの使いやすさ確認
+    # Verify form usability
     username_field = driver.find_element(By.ID, "username")
-    assert username_field.size["height"] >= 44  # タッチフレンドリーなサイズ
+    assert username_field.size["height"] >= 44  # Touch-friendly size
 
-# アクセシビリティテスト
+# Accessibility testing
 @pytest.mark.e2e
 @pytest.mark.accessibility
 def test_accessibility_features(driver, base_url):
-    """アクセシビリティ機能のE2Eテスト"""
+    """Accessibility features E2E test"""
     driver.get(f"{base_url}/login")
     
-    # フォーカス可能な要素の確認
+    # Verify focusable elements
     username_field = driver.find_element(By.ID, "username")
     username_field.click()
     
-    # Tab キーでの移動確認
+    # Verify Tab key navigation
     username_field.send_keys(Keys.TAB)
     
-    # 現在フォーカスされている要素の確認
+    # Verify currently focused element
     focused_element = driver.switch_to.active_element
     assert focused_element.get_attribute("id") == "password"
     
-    # ARIA属性の確認
+    # Verify ARIA attributes
     login_button = driver.find_element(By.ID, "login-button")
     assert login_button.get_attribute("aria-label") is not None
 
-# パフォーマンステスト
+# Performance testing
 @pytest.mark.e2e
 @pytest.mark.performance
 def test_page_load_performance(driver, base_url):
-    """ページ読み込みパフォーマンスのE2Eテスト"""
+    """Page load performance E2E test"""
     start_time = time.time()
     
     driver.get(f"{base_url}/dashboard")
     
-    # DOM完全読み込み待機
+    # Wait for complete DOM load
     WebDriverWait(driver, 10).until(
         lambda d: d.execute_script("return document.readyState") == "complete"
     )
     
     load_time = time.time() - start_time
     
-    # 3秒以内での読み込み完了を期待
+    # Expect completion within 3 seconds
     assert load_time < 3.0
     
-    # ページサイズの確認
+    # Verify page size
     page_source_size = len(driver.page_source.encode('utf-8'))
-    assert page_source_size < 1024 * 1024  # 1MB未満
+    assert page_source_size < 1024 * 1024  # Less than 1MB
 
-# クロスブラウザテスト用のパラメータ化
+# Cross-browser testing with parameterization
 @pytest.mark.parametrize("browser", ["chrome", "firefox"])
 @pytest.mark.e2e
 def test_cross_browser_compatibility(browser, base_url):
-    """クロスブラウザ互換性のE2Eテスト"""
+    """Cross-browser compatibility E2E test"""
     if browser == "chrome":
         options = Options()
         options.add_argument("--headless")
@@ -811,7 +812,7 @@ def test_cross_browser_compatibility(browser, base_url):
     try:
         driver.get(f"{base_url}/login")
         
-        # 基本的な要素の存在確認
+        # Verify basic element presence
         username_field = driver.find_element(By.ID, "username")
         password_field = driver.find_element(By.ID, "password")
         login_button = driver.find_element(By.ID, "login-button")
@@ -820,16 +821,83 @@ def test_cross_browser_compatibility(browser, base_url):
         assert password_field.is_displayed()
         assert login_button.is_displayed()
         
-        # ブラウザ固有のJavaScript機能確認
+        # Verify browser-specific JavaScript functionality
         js_result = driver.execute_script("return navigator.userAgent")
         assert js_result is not None
         
     finally:
         driver.quit()
+
+# Data-driven E2E testing
+@pytest.mark.e2e
+@pytest.mark.parametrize("test_data", [
+    {"username": "user1", "password": "pass1", "expected": "success"},
+    {"username": "user2", "password": "pass2", "expected": "success"},
+    {"username": "invalid", "password": "wrong", "expected": "failure"}
+])
+def test_login_scenarios(login_page, dashboard_page, test_data):
+    """Data-driven login scenarios E2E test"""
+    login_page.navigate()
+    login_page.login(test_data["username"], test_data["password"])
+    
+    if test_data["expected"] == "success":
+        assert dashboard_page.is_loaded()
+    else:
+        error_message = login_page.get_error_message()
+        assert error_message != ""
+
+# Visual regression testing
+@pytest.mark.e2e
+@pytest.mark.visual
+def test_visual_regression(driver, base_url):
+    """Visual regression E2E test"""
+    driver.get(f"{base_url}/login")
+    
+    # Take screenshot for comparison
+    screenshot_path = "screenshots/login_page.png"
+    driver.save_screenshot(screenshot_path)
+    
+    # Compare with baseline (using image comparison library)
+    from PIL import Image, ImageChops
+    
+    current_image = Image.open(screenshot_path)
+    baseline_image = Image.open("screenshots/baseline/login_page.png")
+    
+    # Calculate difference
+    diff = ImageChops.difference(current_image, baseline_image)
+    
+    # Check if images are similar enough
+    bbox = diff.getbbox()
+    assert bbox is None or calculate_difference_percentage(diff) < 5.0
+
+def calculate_difference_percentage(diff_image):
+    """Calculate percentage difference between images"""
+    pixels = diff_image.getdata()
+    total_pixels = len(pixels)
+    different_pixels = sum(1 for pixel in pixels if sum(pixel) > 0)
+    return (different_pixels / total_pixels) * 100
+
+# Security testing
+@pytest.mark.e2e
+@pytest.mark.security
+def test_security_headers(driver, base_url):
+    """Security headers E2E test"""
+    driver.get(f"{base_url}/login")
+    
+    # Check for security headers using JavaScript
+    headers_check = driver.execute_script("""
+        return {
+            csp: document.querySelector('meta[http-equiv="Content-Security-Policy"]'),
+            xframe: document.querySelector('meta[http-equiv="X-Frame-Options"]')
+        }
+    """)
+    
+    # Verify security policies are present
+    assert headers_check["csp"] is not None or "Content-Security-Policy" in driver.page_source
+    
+    # Check for HTTPS redirect
+    if "https" in base_url:
+        assert driver.current_url.startswith("https://")
 ```
 
-この包括的なPytest高度テストパターンドキュメントには、企業レベルでのテスト実装に必要な全ての要素が含まれています。次のタスクに進みましょう。
-
-<function_calls>
-<invoke name="TodoWrite">
-<parameter name="todos">[{"content": "Phase 3: Python Advanced Libraries - FastAPI production patterns document", "status": "completed", "id": "18"}, {"content": "Phase 3: SQLAlchemy 2.0 advanced ORM patterns document", "status": "completed", "id": "19"}, {"content": "Phase 3: Pydantic v2 data validation patterns document", "status": "completed", "id": "20"}, {"content": "Phase 3: Async Python concurrency patterns document", "status": "completed", "id": "21"}, {"content": "Phase 3: Pytest advanced testing patterns document", "status": "completed", "id": "22"}, {"content": "Phase 3: Celery distributed task patterns document", "status": "in_progress", "id": "23"}, {"content": "Phase 3: NumPy/Pandas data science patterns document", "status": "pending", "id": "24"}, {"content": "Phase 3: Django REST framework enterprise patterns document", "status": "pending", "id": "25"}, {"content": "Phase 4: Architecture Patterns (8 documents)", "status": "pending", "id": "26"}, {"content": "Phase 5: Development Methodologies (3 documents)", "status": "pending", "id": "27"}]
+This comprehensive Pytest Advanced Testing Patterns document includes all enterprise-level testing implementation elements needed.

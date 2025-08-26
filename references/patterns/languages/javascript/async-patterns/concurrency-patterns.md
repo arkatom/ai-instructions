@@ -1,6 +1,6 @@
-# 並行処理パターン
+# Concurrency Patterns
 
-## セマフォ
+## Semaphore
 
 ```javascript
 class Semaphore {
@@ -40,7 +40,7 @@ class Semaphore {
 }
 ```
 
-## バッチプロセッサ
+## Batch Processor
 
 ```javascript
 class BatchProcessor {
@@ -67,7 +67,7 @@ class BatchProcessor {
 }
 ```
 
-## MapReduce実装
+## MapReduce Implementation
 
 ```javascript
 class MapReduce {
@@ -92,7 +92,7 @@ class MapReduce {
 }
 ```
 
-## Fork-Joinパターン
+## Fork-Join Pattern
 
 ```javascript
 class ForkJoin {
@@ -126,7 +126,7 @@ class ForkJoin {
 }
 ```
 
-## 並列パイプライン
+## Parallel Pipeline
 
 ```javascript
 class ParallelPipeline {
@@ -172,7 +172,7 @@ class ParallelPipeline {
   }
 }
 
-// 使用例
+// Usage example
 const urls = ['/api/users', '/api/posts', '/api/comments'];
 const [users, posts, comments] = await ForkJoin.fork([
   () => fetch('/api/users').then(r => r.json()),

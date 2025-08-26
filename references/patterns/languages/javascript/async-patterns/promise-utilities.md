@@ -1,10 +1,10 @@
-# Promiseユーティリティ
+# Promise Utilities
 
-## カスタムPromiseユーティリティ
+## Custom Promise Utilities
 
 ```javascript
 class PromiseUtils {
-  // n個のPromiseが成功したら解決
+  // Resolve when n promises succeed
   static async some(promises, count) {
     if (count <= 0) return [];
     if (count >= promises.length) return Promise.all(promises);
@@ -30,7 +30,7 @@ class PromiseUtils {
     });
   }
   
-  // 並行数制限付きmap
+  // Map with concurrency limit
   static async map(items, mapper, { concurrency = Infinity } = {}) {
     if (concurrency === Infinity) {
       return Promise.all(items.map(mapper));
@@ -57,7 +57,7 @@ class PromiseUtils {
     return results;
   }
   
-  // プロパティを解決
+  // Resolve object properties
   static async props(obj) {
     const keys = Object.keys(obj);
     const values = await Promise.all(Object.values(obj));
@@ -67,7 +67,7 @@ class PromiseUtils {
     }, {});
   }
   
-  // 進捗追跡
+  // Progress tracking
   static withProgress(promises, onProgress) {
     let completed = 0;
     const total = promises.length;
@@ -88,7 +88,7 @@ class PromiseUtils {
 }
 ```
 
-## 非同期イベントエミッタ
+## Async Event Emitter
 
 ```javascript
 class AsyncEventEmitter {
@@ -150,7 +150,7 @@ class AsyncEventEmitter {
 }
 ```
 
-## リソースローダー
+## Resource Loader
 
 ```javascript
 class AsyncResourceLoader {
@@ -203,7 +203,7 @@ class AsyncResourceLoader {
   }
 }
 
-// 使用例
+// Usage example
 const loader = new AsyncResourceLoader();
 const config = await loader.load('config', 
   () => fetch('/api/config').then(r => r.json()),

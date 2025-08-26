@@ -1,89 +1,98 @@
-# Web Components 実践ガイド 2025
+# Web Components Complete Implementation Guide
 
-## Custom Elements 実装
+## Custom Elements v1 Implementation
 
-### 1. 基本的なカスタム要素
-
+### Complete Custom Element Lifecycle
 ```javascript
-// 基本的なWeb Component
-class CustomButton extends HTMLElement {
-  // 監視する属性を定義
+// Full custom element with all lifecycle hooks
+class AdvancedElement extends HTMLElement {
   static get observedAttributes() {
-    return ['variant', 'size', 'disabled', 'loading', 'icon', 'icon-position'];
+    return ['theme', 'size', 'disabled', 'data-value'];
   }
-  
+
+  #shadowRoot;
+  #internals;
+  #abortController;
+
   constructor() {
     super();
     
-    // Shadow DOM の作成
-    this.attachShadow({ mode: 'open', delegatesFocus: true });
+    // Attach Shadow DOM
+    this.#shadowRoot = this.attachShadow({ 
+      mode: 'open',
+      delegatesFocus: true 
+    });
     
-    // 内部状態
-    this._internals = this.attachInternals ? this.attachInternals() : null;
-    this._variant = 'primary';
-    this._size = 'medium';
-    this._disabled = false;
-    this._loading = false;
+    // Element internals for form association
+    if ('attachInternals' in this) {
+      this.#internals = this.attachInternals();
+    }
     
-    // イベントハンドラのバインド
+    // Abort controller for cleanup
+    this.#abortController = new AbortController();
+    
+    // Initial state
+    this._state = {
+      value: '',
+      isValid: true,
+      isDirty: false
+    };
+    
+    // Bind methods
+    this.handleInput = this.handleInput.bind(this);
     this.handleClick = this.handleClick.bind(this);
-    this.handleKeyDown = this.handleKeyDown.bind(this);
   }
-  
-  // ライフサイクル: 要素がDOMに追加された時
+
   connectedCallback() {
+    // Element added to DOM
     this.render();
-    this.setupEventListeners();
+    this.attachEventListeners();
     this.upgradeProperties();
     
-    // アクセシビリティ設定
-    if (!this.hasAttribute('role')) {
-      this.setAttribute('role', 'button');
-    }
-    if (!this.hasAttribute('tabindex')) {
-      this.setAttribute('tabindex', '0');
-    }
+    // Dispatch custom event
+    this.dispatchEvent(new CustomEvent('connected', {
+      bubbles: true,
+      composed: true,
+      detail: { element: this }
+    }));
   }
-  
-  // ライフサイクル: 要素がDOMから削除された時
+
   disconnectedCallback() {
-    this.removeEventListeners();
+    // Element removed from DOM
+    this.#abortController.abort();
+    this.cleanup();
   }
-  
-  // ライフサイクル: 要素が別のドキュメントに移動した時
+
   adoptedCallback() {
-    console.log('Element moved to new document');
+    // Element moved to new document
+    console.log('Element adopted to new document');
   }
-  
-  // ライフサイクル: 監視属性が変更された時
+
   attributeChangedCallback(name, oldValue, newValue) {
+    // Attribute changed
     if (oldValue === newValue) return;
     
     switch (name) {
-      case 'variant':
-        this._variant = newValue || 'primary';
+      case 'theme':
+        this.updateTheme(newValue);
         break;
       case 'size':
-        this._size = newValue || 'medium';
+        this.updateSize(newValue);
         break;
       case 'disabled':
-        this._disabled = newValue !== null;
-        this.updateDisabledState();
+        this.updateDisabled(newValue !== null);
         break;
-      case 'loading':
-        this._loading = newValue !== null;
-        this.updateLoadingState();
+      case 'data-value':
+        this.updateValue(newValue);
         break;
     }
     
-    if (this.shadowRoot) {
-      this.render();
-    }
+    this.render();
   }
-  
-  // プロパティアップグレード（属性より先にプロパティが設定された場合の対処）
+
+  // Upgrade properties set before element defined
   upgradeProperties() {
-    ['variant', 'size', 'disabled', 'loading'].forEach(prop => {
+    ['theme', 'size', 'disabled', 'value'].forEach(prop => {
       if (this.hasOwnProperty(prop)) {
         const value = this[prop];
         delete this[prop];
@@ -91,200 +100,34 @@ class CustomButton extends HTMLElement {
       }
     });
   }
-  
-  // レンダリング
-  render() {
-    if (!this.shadowRoot) return;
+
+  // Property getters/setters
+  get value() {
+    return this._state.value;
+  }
+
+  set value(newValue) {
+    const oldValue = this._state.value;
+    this._state.value = newValue;
+    this._state.isDirty = true;
     
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: inline-block;
-          font-family: system-ui, -apple-system, sans-serif;
-          outline: none;
-        }
-        
-        :host([hidden]) {
-          display: none !important;
-        }
-        
-        :host([disabled]) {
-          pointer-events: none;
-          opacity: 0.5;
-        }
-        
-        .button {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: var(--button-padding, 8px 16px);
-          border: none;
-          border-radius: 6px;
-          font-size: inherit;
-          font-weight: 500;
-          line-height: 1.5;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          user-select: none;
-          white-space: nowrap;
-        }
-        
-        /* バリアントスタイル */
-        .button--primary {
-          background: var(--color-primary, #007bff);
-          color: var(--color-primary-text, white);
-        }
-        
-        .button--primary:hover:not(:disabled) {
-          background: var(--color-primary-dark, #0056b3);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-        }
-        
-        .button--secondary {
-          background: transparent;
-          color: var(--color-primary, #007bff);
-          border: 2px solid var(--color-primary, #007bff);
-        }
-        
-        .button--secondary:hover:not(:disabled) {
-          background: var(--color-primary, #007bff);
-          color: white;
-        }
-        
-        /* サイズスタイル */
-        .button--small {
-          padding: 4px 12px;
-          font-size: 0.875rem;
-        }
-        
-        .button--medium {
-          padding: 8px 16px;
-          font-size: 1rem;
-        }
-        
-        .button--large {
-          padding: 12px 24px;
-          font-size: 1.125rem;
-        }
-        
-        /* ローディング状態 */
-        :host([loading]) .button {
-          color: transparent;
-        }
-        
-        .loading-spinner {
-          position: absolute;
-          width: 16px;
-          height: 16px;
-          border: 2px solid currentColor;
-          border-radius: 50%;
-          border-top-color: transparent;
-          animation: spin 0.6s linear infinite;
-        }
-        
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        
-        /* フォーカススタイル */
-        :host(:focus-visible) .button {
-          outline: 2px solid var(--color-focus, #4dabf7);
-          outline-offset: 2px;
-        }
-        
-        /* スロット */
-        ::slotted(*) {
-          pointer-events: none;
-        }
-      </style>
-      
-      <button 
-        class="button button--${this._variant} button--${this._size}"
-        ?disabled="${this._disabled}"
-        aria-busy="${this._loading}"
-      >
-        ${this._loading ? '<span class="loading-spinner"></span>' : ''}
-        <slot></slot>
-      </button>
-    `;
-  }
-  
-  // イベントリスナー設定
-  setupEventListeners() {
-    this.addEventListener('click', this.handleClick);
-    this.addEventListener('keydown', this.handleKeyDown);
-  }
-  
-  removeEventListeners() {
-    this.removeEventListener('click', this.handleClick);
-    this.removeEventListener('keydown', this.handleKeyDown);
-  }
-  
-  handleClick(event) {
-    if (this._disabled || this._loading) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
+    if (this.#internals) {
+      this.#internals.setFormValue(newValue);
     }
     
-    // カスタムイベント発火
-    this.dispatchEvent(new CustomEvent('custom-click', {
-      detail: { timestamp: Date.now() },
+    this.dispatchEvent(new CustomEvent('valuechange', {
+      detail: { oldValue, newValue },
       bubbles: true,
-      composed: true,
+      composed: true
     }));
+    
+    this.render();
   }
-  
-  handleKeyDown(event) {
-    if (event.key === ' ' || event.key === 'Enter') {
-      event.preventDefault();
-      this.click();
-    }
-  }
-  
-  // 状態更新メソッド
-  updateDisabledState() {
-    if (this._disabled) {
-      this.setAttribute('aria-disabled', 'true');
-      this.setAttribute('tabindex', '-1');
-    } else {
-      this.setAttribute('aria-disabled', 'false');
-      this.setAttribute('tabindex', '0');
-    }
-  }
-  
-  updateLoadingState() {
-    if (this._loading) {
-      this.setAttribute('aria-busy', 'true');
-    } else {
-      this.setAttribute('aria-busy', 'false');
-    }
-  }
-  
-  // プロパティゲッター/セッター
-  get variant() {
-    return this._variant;
-  }
-  
-  set variant(value) {
-    this.setAttribute('variant', value);
-  }
-  
-  get size() {
-    return this._size;
-  }
-  
-  set size(value) {
-    this.setAttribute('size', value);
-  }
-  
+
   get disabled() {
-    return this._disabled;
+    return this.hasAttribute('disabled');
   }
-  
+
   set disabled(value) {
     if (value) {
       this.setAttribute('disabled', '');
@@ -292,587 +135,733 @@ class CustomButton extends HTMLElement {
       this.removeAttribute('disabled');
     }
   }
-  
-  get loading() {
-    return this._loading;
-  }
-  
-  set loading(value) {
-    if (value) {
-      this.setAttribute('loading', '');
-    } else {
-      this.removeAttribute('loading');
-    }
-  }
-}
 
-// カスタム要素の登録
-customElements.define('custom-button', CustomButton);
-```
-
-### 2. 高度なWeb Component（フォーム統合）
-
-```typescript
-// TypeScript版の高度なWeb Component
-interface FormAssociatedElement extends HTMLElement {
-  readonly form: HTMLFormElement | null;
-  readonly validity: ValidityState;
-  readonly validationMessage: string;
-  readonly willValidate: boolean;
-  checkValidity(): boolean;
-  reportValidity(): boolean;
-  setCustomValidity(message: string): void;
-}
-
-// フォーム関連Web Component
-class CustomInput extends HTMLElement implements FormAssociatedElement {
-  static formAssociated = true;
-  
-  static get observedAttributes() {
-    return ['value', 'type', 'placeholder', 'required', 'pattern', 'min', 'max', 'disabled'];
-  }
-  
-  private _internals: ElementInternals;
-  private _value: string = '';
-  private _input: HTMLInputElement | null = null;
-  
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open', delegatesFocus: true });
-    this._internals = this.attachInternals();
-    
-    // フォーム関連プロパティの設定
-    this._internals.setFormValue('');
-  }
-  
-  connectedCallback() {
-    this.render();
-    this.setupInput();
-  }
-  
-  disconnectedCallback() {
-    // クリーンアップ
-  }
-  
-  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
-    if (oldValue === newValue) return;
-    
-    switch (name) {
-      case 'value':
-        this.value = newValue || '';
-        break;
-      case 'required':
-        this.updateValidity();
-        break;
-    }
-    
-    if (this._input && name !== 'value') {
-      // 属性を内部inputに転送
-      if (newValue !== null) {
-        this._input.setAttribute(name, newValue);
-      } else {
-        this._input.removeAttribute(name);
-      }
-    }
-  }
-  
+  // Render method
   render() {
-    if (!this.shadowRoot) return;
+    const { value, isValid, isDirty } = this._state;
     
-    this.shadowRoot.innerHTML = `
+    this.#shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
           position: relative;
+          --primary-color: var(--theme-primary, #007bff);
+          --error-color: var(--theme-error, #dc3545);
         }
         
-        .input-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
+        :host([disabled]) {
+          opacity: 0.5;
+          pointer-events: none;
+        }
+        
+        :host([hidden]) {
+          display: none;
+        }
+        
+        :host(:focus-within) {
+          outline: 2px solid var(--primary-color);
+          outline-offset: 2px;
+        }
+        
+        .container {
+          padding: var(--spacing, 1rem);
+          border: 1px solid var(--border-color, #ddd);
+          border-radius: var(--radius, 4px);
+        }
+        
+        .container[data-invalid="true"] {
+          border-color: var(--error-color);
+        }
+        
+        ::slotted(*) {
+          margin: 0.5rem 0;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+          :host {
+            --border-color: #444;
+            --bg-color: #222;
+          }
+        }
+      </style>
+      
+      <div class="container" data-invalid="${!isValid}">
+        <slot name="header"></slot>
+        <div class="content">
+          <input 
+            type="text" 
+            value="${value}"
+            ?disabled="${this.disabled}"
+            aria-invalid="${!isValid}"
+          />
+          ${isDirty && !isValid ? '<span class="error">Invalid input</span>' : ''}
+        </div>
+        <slot name="footer"></slot>
+        <slot></slot>
+      </div>
+    `;
+  }
+
+  // Event handling
+  attachEventListeners() {
+    const input = this.#shadowRoot.querySelector('input');
+    
+    input?.addEventListener('input', this.handleInput, {
+      signal: this.#abortController.signal
+    });
+    
+    this.addEventListener('click', this.handleClick, {
+      signal: this.#abortController.signal
+    });
+  }
+
+  handleInput(event) {
+    this.value = event.target.value;
+    this.validate();
+  }
+
+  handleClick(event) {
+    if (event.target === this) {
+      this.focus();
+    }
+  }
+
+  // Validation
+  validate() {
+    const isValid = this.value.length >= 3;
+    this._state.isValid = isValid;
+    
+    if (this.#internals) {
+      if (isValid) {
+        this.#internals.setValidity({});
+      } else {
+        this.#internals.setValidity(
+          { valueMissing: true },
+          'Value must be at least 3 characters'
+        );
+      }
+    }
+    
+    return isValid;
+  }
+
+  // Cleanup
+  cleanup() {
+    // Remove any external references
+    this._state = null;
+  }
+
+  // Public API methods
+  focus() {
+    this.#shadowRoot.querySelector('input')?.focus();
+  }
+
+  reset() {
+    this._state = {
+      value: '',
+      isValid: true,
+      isDirty: false
+    };
+    this.render();
+  }
+}
+
+// Define the element
+customElements.define('advanced-element', AdvancedElement);
+```
+
+### Form-Associated Custom Elements
+```javascript
+// Form-associated custom element
+class FormInput extends HTMLElement {
+  static formAssociated = true;
+
+  static get observedAttributes() {
+    return ['value', 'name', 'required', 'pattern'];
+  }
+
+  #internals;
+  #value = '';
+
+  constructor() {
+    super();
+    this.#internals = this.attachInternals();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  // Form-associated callbacks
+  formAssociatedCallback(form) {
+    console.log('Associated with form:', form);
+  }
+
+  formDisabledCallback(disabled) {
+    this.disabled = disabled;
+  }
+
+  formResetCallback() {
+    this.value = this.getAttribute('value') || '';
+  }
+
+  formStateRestoreCallback(state, mode) {
+    if (mode === 'restore') {
+      this.value = state;
+    }
+  }
+
+  // Value management
+  get value() {
+    return this.#value;
+  }
+
+  set value(v) {
+    this.#value = v;
+    this.#internals.setFormValue(v);
+    this.updateValidity();
+    this.render();
+  }
+
+  get validity() {
+    return this.#internals.validity;
+  }
+
+  get validationMessage() {
+    return this.#internals.validationMessage;
+  }
+
+  get willValidate() {
+    return this.#internals.willValidate;
+  }
+
+  checkValidity() {
+    return this.#internals.checkValidity();
+  }
+
+  reportValidity() {
+    return this.#internals.reportValidity();
+  }
+
+  updateValidity() {
+    const value = this.#value;
+    const required = this.hasAttribute('required');
+    const pattern = this.getAttribute('pattern');
+
+    // Reset validity
+    this.#internals.setValidity({});
+
+    // Check required
+    if (required && !value) {
+      this.#internals.setValidity(
+        { valueMissing: true },
+        'Please fill out this field'
+      );
+      return;
+    }
+
+    // Check pattern
+    if (pattern && value) {
+      const regex = new RegExp(pattern);
+      if (!regex.test(value)) {
+        this.#internals.setValidity(
+          { patternMismatch: true },
+          `Please match the requested format`
+        );
+      }
+    }
+  }
+
+  connectedCallback() {
+    this.render();
+    
+    const input = this.shadowRoot.querySelector('input');
+    input?.addEventListener('input', (e) => {
+      this.value = e.target.value;
+      this.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
         }
         
         input {
           width: 100%;
-          padding: 10px 12px;
-          border: 2px solid var(--border-color, #ddd);
-          border-radius: 6px;
-          font-size: 16px;
-          font-family: inherit;
-          background: var(--bg-color, white);
-          color: var(--text-color, #333);
-          transition: all 0.2s ease;
+          padding: 0.5rem;
+          border: 1px solid #ccc;
+          border-radius: 4px;
         }
         
-        input:focus {
-          outline: none;
-          border-color: var(--focus-color, #007bff);
-          box-shadow: 0 0 0 3px var(--focus-shadow, rgba(0, 123, 255, 0.1));
+        :host(:invalid) input {
+          border-color: red;
         }
         
-        input:invalid {
-          border-color: var(--error-color, #dc3545);
-        }
-        
-        input:disabled {
-          background: var(--disabled-bg, #f5f5f5);
-          cursor: not-allowed;
-        }
-        
-        .prefix,
-        .suffix {
-          position: absolute;
-          display: flex;
-          align-items: center;
-          height: 100%;
-          padding: 0 12px;
-          color: var(--addon-color, #666);
-        }
-        
-        .prefix {
-          left: 0;
-        }
-        
-        .suffix {
-          right: 0;
-        }
-        
-        :host([has-prefix]) input {
-          padding-left: 40px;
-        }
-        
-        :host([has-suffix]) input {
-          padding-right: 40px;
-        }
-        
-        .error-message {
-          position: absolute;
-          bottom: -20px;
-          left: 0;
-          font-size: 12px;
-          color: var(--error-color, #dc3545);
+        :host(:valid) input {
+          border-color: green;
         }
       </style>
       
-      <div class="input-wrapper">
-        <span class="prefix">
-          <slot name="prefix"></slot>
-        </span>
-        <input 
-          type="${this.getAttribute('type') || 'text'}"
-          placeholder="${this.getAttribute('placeholder') || ''}"
-          value="${this._value}"
-        />
-        <span class="suffix">
-          <slot name="suffix"></slot>
-        </span>
-      </div>
-      <div class="error-message" role="alert" aria-live="polite"></div>
+      <input 
+        type="text" 
+        value="${this.#value}"
+        ?required="${this.hasAttribute('required')}"
+      />
     `;
-  }
-  
-  setupInput() {
-    this._input = this.shadowRoot?.querySelector('input') || null;
-    
-    if (!this._input) return;
-    
-    // イベントリスナー
-    this._input.addEventListener('input', (e) => {
-      const target = e.target as HTMLInputElement;
-      this._value = target.value;
-      this._internals.setFormValue(this._value);
-      
-      // バリデーション
-      this.updateValidity();
-      
-      // カスタムイベント発火
-      this.dispatchEvent(new CustomEvent('input', {
-        detail: { value: this._value },
-        bubbles: true,
-        composed: true,
-      }));
-    });
-    
-    this._input.addEventListener('change', (e) => {
-      this.dispatchEvent(new CustomEvent('change', {
-        detail: { value: this._value },
-        bubbles: true,
-        composed: true,
-      }));
-    });
-  }
-  
-  // バリデーション
-  updateValidity() {
-    if (!this._input) return;
-    
-    const validity = this._input.validity;
-    const validationMessage = this._input.validationMessage;
-    
-    // ElementInternalsにバリデーション状態を設定
-    if (validity.valid) {
-      this._internals.setValidity({});
-    } else {
-      this._internals.setValidity(
-        validity,
-        validationMessage,
-        this._input
-      );
-    }
-    
-    // エラーメッセージ表示
-    const errorElement = this.shadowRoot?.querySelector('.error-message');
-    if (errorElement) {
-      errorElement.textContent = validationMessage;
-    }
-  }
-  
-  // フォーム関連API実装
-  get form() {
-    return this._internals.form;
-  }
-  
-  get validity() {
-    return this._internals.validity;
-  }
-  
-  get validationMessage() {
-    return this._internals.validationMessage;
-  }
-  
-  get willValidate() {
-    return this._internals.willValidate;
-  }
-  
-  checkValidity() {
-    return this._internals.checkValidity();
-  }
-  
-  reportValidity() {
-    return this._internals.reportValidity();
-  }
-  
-  setCustomValidity(message: string) {
-    this._internals.setValidity(
-      { customError: true },
-      message
-    );
-  }
-  
-  // value プロパティ
-  get value() {
-    return this._value;
-  }
-  
-  set value(val: string) {
-    this._value = val;
-    if (this._input) {
-      this._input.value = val;
-    }
-    this._internals.setFormValue(val);
-  }
-  
-  // フォームリセット時の処理
-  formResetCallback() {
-    this.value = this.getAttribute('value') || '';
-  }
-  
-  // フォーム無効化時の処理
-  formDisabledCallback(disabled: boolean) {
-    if (disabled) {
-      this.setAttribute('disabled', '');
-    } else {
-      this.removeAttribute('disabled');
-    }
   }
 }
 
-// 登録
-customElements.define('custom-input', CustomInput);
+customElements.define('form-input', FormInput);
 ```
 
-### 3. Lit を使用した効率的な実装
-
-```typescript
-// Lit を使用したWeb Component
-import { LitElement, html, css, property, customElement } from 'lit';
-import { classMap } from 'lit/directives/class-map.js';
-import { styleMap } from 'lit/directives/style-map.js';
-import { until } from 'lit/directives/until.js';
-
-@customElement('lit-card')
-export class LitCard extends LitElement {
-  static styles = css`
-    :host {
-      display: block;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    
-    .card {
-      background: var(--card-bg, white);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-    }
-    
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    }
-    
-    .card--elevated {
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    }
-    
-    .card--interactive {
-      cursor: pointer;
-    }
-    
-    .card__header {
-      margin-bottom: 16px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border-color, #eee);
-    }
-    
-    .card__title {
-      margin: 0;
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--title-color, #333);
-    }
-    
-    .card__subtitle {
-      margin: 4px 0 0;
-      font-size: 0.875rem;
-      color: var(--subtitle-color, #666);
-    }
-    
-    .card__content {
-      color: var(--content-color, #444);
-    }
-    
-    .card__footer {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color, #eee);
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-    
-    .skeleton {
-      background: linear-gradient(
-        90deg,
-        #f0f0f0 25%,
-        #e0e0e0 50%,
-        #f0f0f0 75%
-      );
-      background-size: 200% 100%;
-      animation: loading 1.5s infinite;
-      border-radius: 4px;
-    }
-    
-    @keyframes loading {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-  `;
-  
-  @property({ type: String }) title = '';
-  @property({ type: String }) subtitle = '';
-  @property({ type: Boolean }) elevated = false;
-  @property({ type: Boolean }) interactive = false;
-  @property({ type: Boolean }) loading = false;
-  @property({ type: Object }) customStyles = {};
-  
-  private async loadContent() {
-    // 非同期コンテンツの読み込みシミュレーション
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return html`<p>読み込まれたコンテンツ</p>`;
-  }
-  
-  render() {
-    const classes = {
-      'card': true,
-      'card--elevated': this.elevated,
-      'card--interactive': this.interactive,
-    };
-    
-    if (this.loading) {
-      return this.renderSkeleton();
-    }
-    
-    return html`
-      <article 
-        class=${classMap(classes)}
-        style=${styleMap(this.customStyles)}
-        @click=${this.handleClick}
-      >
-        ${this.title || this.subtitle ? html`
-          <header class="card__header">
-            ${this.title ? html`<h2 class="card__title">${this.title}</h2>` : ''}
-            ${this.subtitle ? html`<p class="card__subtitle">${this.subtitle}</p>` : ''}
-          </header>
-        ` : ''}
-        
-        <div class="card__content">
-          <slot></slot>
-          ${until(this.loadContent(), html`<p>読み込み中...</p>`)}
-        </div>
-        
-        <footer class="card__footer">
-          <slot name="footer"></slot>
-        </footer>
-      </article>
-    `;
-  }
-  
-  renderSkeleton() {
-    return html`
-      <div class="card">
-        <div class="card__header">
-          <div class="skeleton" style="height: 24px; width: 60%;"></div>
-          <div class="skeleton" style="height: 16px; width: 40%; margin-top: 8px;"></div>
-        </div>
-        <div class="card__content">
-          <div class="skeleton" style="height: 16px; width: 100%;"></div>
-          <div class="skeleton" style="height: 16px; width: 90%; margin-top: 8px;"></div>
-          <div class="skeleton" style="height: 16px; width: 95%; margin-top: 8px;"></div>
-        </div>
-      </div>
-    `;
-  }
-  
-  private handleClick() {
-    if (this.interactive) {
-      this.dispatchEvent(new CustomEvent('card-click', {
-        detail: {
-          title: this.title,
-          subtitle: this.subtitle,
-        },
-        bubbles: true,
-        composed: true,
-      }));
-    }
-  }
-}
-
-// 使用例
-// <lit-card 
-//   title="カードタイトル" 
-//   subtitle="サブタイトル"
-//   elevated
-//   interactive
-// >
-//   <p>カードの内容</p>
-//   <button slot="footer">アクション</button>
-// </lit-card>
-```
-
-## Slot と Shadow DOM
-
+### Advanced Shadow DOM with Slots
 ```javascript
-// 高度なスロット管理
-class SlottedComponent extends HTMLElement {
+// Card component with multiple named slots
+class CardComponent extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
   }
-  
+
   connectedCallback() {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
-        }
-        
-        .container {
-          border: 2px solid #ddd;
+          border: 1px solid #ddd;
           border-radius: 8px;
-          padding: 16px;
-        }
-        
-        ::slotted(h1),
-        ::slotted(h2),
-        ::slotted(h3) {
-          color: var(--heading-color, #333);
-          margin-top: 0;
-        }
-        
-        ::slotted(p) {
-          line-height: 1.6;
-        }
-        
-        ::slotted(.highlight) {
-          background: yellow;
-          padding: 2px 4px;
+          overflow: hidden;
+          background: white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .header {
+          padding: 1rem;
           background: #f5f5f5;
-          margin: -16px -16px 16px;
-          padding: 12px 16px;
-          border-radius: 6px 6px 0 0;
+          border-bottom: 1px solid #ddd;
         }
         
-        .footer {
-          background: #f5f5f5;
-          margin: 16px -16px -16px;
-          padding: 12px 16px;
-          border-radius: 0 0 6px 6px;
+        .header ::slotted(h1),
+        .header ::slotted(h2),
+        .header ::slotted(h3) {
+          margin: 0;
+          color: #333;
+        }
+        
+        .media {
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .media ::slotted(img) {
+          width: 100%;
+          height: auto;
+          display: block;
+        }
+        
+        .content {
+          padding: 1rem;
+        }
+        
+        .actions {
+          padding: 1rem;
+          border-top: 1px solid #ddd;
+          display: flex;
+          gap: 0.5rem;
+          justify-content: flex-end;
+        }
+        
+        .actions ::slotted(button) {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 4px;
+          background: #007bff;
+          color: white;
+          cursor: pointer;
+        }
+        
+        /* Slot change animation */
+        slot {
+          display: block;
+          animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
       </style>
       
-      <div class="container">
+      <div class="card">
         <div class="header">
-          <slot name="header">デフォルトヘッダー</slot>
+          <slot name="header"></slot>
         </div>
-        
-        <main>
-          <slot>デフォルトコンテンツ</slot>
-        </main>
-        
-        <div class="footer">
-          <slot name="footer">デフォルトフッター</slot>
+        <div class="media">
+          <slot name="media"></slot>
+        </div>
+        <div class="content">
+          <slot></slot>
+        </div>
+        <div class="actions">
+          <slot name="actions"></slot>
         </div>
       </div>
     `;
-    
-    // スロット変更の監視
+
+    // Monitor slot changes
     const slots = this.shadowRoot.querySelectorAll('slot');
     slots.forEach(slot => {
       slot.addEventListener('slotchange', (e) => {
-        const slot = e.target as HTMLSlotElement;
         const nodes = slot.assignedNodes();
-        console.log(`Slot "${slot.name || 'default'}" changed:`, nodes);
+        console.log(`Slot ${slot.name || 'default'} changed:`, nodes);
         
-        // スロットコンテンツに基づく処理
-        this.processSlottedContent(slot, nodes);
+        // Handle specific slot changes
+        if (slot.name === 'media' && nodes.length > 0) {
+          this.handleMediaSlotChange(nodes);
+        }
       });
     });
   }
-  
-  processSlottedContent(slot, nodes) {
-    // スロットコンテンツの処理
+
+  handleMediaSlotChange(nodes) {
     nodes.forEach(node => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        // 要素ノードの処理
-        console.log('Slotted element:', node.tagName);
+      if (node.tagName === 'IMG') {
+        // Lazy load images
+        if ('loading' in HTMLImageElement.prototype) {
+          node.loading = 'lazy';
+        }
       }
     });
   }
 }
 
-customElements.define('slotted-component', SlottedComponent);
+customElements.define('card-component', CardComponent);
 ```
 
-## ベストプラクティス
+### Lit Framework Integration
+```typescript
+// Lit element with TypeScript
+import { LitElement, html, css, customElement, property, state } from 'lit';
+import { classMap } from 'lit/directives/class-map.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { until } from 'lit/directives/until.js';
 
-1. **Shadow DOM**: スタイルのカプセル化と再利用性
-2. **Custom Elements**: 標準HTMLのように使える独自要素
-3. **属性とプロパティ**: 適切な同期と型変換
-4. **ライフサイクル**: 適切なタイミングでの初期化とクリーンアップ
-5. **アクセシビリティ**: ARIA属性、キーボード操作対応
-6. **パフォーマンス**: 遅延レンダリング、効率的な更新
-7. **フレームワーク統合**: React、Vue、Angularとの相互運用性
+@customElement('lit-todo-app')
+export class LitTodoApp extends LitElement {
+  static styles = css`
+    :host {
+      display: block;
+      font-family: system-ui;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .todo-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+
+    .todo-item.completed {
+      opacity: 0.6;
+      background: #f5f5f5;
+    }
+
+    .todo-item.completed .todo-text {
+      text-decoration: line-through;
+    }
+
+    .todo-item.priority-high {
+      border-left: 4px solid #dc3545;
+    }
+
+    .todo-item.priority-medium {
+      border-left: 4px solid #ffc107;
+    }
+
+    .todo-item.priority-low {
+      border-left: 4px solid #28a745;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .filters {
+      display: flex;
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+
+    .filter-btn {
+      background: #e9ecef;
+      color: #333;
+    }
+
+    .filter-btn.active {
+      background: #007bff;
+      color: white;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 4px;
+      margin-top: 1rem;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :host {
+        color: #fff;
+        background: #1a1a1a;
+      }
+
+      .todo-item {
+        border-color: #444;
+        background: #2a2a2a;
+      }
+
+      input {
+        background: #2a2a2a;
+        border-color: #444;
+        color: #fff;
+      }
+    }
+  `;
+
+  @property({ type: Array }) todos: Todo[] = [];
+  @property({ type: String }) filter: 'all' | 'active' | 'completed' = 'all';
+  @state() private newTodoText = '';
+  @state() private priority: 'low' | 'medium' | 'high' = 'medium';
+
+  private async loadTodos() {
+    // Simulate async data loading
+    return new Promise<Todo[]>((resolve) => {
+      setTimeout(() => {
+        resolve([
+          { id: 1, text: 'Learn Lit', completed: false, priority: 'high' },
+          { id: 2, text: 'Build app', completed: false, priority: 'medium' }
+        ]);
+      }, 1000);
+    });
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.loadTodos().then(todos => {
+      this.todos = todos;
+    });
+  }
+
+  private addTodo() {
+    if (!this.newTodoText.trim()) return;
+
+    const newTodo: Todo = {
+      id: Date.now(),
+      text: this.newTodoText,
+      completed: false,
+      priority: this.priority
+    };
+
+    this.todos = [...this.todos, newTodo];
+    this.newTodoText = '';
+    
+    this.dispatchEvent(new CustomEvent('todo-added', {
+      detail: newTodo,
+      bubbles: true,
+      composed: true
+    }));
+  }
+
+  private toggleTodo(id: number) {
+    this.todos = this.todos.map(todo =>
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    );
+  }
+
+  private deleteTodo(id: number) {
+    this.todos = this.todos.filter(todo => todo.id !== id);
+  }
+
+  private get filteredTodos() {
+    switch (this.filter) {
+      case 'active':
+        return this.todos.filter(t => !t.completed);
+      case 'completed':
+        return this.todos.filter(t => t.completed);
+      default:
+        return this.todos;
+    }
+  }
+
+  private get stats() {
+    return {
+      total: this.todos.length,
+      active: this.todos.filter(t => !t.completed).length,
+      completed: this.todos.filter(t => t.completed).length
+    };
+  }
+
+  render() {
+    return html`
+      <h1>Todo App</h1>
+      
+      <div class="input-group">
+        <input
+          type="text"
+          .value=${this.newTodoText}
+          @input=${(e: InputEvent) => this.newTodoText = (e.target as HTMLInputElement).value}
+          @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
+          placeholder="What needs to be done?"
+        />
+        
+        <select @change=${(e: Event) => this.priority = (e.target as HTMLSelectElement).value as any}>
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        
+        <button @click=${this.addTodo}>Add Todo</button>
+      </div>
+
+      <div class="filters">
+        ${['all', 'active', 'completed'].map(f => html`
+          <button
+            class=${classMap({ 
+              'filter-btn': true, 
+              'active': this.filter === f 
+            })}
+            @click=${() => this.filter = f as any}
+          >
+            ${f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        `)}
+      </div>
+
+      <ul class="todo-list">
+        ${repeat(
+          this.filteredTodos,
+          todo => todo.id,
+          todo => html`
+            <li
+              class=${classMap({
+                'todo-item': true,
+                'completed': todo.completed,
+                [`priority-${todo.priority}`]: true
+              })}
+            >
+              <input
+                type="checkbox"
+                .checked=${todo.completed}
+                @change=${() => this.toggleTodo(todo.id)}
+              />
+              <span class="todo-text">${todo.text}</span>
+              <button @click=${() => this.deleteTodo(todo.id)}>Delete</button>
+            </li>
+          `
+        )}
+      </ul>
+
+      <div class="stats">
+        <span>Total: ${this.stats.total}</span>
+        <span>Active: ${this.stats.active}</span>
+        <span>Completed: ${this.stats.completed}</span>
+      </div>
+
+      ${until(
+        this.loadTodos().then(() => html`<p>Todos loaded!</p>`),
+        html`<p>Loading todos...</p>`
+      )}
+    `;
+  }
+}
+
+interface Todo {
+  id: number;
+  text: string;
+  completed: boolean;
+  priority: 'low' | 'medium' | 'high';
+}
+```
+
+## Testing Web Components
+
+```typescript
+// Testing with @open-wc/testing
+import { expect, fixture, html } from '@open-wc/testing';
+import '../src/my-element.js';
+
+describe('MyElement', () => {
+  it('has a default title', async () => {
+    const el = await fixture(html`<my-element></my-element>`);
+    expect(el.title).to.equal('Default Title');
+  });
+
+  it('renders slot content', async () => {
+    const el = await fixture(html`
+      <my-element>
+        <p slot="content">Test content</p>
+      </my-element>
+    `);
+    
+    const slot = el.shadowRoot!.querySelector('slot[name="content"]');
+    const nodes = (slot as HTMLSlotElement).assignedNodes();
+    expect(nodes).to.have.length(1);
+  });
+
+  it('fires custom event on click', async () => {
+    const el = await fixture(html`<my-element></my-element>`);
+    let eventFired = false;
+    
+    el.addEventListener('my-event', () => {
+      eventFired = true;
+    });
+    
+    el.click();
+    expect(eventFired).to.be.true;
+  });
+});
+```
+
+## Production Checklist
+- [ ] Custom elements properly registered
+- [ ] Shadow DOM encapsulation configured
+- [ ] Observed attributes defined
+- [ ] Lifecycle callbacks implemented
+- [ ] Form association added where needed
+- [ ] Proper event handling with cleanup
+- [ ] Accessibility attributes included
+- [ ] CSS custom properties for theming
+- [ ] Slot change monitoring
+- [ ] Testing coverage for components

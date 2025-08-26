@@ -1,525 +1,726 @@
-# CSS Grid & Flexbox 実践ガイド 2025
+# CSS Grid & Flexbox Advanced Layout Guide
 
-## CSS Grid 完全マスター
+## CSS Grid Complete Implementation
 
-### 1. グリッドレイアウトの基礎と応用
-
+### Advanced Grid Template Areas
 ```css
-/* Grid コンテナの設定 */
-.grid-container {
-  display: grid;
-  
-  /* 明示的グリッド定義 */
-  grid-template-columns: 
-    [full-start] minmax(1rem, 1fr) 
-    [main-start] minmax(0, 75rem) 
-    [main-end] minmax(1rem, 1fr) 
-    [full-end];
-  
-  grid-template-rows: 
-    [header-start] auto 
-    [header-end main-start] 1fr 
-    [main-end footer-start] auto 
-    [footer-end];
-  
-  /* 暗黙的グリッド */
-  grid-auto-rows: minmax(100px, auto);
-  grid-auto-columns: 1fr;
-  grid-auto-flow: row dense; /* 隙間を埋める配置 */
-  
-  /* ギャップ（旧grid-gap） */
-  gap: clamp(1rem, 2vw, 2rem);
-  row-gap: 20px;
-  column-gap: 30px;
-  
-  /* アライメント */
-  justify-items: stretch; /* start | end | center | stretch */
-  align-items: stretch;
-  justify-content: start; /* space-between | space-around | space-evenly */
-  align-content: start;
-  
-  /* ショートハンド */
-  place-items: center; /* align-items justify-items */
-  place-content: center; /* align-content justify-content */
-}
-
-/* レスポンシブグリッドパターン */
-.responsive-grid {
-  display: grid;
-  
-  /* Auto-fit: 空のトラックを削除 */
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  
-  /* Auto-fill: 空のトラックを保持 */
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  
-  /* RAM (Repeat, Auto, Minmax) パターン */
-  grid-template-columns: repeat(auto-fit, minmax(
-    min(100%, 300px), /* 最小値をビューポート幅に制限 */
-    1fr
-  ));
-  
-  /* 可変カラム数 */
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(
-      clamp(200px, 25%, 300px), /* 動的な最小幅 */
-      1fr
-    )
-  );
-}
-
-/* グリッドアイテムの配置 */
-.grid-item {
-  /* 配置指定 */
-  grid-column: 1 / 3; /* または span 2 */
-  grid-row: 2 / 4;
-  
-  /* 名前付きライン使用 */
-  grid-column: main-start / main-end;
-  
-  /* ショートハンド */
-  grid-area: 2 / 1 / 4 / 3; /* row-start / col-start / row-end / col-end */
-  
-  /* セルフアライメント */
-  justify-self: center;
-  align-self: end;
-  place-self: center stretch;
-  
-  /* Zインデックス制御 */
-  z-index: 1; /* グリッドアイテム間の重なり順 */
-}
-
-/* Grid Template Areas - ビジュアルレイアウト */
-.layout-grid {
+/* Complex dashboard layout with named areas */
+.dashboard {
   display: grid;
   grid-template-areas:
-    "header header header"
-    "nav    main   aside"
-    "nav    main   aside"
-    "footer footer footer";
-  
-  grid-template-columns: 200px 1fr 300px;
-  grid-template-rows: auto 1fr auto auto;
-  gap: 20px;
-  min-height: 100vh;
+    "header header header header"
+    "sidebar main main widgets"
+    "sidebar main main widgets"
+    "sidebar footer footer footer";
+  grid-template-columns: 250px 1fr 1fr 300px;
+  grid-template-rows: 80px 1fr 1fr 60px;
+  gap: 1rem;
+  height: 100vh;
 }
 
-.header { grid-area: header; }
-.nav    { grid-area: nav; }
-.main   { grid-area: main; }
-.aside  { grid-area: aside; }
-.footer { grid-area: footer; }
-
-/* Subgrid - 親グリッドの継承 */
-.parent-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+.header {
+  grid-area: header;
+  background: #2c3e50;
+  color: white;
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
 }
 
-.subgrid-item {
-  display: grid;
-  grid-column: span 2;
-  
-  /* Subgrid: 親のトラックを継承 */
-  grid-template-columns: subgrid;
-  grid-template-rows: subgrid;
+.sidebar {
+  grid-area: sidebar;
+  background: #34495e;
+  color: white;
+  overflow-y: auto;
 }
 
-/* Container Queries と組み合わせ */
-@container (min-width: 700px) {
-  .container-grid {
-    grid-template-columns: repeat(3, 1fr);
+.main {
+  grid-area: main;
+  background: white;
+  overflow-y: auto;
+  padding: 2rem;
+}
+
+.widgets {
+  grid-area: widgets;
+  background: #ecf0f1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.footer {
+  grid-area: footer;
+  background: #2c3e50;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive grid areas */
+@media (max-width: 1200px) {
+  .dashboard {
+    grid-template-areas:
+      "header header header"
+      "sidebar main main"
+      "sidebar main main"
+      "widgets widgets widgets"
+      "footer footer footer";
+    grid-template-columns: 200px 1fr 1fr;
+    grid-template-rows: 80px 1fr 1fr auto 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-areas:
+      "header"
+      "main"
+      "widgets"
+      "sidebar"
+      "footer";
+    grid-template-columns: 1fr;
+    grid-template-rows: 80px 1fr auto auto 60px;
   }
 }
 ```
 
-### 2. 高度なグリッドテクニック
-
+### CSS Subgrid Implementation
 ```css
-/* マソンリーレイアウト（実験的機能） */
-.masonry-grid {
+/* Subgrid for aligned nested content */
+.card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  grid-template-rows: masonry; /* 実験的 */
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
 }
 
-/* アスペクト比を保つグリッド */
-.aspect-ratio-grid {
+.card {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card-header {
+  grid-row: 1;
+  padding: 1rem;
+  background: #f5f5f5;
+}
+
+.card-body {
+  grid-row: 2;
+  padding: 1rem;
+  flex: 1;
+}
+
+.card-footer {
+  grid-row: 3;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-top: 1px solid #ddd;
+}
+
+/* Alternative: container subgrid */
+.form-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
   gap: 1rem;
 }
 
-.aspect-ratio-grid > * {
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  width: 100%;
-  height: 100%;
-}
-
-/* 複雑なレイアウトパターン */
-.complex-grid {
+.form-section {
   display: grid;
-  grid-template-columns: 
-    [full-start] 
-    minmax(1rem, 1fr) 
-    [content-start] 
-    repeat(12, [col-start] minmax(0, 6.25rem) [col-end])
-    [content-end]
-    minmax(1rem, 1fr)
-    [full-end];
-  
-  /* 行の最小・最大高さ */
-  grid-template-rows: 
-    minmax(100px, max-content)
-    fit-content(300px)
-    minmax(200px, 1fr);
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  gap: inherit;
 }
 
-/* グリッドアニメーション */
-.animated-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  transition: grid-template-columns 0.3s ease;
+.form-label {
+  grid-column: 1;
+  text-align: right;
+  padding-right: 1rem;
 }
 
-.animated-grid:hover {
-  grid-template-columns: 2fr 1fr 1fr;
-}
-
-.animated-grid-item {
-  transition: grid-column 0.3s ease, grid-row 0.3s ease;
-}
-
-/* レイヤードグリッド */
-.layered-grid {
-  display: grid;
-  grid-template: 1fr / 1fr; /* 1x1グリッド */
-}
-
-.layered-grid > * {
-  grid-area: 1 / 1; /* 全て同じセルに配置 */
-}
-
-.layered-grid > .background {
-  z-index: 0;
-}
-
-.layered-grid > .content {
-  z-index: 1;
-  align-self: center;
-  justify-self: center;
+.form-input {
+  grid-column: 2;
 }
 ```
 
-## Flexbox 完全マスター
-
-### 1. Flexboxの基礎と応用
-
+### Masonry Layout with Grid
 ```css
-/* Flex コンテナ */
-.flex-container {
-  display: flex; /* または inline-flex */
-  
-  /* 主軸の方向 */
-  flex-direction: row; /* row-reverse | column | column-reverse */
-  
-  /* 折り返し */
-  flex-wrap: wrap; /* nowrap | wrap-reverse */
-  
-  /* ショートハンド */
-  flex-flow: row wrap;
-  
-  /* 主軸の配置 */
-  justify-content: flex-start; 
-  /* flex-end | center | space-between | space-around | space-evenly */
-  
-  /* 交差軸の配置 */
-  align-items: stretch;
-  /* flex-start | flex-end | center | baseline */
-  
-  /* 複数行の配置 */
-  align-content: flex-start;
-  /* flex-end | center | space-between | space-around | stretch */
-  
-  /* ギャップ */
-  gap: 20px;
-  row-gap: 10px;
-  column-gap: 20px;
+/* Pure CSS Masonry (Firefox only with grid-template-rows: masonry) */
+.masonry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-rows: masonry; /* Firefox only */
+  gap: 1rem;
 }
 
-/* Flex アイテム */
-.flex-item {
-  /* 伸長係数 */
-  flex-grow: 1; /* 0がデフォルト */
-  
-  /* 収縮係数 */
-  flex-shrink: 1; /* 1がデフォルト */
-  
-  /* ベースサイズ */
-  flex-basis: auto; /* または具体的な値 200px, 20% など */
-  
-  /* ショートハンド */
-  flex: 1 1 auto; /* grow shrink basis */
-  flex: 1; /* 1 1 0 と同じ */
-  flex: auto; /* 1 1 auto */
-  flex: initial; /* 0 1 auto */
-  flex: none; /* 0 0 auto */
-  
-  /* セルフアライメント */
-  align-self: auto; /* flex-start | flex-end | center | baseline | stretch */
-  
-  /* 並び順 */
-  order: 0; /* デフォルト0、負の値も可能 */
+/* Fallback: Dense packing algorithm */
+.masonry-fallback {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-auto-rows: 20px;
+  gap: 1rem;
 }
 
-/* 一般的なFlexboxパターン */
+.masonry-item {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+}
 
-/* 中央揃え */
-.center-flex {
+.masonry-item:nth-child(odd) {
+  grid-row-end: span 10;
+}
+
+.masonry-item:nth-child(even) {
+  grid-row-end: span 15;
+}
+
+.masonry-item:nth-child(3n) {
+  grid-row-end: span 12;
+}
+
+/* JavaScript-enhanced masonry */
+.js-masonry {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-auto-rows: 10px;
+  gap: 1rem;
+}
+
+.js-masonry-item {
+  grid-row-end: span var(--rows);
+}
+```
+
+### Complex Grid Patterns
+```css
+/* Magazine-style layout */
+.magazine-layout {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: minmax(100px, auto);
+  gap: 1.5rem;
+}
+
+.feature-article {
+  grid-column: 1 / 9;
+  grid-row: 1 / 4;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+.side-article {
+  grid-column: 9 / 13;
+  grid-row: 1 / 2;
+}
+
+.small-article {
+  grid-column: span 4;
+  grid-row: span 2;
+}
+
+.horizontal-article {
+  grid-column: span 8;
+  grid-row: span 1;
+}
+
+/* Bento grid layout */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 120px;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.bento-item-large {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.bento-item-tall {
+  grid-column: span 1;
+  grid-row: span 2;
+}
+
+.bento-item-wide {
+  grid-column: span 2;
+  grid-row: span 1;
+}
+
+.bento-item-small {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+```
+
+## Flexbox Advanced Patterns
+
+### Holy Grail Layout with Flexbox
+```css
+/* Classic holy grail layout */
+.holy-grail {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.holy-grail-header {
+  flex: 0 0 auto;
+  background: #333;
+  color: white;
+  padding: 1rem;
+}
+
+.holy-grail-body {
+  flex: 1 0 auto;
+  display: flex;
+}
+
+.holy-grail-content {
+  flex: 1;
+  padding: 2rem;
+  order: 2;
+}
+
+.holy-grail-nav {
+  flex: 0 0 200px;
+  order: 1;
+  background: #f5f5f5;
+  padding: 1rem;
+}
+
+.holy-grail-aside {
+  flex: 0 0 200px;
+  order: 3;
+  background: #f5f5f5;
+  padding: 1rem;
+}
+
+.holy-grail-footer {
+  flex: 0 0 auto;
+  background: #333;
+  color: white;
+  padding: 1rem;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .holy-grail-body {
+    flex-direction: column;
+  }
+  
+  .holy-grail-nav,
+  .holy-grail-aside {
+    flex: 1 0 auto;
+    order: initial;
+  }
+}
+```
+
+### Advanced Flexbox Alignment
+```css
+/* Equal height cards with flexbox */
+.card-container {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.flex-card {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.flex-card-header {
+  padding: 1rem;
+  background: #f5f5f5;
+}
+
+.flex-card-body {
+  flex: 1;
+  padding: 1rem;
+}
+
+.flex-card-footer {
+  padding: 1rem;
+  background: #f5f5f5;
+  margin-top: auto; /* Push to bottom */
+}
+
+/* Center anything pattern */
+.flex-center {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
 }
 
-/* サイドバーレイアウト */
-.sidebar-layout {
+/* Sidebar with flex */
+.flex-layout {
   display: flex;
-  gap: 20px;
-}
-
-.sidebar {
-  flex: 0 0 250px; /* 固定幅 */
-}
-
-.main-content {
-  flex: 1; /* 残りの空間を占有 */
-  min-width: 0; /* テキストオーバーフロー対策 */
-}
-
-/* ヘッダー/フッター固定レイアウト */
-.app-layout {
-  display: flex;
-  flex-direction: column;
   min-height: 100vh;
 }
 
-.app-header,
-.app-footer {
-  flex: 0 0 auto;
+.flex-sidebar {
+  flex: 0 0 250px;
+  background: #2c3e50;
+  color: white;
+  padding: 1rem;
+  
+  /* Sticky sidebar */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
-.app-main {
-  flex: 1 0 auto;
+.flex-main {
+  flex: 1;
+  padding: 2rem;
+  min-width: 0; /* Prevent overflow */
 }
 
-/* カードグリッド */
-.card-grid {
+/* Flex wrap with consistent spacing */
+.flex-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
-  
-  /* 負のマージンテクニック */
-  margin: -10px;
+  margin: -0.5rem;
 }
 
-.card-grid > * {
-  flex: 1 1 300px; /* 最小幅300pxで伸縮 */
-  margin: 10px;
+.flex-grid-item {
+  flex: 0 0 calc(33.333% - 1rem);
+  margin: 0.5rem;
 }
 
-/* ナビゲーションバー */
-.navbar {
+@media (max-width: 768px) {
+  .flex-grid-item {
+    flex: 0 0 calc(50% - 1rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .flex-grid-item {
+    flex: 0 0 calc(100% - 1rem);
+  }
+}
+```
+
+### Flexbox Navigation Patterns
+```css
+/* Responsive navigation with flexbox */
+.nav-flex {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
+  background: #333;
 }
 
-.nav-links {
+.nav-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+}
+
+.nav-menu {
   display: flex;
   gap: 2rem;
   list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-item {
+  color: white;
+  text-decoration: none;
+  position: relative;
+}
+
+.nav-item:hover::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #007bff;
 }
 
 .nav-actions {
   display: flex;
   gap: 1rem;
-  margin-left: auto; /* 右寄せ */
-}
-```
-
-### 2. 高度なFlexboxテクニック
-
-```css
-/* レスポンシブFlexbox */
-.responsive-flex {
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(1rem, 2vw, 2rem);
 }
 
-.responsive-flex > * {
-  flex: 1 1 calc(33.333% - 2rem);
-}
-
+/* Mobile menu */
 @media (max-width: 768px) {
-  .responsive-flex > * {
-    flex: 1 1 calc(50% - 1rem);
+  .nav-menu {
+    position: fixed;
+    top: 60px;
+    left: -100%;
+    width: 100%;
+    height: calc(100vh - 60px);
+    background: #333;
+    flex-direction: column;
+    padding: 2rem;
+    transition: left 0.3s ease;
   }
-}
-
-@media (max-width: 480px) {
-  .responsive-flex > * {
-    flex: 1 1 100%;
-  }
-}
-
-/* Flexbox アニメーション */
-.animated-flex {
-  display: flex;
-  transition: gap 0.3s ease;
-}
-
-.animated-flex:hover {
-  gap: 2rem;
-}
-
-.animated-flex-item {
-  flex: 1;
-  transition: flex 0.3s ease;
-}
-
-.animated-flex-item:hover {
-  flex: 2;
-}
-
-/* Flexbox タブシステム */
-.tab-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.tab-list {
-  display: flex;
-  gap: 1px;
-  background: #ddd;
-}
-
-.tab-button {
-  flex: 1;
-  padding: 1rem;
-  background: white;
-  border: none;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.tab-button[aria-selected="true"] {
-  background: #007bff;
-  color: white;
-}
-
-.tab-panel {
-  padding: 2rem;
-  display: none;
-}
-
-.tab-panel[aria-hidden="false"] {
-  display: block;
-}
-
-/* Intrinsic サイジング */
-.intrinsic-flex {
-  display: flex;
-  gap: 1rem;
-}
-
-.intrinsic-item {
-  flex: 0 1 max-content; /* コンテンツに基づくサイズ */
-}
-
-.intrinsic-fill {
-  flex: 1 1 0; /* 残りの空間を埋める */
-}
-
-/* Flexbox マスタリー */
-.mastery-container {
-  display: flex;
-  flex-wrap: wrap;
   
-  /* Flexboxでのアスペクト比保持 */
-  --columns: 3;
-  --gap: 1rem;
-}
-
-.mastery-item {
-  flex: 0 1 calc((100% - (var(--columns) - 1) * var(--gap)) / var(--columns));
-  aspect-ratio: 1;
+  .nav-menu.active {
+    left: 0;
+  }
 }
 ```
 
-## Grid vs Flexbox 使い分け
+## Grid vs Flexbox Decision Matrix
 
 ```css
-/* 2次元レイアウト → Grid */
-.two-dimensional {
+/* Use Grid when you need: */
+/* 1. Two-dimensional layouts */
+.grid-2d {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 100px);
 }
 
-/* 1次元レイアウト → Flexbox */
-.one-dimensional {
+/* 2. Precise placement */
+.grid-placement {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.item {
+  grid-column: 2 / 10;
+  grid-row: 1 / 3;
+}
+
+/* 3. Overlapping elements */
+.grid-overlap {
+  display: grid;
+}
+
+.background {
+  grid-area: 1 / 1 / 2 / 2;
+  z-index: 1;
+}
+
+.foreground {
+  grid-area: 1 / 1 / 2 / 2;
+  z-index: 2;
+}
+
+/* Use Flexbox when you need: */
+/* 1. One-dimensional layouts */
+.flex-1d {
   display: flex;
   justify-content: space-between;
 }
 
-/* 複雑なレイアウト → Grid + Flexbox組み合わせ */
-.hybrid-layout {
-  display: grid;
-  grid-template-columns: 250px 1fr;
-  gap: 2rem;
-}
-
-.hybrid-sidebar {
+/* 2. Content-based sizing */
+.flex-content {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
 }
 
-.hybrid-main {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+.flex-item {
+  flex: 0 1 auto; /* Shrink but don't grow */
 }
 
-/* パフォーマンス考慮 */
-.performance-optimized {
-  /* Gridの場合 */
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  contain: layout; /* レイアウト計算の最適化 */
-}
-
-.performance-flex {
-  /* Flexboxの場合 */
+/* 3. Alignment along one axis */
+.flex-align {
   display: flex;
-  flex-wrap: wrap;
-  will-change: auto; /* アニメーション時のみwill-change使用 */
+  align-items: center;
+  justify-content: center;
 }
 ```
 
-## ベストプラクティス
+## Container Queries with Grid/Flexbox
 
-1. **Grid選択基準**: 2次元レイアウト、複雑な配置、オーバーラップ
-2. **Flexbox選択基準**: 1次元配置、動的サイズ調整、コンテンツベースレイアウト
-3. **レスポンシブ**: clamp()、minmax()、auto-fit/auto-fillの活用
-4. **パフォーマンス**: contain、will-changeの適切な使用
-5. **アクセシビリティ**: 論理的な並び順の維持
-6. **フォールバック**: @supportsによる段階的強化
-7. **デバッグ**: Chrome/Firefox DevToolsのGrid/Flexインスペクター活用
+```css
+/* Container query with grid */
+.card-container {
+  container-type: inline-size;
+  container-name: card;
+}
+
+.card-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@container card (min-width: 700px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container card (min-width: 1000px) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Container query with flexbox */
+.flex-container {
+  container-type: inline-size;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.flex-item {
+  flex: 1 1 100%;
+}
+
+@container (min-width: 500px) {
+  .flex-item {
+    flex: 1 1 calc(50% - 0.5rem);
+  }
+}
+
+@container (min-width: 800px) {
+  .flex-item {
+    flex: 1 1 calc(33.333% - 0.667rem);
+  }
+}
+```
+
+## Performance Optimization
+
+```css
+/* Optimize grid/flex performance */
+.optimized-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  
+  /* Contain layout for performance */
+  contain: layout style;
+  
+  /* Will-change for animations */
+  will-change: transform;
+}
+
+.optimized-flex {
+  display: flex;
+  flex-wrap: wrap;
+  
+  /* Avoid layout thrashing */
+  contain: layout;
+  
+  /* Hardware acceleration */
+  transform: translateZ(0);
+}
+
+/* Reduce reflows */
+.stable-layout {
+  /* Define explicit dimensions */
+  width: 100%;
+  max-width: 1200px;
+  height: 600px;
+  
+  /* Prevent content shift */
+  aspect-ratio: 16 / 9;
+  
+  /* Isolate layout calculations */
+  contain: size layout;
+}
+```
+
+## Production Examples
+
+```typescript
+// React component with CSS Grid
+function GridGallery({ items }: { items: GalleryItem[] }) {
+  return (
+    <div className="gallery-grid">
+      {items.map((item, index) => (
+        <div
+          key={item.id}
+          className={`gallery-item ${item.featured ? 'featured' : ''}`}
+          style={{
+            gridColumn: item.featured ? 'span 2' : 'span 1',
+            gridRow: item.featured ? 'span 2' : 'span 1'
+          }}
+        >
+          <img src={item.image} alt={item.title} />
+          <div className="gallery-overlay">
+            <h3>{item.title}</h3>
+            <p>{item.description}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// CSS for the gallery
+const galleryStyles = `
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-auto-rows: 200px;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.gallery-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.gallery-item:hover img {
+  transform: scale(1.1);
+}
+
+.gallery-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  color: white;
+  padding: 1rem;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.gallery-item:hover .gallery-overlay {
+  transform: translateY(0);
+}
+
+@supports (grid-template-rows: masonry) {
+  .gallery-grid {
+    grid-template-rows: masonry;
+  }
+}
+`;
+```
+
+## Production Checklist
+- [ ] Grid template areas defined for complex layouts
+- [ ] Subgrid used for aligned content
+- [ ] Fallbacks for unsupported features
+- [ ] Responsive breakpoints configured
+- [ ] Container queries implemented where beneficial
+- [ ] Performance optimizations applied
+- [ ] Layout containment for reflow prevention
+- [ ] Flexbox used for one-dimensional layouts
+- [ ] Grid used for two-dimensional layouts
+- [ ] Browser compatibility verified

@@ -1,9 +1,9 @@
-# 不変性パターン
+# Immutability Patterns
 
-## 基本的なイミュータブル操作
+## Basic Immutable Operations
 
 ```javascript
-// 配列の不変更新
+// Immutable array updates
 const addItem = (arr, item) => [...arr, item];
 const removeItem = (arr, index) => [
   ...arr.slice(0, index),
@@ -15,7 +15,7 @@ const updateItem = (arr, index, newItem) => [
   ...arr.slice(index + 1)
 ];
 
-// オブジェクトの不変更新
+// Immutable object updates
 const setProperty = (obj, key, value) => ({
   ...obj,
   [key]: value
@@ -32,10 +32,10 @@ const deleteProperty = (obj, key) => {
 };
 ```
 
-## 深いオブジェクトの更新
+## Deep Object Updates
 
 ```javascript
-// パス指定による深い更新
+// Path-based deep updates
 const setIn = (obj, path, value) => {
   const [head, ...tail] = path;
   
@@ -62,7 +62,7 @@ const updateIn = (obj, path, updater) => {
   };
 };
 
-// 使用例
+// Usage example
 const state = {
   user: {
     profile: {
@@ -79,10 +79,10 @@ const newState = setIn(state, ['user', 'profile', 'name'], 'Jane');
 const incrementedAge = updateIn(state, ['user', 'profile', 'age'], age => age + 1);
 ```
 
-## カスタムイミュータブルデータ構造
+## Custom Immutable Data Structures
 
 ```javascript
-// イミュータブルリスト
+// Immutable List
 class ImmutableList {
   constructor(items = []) {
     this.items = Object.freeze([...items]);
@@ -132,7 +132,7 @@ class ImmutableList {
   }
 }
 
-// イミュータブルマップ
+// Immutable Map
 class ImmutableMap {
   constructor(entries = []) {
     this.data = Object.freeze(
@@ -186,10 +186,10 @@ class ImmutableMap {
 }
 ```
 
-## 構造的共有の最適化
+## Structural Sharing Optimization
 
 ```javascript
-// 効率的な配列更新（構造的共有）
+// Efficient array updates (structural sharing)
 class PersistentVector {
   constructor(items = [], trie = null) {
     this.items = items;
@@ -198,11 +198,11 @@ class PersistentVector {
   }
   
   push(item) {
-    // 単純化された実装（実際はtrie構造を使用）
+    // Simplified implementation (actual would use trie structure)
     if (this.length < 32) {
       return new PersistentVector([...this.items, item]);
     }
-    // より効率的なtrie-based実装が必要
+    // More efficient trie-based implementation needed
     return new PersistentVector([...this.items, item]);
   }
   
@@ -221,7 +221,7 @@ class PersistentVector {
   }
 }
 
-// Copy-on-Write最適化
+// Copy-on-Write optimization
 class COWArray {
   constructor(items = [], isCopied = false) {
     this._items = items;
@@ -263,10 +263,10 @@ class COWArray {
 }
 ```
 
-## レンズによる関数的更新
+## Functional Updates with Lenses
 
 ```javascript
-// レンズパターンの実装
+// Lens pattern implementation
 const Lens = {
   of: (getter, setter) => ({ get: getter, set: setter }),
   
@@ -292,7 +292,7 @@ const Lens = {
   set: (lens, value) => obj => lens.set(value)(obj)
 };
 
-// 使用例
+// Usage example
 const userLens = Lens.prop('user');
 const nameLens = Lens.path(['user', 'name']);
 const ageLens = Lens.path(['user', 'age']);

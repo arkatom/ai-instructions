@@ -1,6 +1,6 @@
-# Async/Awaitベストプラクティス
+# Async/Await Best Practices
 
-## 優先度付きキュー
+## Priority Async Queue
 
 ```javascript
 class PriorityAsyncQueue {
@@ -44,7 +44,7 @@ class PriorityAsyncQueue {
 }
 ```
 
-## 非同期パイプライン
+## Async Pipeline
 
 ```javascript
 class AsyncPipeline {
@@ -106,7 +106,7 @@ class AsyncPipeline {
 }
 ```
 
-## リソース管理
+## Resource Management
 
 ```javascript
 class AsyncResourceManager {
@@ -157,7 +157,7 @@ class AsyncResourceManager {
   }
 }
 
-// 使用例
+// Usage example
 const resourceManager = new AsyncResourceManager();
 const db = await resourceManager.acquire(
   'database',

@@ -1,22 +1,22 @@
-# Tailwind CSS 実践ガイド 2025
+# Tailwind CSS Practical Guide 2025
 
-## 最適化された設定とJITモード
+## Optimized Configuration and JIT Mode
 
-### 本番環境向け最小構成
+### Production-Ready Minimal Setup
 
 ```javascript
 // tailwind.config.js
 module.exports = {
   content: [
     './src/**/*.{js,ts,jsx,tsx,mdx}',
-    // 動的クラス生成パターンをセーフリストに追加
+    // Dynamic class generation patterns added to safelist
     './src/utils/tailwind-safelist.ts',
   ],
-  // ダークモード戦略（class or media）
+  // Dark mode strategy (class or media)
   darkMode: 'class',
   theme: {
     extend: {
-      // カスタムブレークポイント（デバイス固有）
+      // Custom breakpoints (device-specific)
       screens: {
         'xs': '475px',
         '3xl': '1920px',
@@ -24,22 +24,22 @@ module.exports = {
         'mouse': { 'raw': '(hover: hover)' },
         'retina': { 'raw': '(-webkit-min-device-pixel-ratio: 2)' },
       },
-      // デザインシステムとの統合
+      // Design system integration
       colors: {
         primary: {
           50: 'rgb(var(--color-primary-50) / <alpha-value>)',
           100: 'rgb(var(--color-primary-100) / <alpha-value>)',
-          // RGB値での定義で opacity-* との併用を可能に
+          // RGB values enable opacity-* utilities
           DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
         },
       },
-      // パフォーマンス最適化された影
+      // Performance-optimized shadows
       boxShadow: {
         'soft': '0 2px 8px -2px rgb(0 0 0 / 0.1)',
         'hard': '0 10px 40px -15px rgb(0 0 0 / 0.3)',
         'inner-soft': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.06)',
       },
-      // GPU加速アニメーション
+      // GPU-accelerated animations
       animation: {
         'fade-in': 'fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         'slide-up': 'slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -62,9 +62,9 @@ module.exports = {
     },
   },
   plugins: [
-    // カスタムユーティリティ
+    // Custom utilities
     function({ addUtilities, matchUtilities, theme }) {
-      // GPU加速用ユーティリティ
+      // GPU acceleration utilities
       addUtilities({
         '.gpu': {
           'transform': 'translateZ(0)',
@@ -76,7 +76,7 @@ module.exports = {
         },
       });
       
-      // 動的グリッドシステム
+      // Dynamic grid system
       matchUtilities(
         {
           'grid-auto-fill': (value) => ({
@@ -99,26 +99,26 @@ module.exports = {
 };
 ```
 
-### PostCSS 最適化パイプライン
+### PostCSS Optimization Pipeline
 
 ```javascript
 // postcss.config.js
 module.exports = {
   plugins: {
     'tailwindcss': {},
-    'postcss-focus-visible': {}, // :focus-visible ポリフィル
+    'postcss-focus-visible': {}, // :focus-visible polyfill
     'autoprefixer': {},
     ...(process.env.NODE_ENV === 'production' ? {
       'cssnano': {
         preset: ['advanced', {
-          reduceIdents: false, // アニメーション名を保持
-          zindex: false, // z-index の再計算を無効化
+          reduceIdents: false, // Preserve animation names
+          zindex: false, // Disable z-index recalculation
         }],
       },
       '@fullhuman/postcss-purgecss': {
         content: ['./src/**/*.{js,jsx,ts,tsx}'],
         defaultExtractor: content => {
-          // Tailwind の動的クラスを正確に抽出
+          // Accurately extract Tailwind dynamic classes
           const broadMatches = content.match(/[^<>"'`\s]*[^<>"'`\s:]/g) || [];
           const innerMatches = content.match(/[^<>"'`\s.()]*[^<>"'`\s.():]/g) || [];
           return broadMatches.concat(innerMatches);
@@ -134,9 +134,9 @@ module.exports = {
 };
 ```
 
-## 高度なコンポーネントパターン
+## Advanced Component Patterns
 
-### 1. 条件付きスタイリングとバリアント管理
+### 1. Conditional Styling and Variant Management
 
 ```typescript
 // utils/cn.ts (class-variance-authority + clsx)
@@ -150,7 +150,7 @@ export function cn(...inputs: ClassValue[]) {
 
 // components/Button.tsx
 const buttonVariants = cva(
-  // ベーススタイル
+  // Base styles
   'inline-flex items-center justify-center rounded-md font-medium transition-all focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
@@ -168,7 +168,7 @@ const buttonVariants = cva(
         lg: 'h-11 rounded-md px-8',
         icon: 'h-10 w-10',
       },
-      // 複合バリアント
+      // Compound variants
       loading: {
         true: 'relative text-transparent pointer-events-none',
       },
@@ -221,41 +221,41 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 ```
 
-### 2. 動的クラス生成とセーフリスト
+### 2. Dynamic Class Generation and Safelist
 
 ```typescript
 // utils/tailwind-safelist.ts
-// 動的に生成されるクラスをビルド時に含める
+// Dynamically generated classes to include at build time
 
 const colors = ['red', 'blue', 'green', 'yellow', 'purple'];
 const sizes = ['1', '2', '3', '4', '5', '6', '8', '10', '12'];
 
-// バンドルに含めるクラスを明示的に定義
+// Explicitly define classes to bundle
 export const safelist = [
-  // 動的な背景色
+  // Dynamic background colors
   ...colors.map(color => `bg-${color}-500`),
   ...colors.map(color => `hover:bg-${color}-600`),
   
-  // 動的なサイズ
+  // Dynamic sizes
   ...sizes.map(size => `w-${size}`),
   ...sizes.map(size => `h-${size}`),
   
-  // グリッドカラム
+  // Grid columns
   ...Array.from({ length: 12 }, (_, i) => `grid-cols-${i + 1}`),
   
-  // アニメーション遅延
+  // Animation delays
   ...['75', '100', '150', '200', '300', '500', '700', '1000'].map(
     delay => `animation-delay-${delay}`
   ),
 ];
 
-// 実際の使用時の型安全な関数
+// Type-safe function for runtime use
 export function getTailwindClass(
   type: 'bg' | 'text' | 'border',
   color: string,
   shade: number = 500
 ): string {
-  // 実行時の検証
+  // Runtime validation
   const validColors = new Set(colors);
   if (!validColors.has(color)) {
     console.warn(`Invalid color: ${color}`);
@@ -266,7 +266,7 @@ export function getTailwindClass(
 }
 ```
 
-### 3. レスポンシブとアダプティブデザイン
+### 3. Responsive and Adaptive Design
 
 ```tsx
 // components/ResponsiveGrid.tsx
@@ -287,7 +287,7 @@ export function ResponsiveGrid({
   cols = { default: 1, sm: 2, md: 3, lg: 4 },
   gap = 4 
 }: ResponsiveGridProps) {
-  // 型安全なレスポンシブクラス生成
+  // Type-safe responsive class generation
   const gridClasses = cn(
     'grid',
     `gap-${gap}`,
@@ -301,13 +301,13 @@ export function ResponsiveGrid({
   return <div className={gridClasses}>{children}</div>;
 }
 
-// コンテナクエリベースのレスポンシブ
+// Container query-based responsive
 export function ContainerResponsive({ children }: { children: React.ReactNode }) {
   return (
     <div className="@container">
       <div className="@sm:p-4 @md:p-6 @lg:p-8 @xl:p-10">
         <h2 className="@sm:text-lg @md:text-xl @lg:text-2xl @xl:text-3xl">
-          コンテナサイズに応じた表示
+          Container-sized display
         </h2>
         {children}
       </div>
@@ -316,9 +316,9 @@ export function ContainerResponsive({ children }: { children: React.ReactNode })
 }
 ```
 
-## パフォーマンス最適化
+## Performance Optimization
 
-### 1. Critical CSS インライン化
+### 1. Critical CSS Inlining
 
 ```typescript
 // scripts/extract-critical.js
@@ -338,7 +338,7 @@ async function extractCritical() {
     },
   });
   
-  // Critical CSS を別ファイルに保存
+  // Save Critical CSS to separate file
   fs.writeFileSync(
     path.join(__dirname, '../public/critical.css'),
     result.css
@@ -347,7 +347,7 @@ async function extractCritical() {
   return result.css;
 }
 
-// _document.tsx での使用
+// _document.tsx usage
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -372,14 +372,14 @@ export default function Document() {
 }
 ```
 
-### 2. 動的インポートと遅延読み込み
+### 2. Dynamic Import and Lazy Loading
 
 ```typescript
 // components/HeavyComponent.tsx
 import dynamic from 'next/dynamic';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-// Tailwind クラスの動的読み込み
+// Dynamic loading of Tailwind classes
 const DynamicHeavyStyles = dynamic(
   () => import('./HeavyStyles'),
   {
@@ -388,7 +388,7 @@ const DynamicHeavyStyles = dynamic(
   }
 );
 
-// Intersection Observer での遅延読み込み
+// Intersection Observer lazy loading
 export function LazyLoadedSection() {
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -423,9 +423,9 @@ export function LazyLoadedSection() {
 }
 ```
 
-## デバッグとトラブルシューティング
+## Debugging and Troubleshooting
 
-### 1. 開発環境でのクラス検証
+### 1. Development Environment Class Validation
 
 ```typescript
 // utils/dev-helpers.ts
@@ -448,7 +448,7 @@ export function validateTailwindClass(className: string): void {
   }
 }
 
-// ESLint プラグイン設定
+// ESLint plugin configuration
 // .eslintrc.js
 module.exports = {
   extends: ['plugin:tailwindcss/recommended'],
@@ -462,7 +462,7 @@ module.exports = {
 };
 ```
 
-### 2. プロダクションビルドサイズ分析
+### 2. Production Bundle Size Analysis
 
 ```javascript
 // analyze-bundle.js
@@ -481,7 +481,7 @@ module.exports = {
       );
     }
     
-    // Tailwind CSS の最適化
+    // Tailwind CSS optimization
     config.module.rules.push({
       test: /\.css$/,
       use: [
@@ -500,12 +500,12 @@ module.exports = {
 };
 ```
 
-## ベストプラクティス
+## Best Practices
 
-1. **JIT モード**: 常に有効化し、動的クラスはセーフリストで管理
-2. **パージ設定**: content 配列を正確に設定し、未使用CSSを確実に削除
-3. **カスタムユーティリティ**: 頻出パターンはプラグインとして定義
-4. **型安全性**: CVAやtailwind-mergeで条件付きクラスを管理
-5. **パフォーマンス**: Critical CSS抽出、遅延読み込みの活用
-6. **保守性**: ESLintプラグインでクラス順序と妥当性を検証
-7. **デザインシステム**: CSS変数と組み合わせて柔軟性を確保
+1. **JIT Mode**: Always enable and manage dynamic classes via safelist
+2. **Purge Settings**: Configure content array accurately to remove unused CSS
+3. **Custom Utilities**: Define frequently used patterns as plugins
+4. **Type Safety**: Manage conditional classes with CVA or tailwind-merge
+5. **Performance**: Extract Critical CSS, utilize lazy loading
+6. **Maintainability**: Validate class order and validity with ESLint plugin
+7. **Design System**: Ensure flexibility by combining with CSS variables

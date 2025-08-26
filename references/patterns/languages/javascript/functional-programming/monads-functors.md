@@ -1,9 +1,9 @@
-# モナドとファンクタ
+# Monads and Functors
 
-## Maybe モナド
+## Maybe Monad
 
 ```javascript
-// Maybe モナドの実装
+// Maybe monad implementation
 class Maybe {
   constructor(value) {
     this.value = value;
@@ -47,7 +47,7 @@ class Maybe {
   }
 }
 
-// 安全な計算例
+// Safe calculation examples
 const safeDivide = (a, b) => 
   b === 0 ? Maybe.nothing() : Maybe.of(a / b);
 
@@ -62,7 +62,7 @@ const safeParse = (str) => {
   }
 };
 
-// チェーン操作
+// Chain operations
 const processValue = (x) =>
   Maybe.of(x)
     .flatMap(val => safeDivide(val, 2))
@@ -73,10 +73,10 @@ console.log(processValue(8).getOrElse(0)); // 2
 console.log(processValue(-4).getOrElse(0)); // 0
 ```
 
-## Either モナド
+## Either Monad
 
 ```javascript
-// Either モナド（Left/Right）
+// Either monad (Left/Right)
 class Either {
   constructor(value, isLeft = false) {
     this.value = value;
@@ -112,15 +112,15 @@ class Either {
   }
 }
 
-// エラーハンドリングでの使用
+// Error handling usage
 const validateAge = (age) =>
-  age < 0 ? Either.left('年齢は負数にできません') :
-  age > 150 ? Either.left('年齢が不正です') :
+  age < 0 ? Either.left('Age cannot be negative') :
+  age > 150 ? Either.left('Age is invalid') :
   Either.right(age);
 
 const validateName = (name) =>
   !name || name.trim().length === 0 ? 
-    Either.left('名前は必須です') :
+    Either.left('Name is required') :
     Either.right(name.trim());
 
 const createUser = (name, age) =>
@@ -133,13 +133,13 @@ const user1 = createUser('John', 30);
 const user2 = createUser('', -5);
 
 console.log(user1.getOrElse(null)); // { name: 'John', age: 30 }
-console.log(user2.fold(error => `Error: ${error}`, user => user)); // Error: 名前は必須です
+console.log(user2.fold(error => `Error: ${error}`, user => user)); // Error: Name is required
 ```
 
-## IO モナド
+## IO Monad
 
 ```javascript
-// IO モナドで副作用を管理
+// IO monad for side effect management
 class IO {
   constructor(effect) {
     this.effect = effect;
@@ -162,14 +162,14 @@ class IO {
   }
 }
 
-// IO操作の例
+// IO operation examples
 const readFile = (filename) => new IO(() => {
-  // 実際のファイル読み込み（簡略化）
+  // Actual file reading (simplified)
   return `Contents of ${filename}`;
 });
 
 const writeFile = (filename, content) => new IO(() => {
-  // 実際のファイル書き込み（簡略化）
+  // Actual file writing (simplified)
   console.log(`Writing to ${filename}: ${content}`);
   return `Written to ${filename}`;
 });
@@ -179,7 +179,7 @@ const log = (message) => new IO(() => {
   return message;
 });
 
-// IO操作の合成
+// IO operation composition
 const processFile = (inputFile, outputFile) =>
   readFile(inputFile)
     .flatMap(content => log(`Processing: ${content}`))
@@ -188,17 +188,17 @@ const processFile = (inputFile, outputFile) =>
       writeFile(outputFile, processedContent)
     );
 
-// 実行時まで副作用を遅延
+// Side effects delayed until execution
 const fileOperation = processFile('input.txt', 'output.txt');
-// まだ実行されていない
+// Not yet executed
 
-fileOperation.run(); // ここで実行される
+fileOperation.run(); // Executed here
 ```
 
-## Task モナド（非同期操作）
+## Task Monad (Async Operations)
 
 ```javascript
-// 非同期操作のためのTask モナド
+// Task monad for async operations
 class Task {
   constructor(executor) {
     this.executor = executor;
@@ -254,7 +254,7 @@ class Task {
   }
 }
 
-// 非同期操作の例
+// Async operation examples
 const fetchUser = (id) => new Task((resolve, reject) => {
   setTimeout(() => {
     if (id > 0) {
@@ -274,7 +274,7 @@ const fetchPosts = (userId) => new Task((resolve, reject) => {
   }, 150);
 });
 
-// Task の合成
+// Task composition
 const getUserWithPosts = (id) =>
   fetchUser(id)
     .flatMap(user =>
@@ -288,20 +288,20 @@ getUserWithPosts(1)
   .catch(error => console.error(error));
 ```
 
-## ファンクタ法則
+## Functor Laws
 
 ```javascript
-// ファンクタ法則の検証
+// Functor law verification
 const testFunctorLaws = (Functor, value) => {
   const f = x => x * 2;
   const g = x => x + 1;
   const id = x => x;
   
-  // 恒等法則: F.of(a).map(id) === F.of(a)
+  // Identity law: F.of(a).map(id) === F.of(a)
   const identity1 = Functor.of(value).map(id);
   const identity2 = Functor.of(value);
   
-  // 合成法則: F.of(a).map(x => g(f(x))) === F.of(a).map(f).map(g)
+  // Composition law: F.of(a).map(x => g(f(x))) === F.of(a).map(f).map(g)
   const composition1 = Functor.of(value).map(x => g(f(x)));
   const composition2 = Functor.of(value).map(f).map(g);
   
@@ -309,6 +309,6 @@ const testFunctorLaws = (Functor, value) => {
   console.log('Composition law:', JSON.stringify(composition1) === JSON.stringify(composition2));
 };
 
-// Maybe ファンクタで検証
+// Verify with Maybe functor
 testFunctorLaws(Maybe, 5);
 ```

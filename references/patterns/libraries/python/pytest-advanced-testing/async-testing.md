@@ -1,6 +1,6 @@
 ## Async Testing Patterns
 
-### 1. 高度な非同期テスト
+### 1. Advanced Asynchronous Testing
 
 ```python
 import pytest
@@ -12,10 +12,10 @@ import time
 from unittest.mock import AsyncMock, patch
 import logging
 
-# 非同期フィクスチャ
+# Asynchronous fixtures
 @pytest.fixture(scope="session")
 def event_loop():
-    """セッション全体で共有されるイベントループ"""
+    """Event loop shared across entire session"""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -25,12 +25,12 @@ def event_loop():
 
 @pytest.fixture
 async def async_database():
-    """非同期データベース接続"""
+    """Asynchronous database connection"""
     connection = await asyncpg.connect(
         "postgresql://testuser:testpass@localhost/testdb"
     )
     
-    # テーブルの初期化
+    # Initialize tables
     await connection.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -42,19 +42,19 @@ async def async_database():
     
     yield connection
     
-    # クリーンアップ
+    # Cleanup
     await connection.execute("DROP TABLE IF EXISTS users")
     await connection.close()
 
 @pytest.fixture
 async def async_http_client():
-    """非同期HTTPクライアント"""
+    """Asynchronous HTTP client"""
     async with aiohttp.ClientSession() as session:
         yield session
 
 @pytest.fixture
 async def async_test_data(async_database):
-    """非同期テストデータ作成"""
+    """Asynchronous test data creation"""
     users = []
     
     for i in range(5):
@@ -67,15 +67,15 @@ async def async_test_data(async_database):
     
     yield users
     
-    # クリーンアップ
+    # Cleanup
     for user_id in users:
         await async_database.execute("DELETE FROM users WHERE id = $1", user_id)
 
-# 非同期テストケース
+# Asynchronous test cases
 @pytest.mark.asyncio
 async def test_async_database_operations(async_database):
-    """非同期データベース操作のテスト"""
-    # ユーザーの作成
+    """Test asynchronous database operations"""
+    # Create user
     user_id = await async_database.fetchval(
         "INSERT INTO users (username, email) VALUES ($1, $2) RETURNING id",
         "asyncuser",
@@ -84,7 +84,7 @@ async def test_async_database_operations(async_database):
     
     assert user_id is not None
     
-    # ユーザーの取得
+    # Retrieve user
     user = await async_database.fetchrow(
         "SELECT * FROM users WHERE id = $1", user_id
     )
@@ -92,7 +92,7 @@ async def test_async_database_operations(async_database):
     assert user["username"] == "asyncuser"
     assert user["email"] == "async@example.com"
     
-    # ユーザーの更新
+    # Update user
     await async_database.execute(
         "UPDATE users SET email = $1 WHERE id = $2",
         "updated@example.com",
@@ -105,7 +105,7 @@ async def test_async_database_operations(async_database):
     
     assert updated_user["email"] == "updated@example.com"
     
-    # ユーザーの削除
+    # Delete user
     deleted_count = await async_database.execute(
         "DELETE FROM users WHERE id = $1", user_id
     )
@@ -114,8 +114,8 @@ async def test_async_database_operations(async_database):
 
 @pytest.mark.asyncio
 async def test_async_http_requests(async_http_client):
-    """非同期HTTPリクエストのテスト"""
-    # 複数の並行リクエスト
+    """Test asynchronous HTTP requests"""
+    # Multiple concurrent requests
     urls = [
         "https://httpbin.org/json",
         "https://httpbin.org/user-agent",
@@ -129,31 +129,31 @@ async def test_async_http_requests(async_http_client):
     
     responses = await asyncio.gather(*tasks)
     
-    # レスポンスの検証
+    # Validate responses
     assert len(responses) == len(urls)
     for response in responses:
         assert response.status == 200
 
-# 非同期コンテキストマネージャーのテスト
+# Test asynchronous context managers
 class AsyncResourceManager:
-    """非同期リソース管理クラス"""
+    """Asynchronous resource management class"""
     
     def __init__(self, resource_name: str):
         self.resource_name = resource_name
         self.is_acquired = False
     
     async def __aenter__(self):
-        await asyncio.sleep(0.1)  # リソース取得をシミュレート
+        await asyncio.sleep(0.1)  # Simulate resource acquisition
         self.is_acquired = True
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await asyncio.sleep(0.1)  # リソース解放をシミュレート
+        await asyncio.sleep(0.1)  # Simulate resource release
         self.is_acquired = False
 
 @pytest.mark.asyncio
 async def test_async_context_manager():
-    """非同期コンテキストマネージャーのテスト"""
+    """Test asynchronous context manager"""
     manager = AsyncResourceManager("test_resource")
     
     assert not manager.is_acquired
@@ -163,16 +163,16 @@ async def test_async_context_manager():
     
     assert not manager.is_acquired
 
-# 非同期ジェネレータのテスト
+# Test asynchronous generators
 async def async_number_generator(start: int, end: int) -> AsyncGenerator[int, None]:
-    """非同期数値ジェネレータ"""
+    """Asynchronous number generator"""
     for i in range(start, end):
-        await asyncio.sleep(0.01)  # 非同期処理をシミュレート
+        await asyncio.sleep(0.01)  # Simulate async processing
         yield i
 
 @pytest.mark.asyncio
 async def test_async_generator():
-    """非同期ジェネレータのテスト"""
+    """Test asynchronous generator"""
     numbers = []
     
     async for number in async_number_generator(1, 6):
@@ -180,43 +180,43 @@ async def test_async_generator():
     
     assert numbers == [1, 2, 3, 4, 5]
 
-# 非同期例外処理のテスト
+# Test asynchronous exception handling
 async def async_function_with_exception():
-    """例外を発生させる非同期関数"""
+    """Async function that raises exception"""
     await asyncio.sleep(0.1)
     raise ValueError("Async error occurred")
 
 @pytest.mark.asyncio
 async def test_async_exception_handling():
-    """非同期例外処理のテスト"""
+    """Test asynchronous exception handling"""
     with pytest.raises(ValueError, match="Async error occurred"):
         await async_function_with_exception()
 
-# タイムアウトテスト
+# Timeout testing
 @pytest.mark.asyncio
 @pytest.mark.timeout(2)
 async def test_async_timeout():
-    """非同期タイムアウトのテスト"""
-    # 1秒で完了する処理（タイムアウト内）
+    """Test asynchronous timeout"""
+    # Operation completing within timeout (1 second)
     await asyncio.sleep(1)
     assert True
 
 @pytest.mark.asyncio
 async def test_async_operation_timeout():
-    """非同期操作のタイムアウトテスト"""
+    """Test asynchronous operation timeout"""
     async def slow_operation():
-        await asyncio.sleep(5)  # 5秒の処理
+        await asyncio.sleep(5)  # 5-second operation
         return "completed"
     
-    # 2秒でタイムアウト
+    # Timeout after 2 seconds
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(slow_operation(), timeout=2.0)
 
-# 非同期モックのテスト
+# Test asynchronous mocks
 @pytest.mark.asyncio
 async def test_async_mock():
-    """非同期モックのテスト"""
-    # AsyncMock の使用
+    """Test asynchronous mocks"""
+    # Using AsyncMock
     mock_service = AsyncMock()
     mock_service.get_data.return_value = {"result": "mocked_data"}
     
@@ -225,16 +225,16 @@ async def test_async_mock():
     assert result == {"result": "mocked_data"}
     mock_service.get_data.assert_awaited_once_with("test_param")
 
-# 非同期パフォーマンステスト
+# Asynchronous performance testing
 @pytest.mark.asyncio
 async def test_async_performance():
-    """非同期パフォーマンステスト"""
+    """Test asynchronous performance"""
     async def cpu_bound_task(n: int) -> int:
-        """CPU集約的なタスク"""
-        await asyncio.sleep(0)  # 他のタスクに制御を譲る
+        """CPU-intensive task"""
+        await asyncio.sleep(0)  # Yield control to other tasks
         return sum(i**2 for i in range(n))
     
-    # 並行実行
+    # Concurrent execution
     start_time = time.time()
     
     tasks = [cpu_bound_task(1000) for _ in range(10)]
@@ -244,12 +244,12 @@ async def test_async_performance():
     
     assert len(results) == 10
     assert all(isinstance(result, int) for result in results)
-    assert execution_time < 1.0  # 1秒以内で完了することを期待
+    assert execution_time < 1.0  # Expect completion within 1 second
 
-# 非同期エラー集約テスト
+# Asynchronous error aggregation testing
 @pytest.mark.asyncio
 async def test_async_error_aggregation():
-    """非同期エラー集約のテスト"""
+    """Test asynchronous error aggregation"""
     async def failing_task(task_id: int):
         await asyncio.sleep(0.1)
         if task_id % 2 == 0:
@@ -259,18 +259,43 @@ async def test_async_error_aggregation():
     tasks = [failing_task(i) for i in range(5)]
     results = await asyncio.gather(*tasks, return_exceptions=True)
     
-    # 結果の分析
+    # Analyze results
     successes = [r for r in results if isinstance(r, str)]
     failures = [r for r in results if isinstance(r, Exception)]
     
-    assert len(successes) == 3  # 奇数のタスクが成功
-    assert len(failures) == 2   # 偶数のタスクが失敗
+    assert len(successes) == 3  # Odd tasks succeed
+    assert len(failures) == 2   # Even tasks fail
     
     for failure in failures:
         assert isinstance(failure, ValueError)
+
+# Advanced async testing with cancellation
+@pytest.mark.asyncio
+async def test_async_task_cancellation():
+    """Test asynchronous task cancellation"""
+    async def long_running_task():
+        try:
+            await asyncio.sleep(10)  # Long operation
+            return "completed"
+        except asyncio.CancelledError:
+            return "cancelled"
+    
+    # Start task and cancel it
+    task = asyncio.create_task(long_running_task())
+    await asyncio.sleep(0.1)  # Let task start
+    
+    task.cancel()
+    
+    try:
+        result = await task
+    except asyncio.CancelledError:
+        result = "task_cancelled"
+    
+    assert result == "task_cancelled"
+    assert task.cancelled()
 ```
 
-### 2. 非同期統合テスト
+### 2. Asynchronous Integration Testing
 
 ```python
 import pytest
@@ -281,7 +306,7 @@ import json
 from typing import Dict, Any
 
 class AsyncTestService:
-    """非同期テストサービス"""
+    """Asynchronous test service"""
     
     def __init__(self, db_pool, redis_client, http_client):
         self.db_pool = db_pool
@@ -289,8 +314,8 @@ class AsyncTestService:
         self.http_client = http_client
     
     async def create_user_with_cache(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
-        """キャッシュ付きユーザー作成"""
-        # データベースにユーザーを作成
+        """Create user with caching"""
+        # Create user in database
         async with self.db_pool.acquire() as connection:
             user_id = await connection.fetchval(
                 "INSERT INTO users (username, email) VALUES ($1, $2) RETURNING id",
@@ -298,16 +323,16 @@ class AsyncTestService:
                 user_data["email"]
             )
         
-        # キャッシュに保存
+        # Save to cache
         cache_key = f"user:{user_id}"
         user_data["id"] = user_id
         await self.redis_client.setex(
             cache_key, 
-            3600,  # 1時間
+            3600,  # 1 hour
             json.dumps(user_data)
         )
         
-        # 外部APIに通知
+        # Notify external API
         await self.http_client.post(
             "https://api.example.com/notifications",
             json={"event": "user_created", "user_id": user_id}
@@ -316,15 +341,15 @@ class AsyncTestService:
         return user_data
     
     async def get_user_with_cache(self, user_id: int) -> Dict[str, Any]:
-        """キャッシュ付きユーザー取得"""
+        """Get user with caching"""
         cache_key = f"user:{user_id}"
         
-        # キャッシュから取得試行
+        # Try cache first
         cached_data = await self.redis_client.get(cache_key)
         if cached_data:
             return json.loads(cached_data)
         
-        # データベースから取得
+        # Fetch from database
         async with self.db_pool.acquire() as connection:
             user = await connection.fetchrow(
                 "SELECT * FROM users WHERE id = $1", user_id
@@ -332,7 +357,7 @@ class AsyncTestService:
         
         if user:
             user_data = dict(user)
-            # キャッシュに保存
+            # Save to cache
             await self.redis_client.setex(
                 cache_key,
                 3600,
@@ -344,14 +369,14 @@ class AsyncTestService:
 
 @pytest.fixture
 async def async_service_dependencies():
-    """非同期サービス依存関係"""
-    # データベースプールのモック
+    """Asynchronous service dependencies"""
+    # Mock database pool
     db_pool = AsyncMock()
     
-    # Redisクライアントのモック
+    # Mock Redis client
     redis_client = AsyncMock()
     
-    # HTTPクライアントのモック
+    # Mock HTTP client
     http_client = AsyncMock()
     
     return {
@@ -362,13 +387,13 @@ async def async_service_dependencies():
 
 @pytest.fixture
 async def async_test_service(async_service_dependencies):
-    """非同期テストサービス"""
+    """Asynchronous test service"""
     return AsyncTestService(**async_service_dependencies)
 
 @pytest.mark.asyncio
 async def test_async_service_user_creation(async_test_service, async_service_dependencies):
-    """非同期サービスのユーザー作成テスト"""
-    # モックの設定
+    """Test asynchronous service user creation"""
+    # Configure mocks
     mock_connection = AsyncMock()
     mock_connection.fetchval.return_value = 123
     async_service_dependencies["db_pool"].acquire.return_value.__aenter__.return_value = mock_connection
@@ -378,23 +403,23 @@ async def test_async_service_user_creation(async_test_service, async_service_dep
         "email": "test@example.com"
     }
     
-    # サービスメソッドの実行
+    # Execute service method
     result = await async_test_service.create_user_with_cache(user_data)
     
-    # アサーション
+    # Assertions
     assert result["id"] == 123
     assert result["username"] == "testuser"
     assert result["email"] == "test@example.com"
     
-    # モックの呼び出し確認
+    # Verify mock calls
     mock_connection.fetchval.assert_awaited_once()
     async_service_dependencies["redis_client"].setex.assert_awaited_once()
     async_service_dependencies["http_client"].post.assert_awaited_once()
 
 @pytest.mark.asyncio
 async def test_async_service_cache_hit(async_test_service, async_service_dependencies):
-    """キャッシュヒット時のテスト"""
-    # キャッシュデータの設定
+    """Test cache hit scenario"""
+    # Configure cache data
     cached_user = {
         "id": 123,
         "username": "cacheduser",
@@ -402,22 +427,22 @@ async def test_async_service_cache_hit(async_test_service, async_service_depende
     }
     async_service_dependencies["redis_client"].get.return_value = json.dumps(cached_user)
     
-    # サービスメソッドの実行
+    # Execute service method
     result = await async_test_service.get_user_with_cache(123)
     
-    # アサーション
+    # Assertions
     assert result == cached_user
     
-    # データベースアクセスがないことを確認
+    # Verify no database access
     async_service_dependencies["db_pool"].acquire.assert_not_awaited()
 
 @pytest.mark.asyncio
 async def test_async_service_cache_miss(async_test_service, async_service_dependencies):
-    """キャッシュミス時のテスト"""
-    # キャッシュミスの設定
+    """Test cache miss scenario"""
+    # Configure cache miss
     async_service_dependencies["redis_client"].get.return_value = None
     
-    # データベースデータの設定
+    # Configure database data
     db_user = {
         "id": 123,
         "username": "dbuser",
@@ -427,31 +452,31 @@ async def test_async_service_cache_miss(async_test_service, async_service_depend
     mock_connection.fetchrow.return_value = db_user
     async_service_dependencies["db_pool"].acquire.return_value.__aenter__.return_value = mock_connection
     
-    # サービスメソッドの実行
+    # Execute service method
     result = await async_test_service.get_user_with_cache(123)
     
-    # アサーション
+    # Assertions
     assert result == db_user
     
-    # データベースアクセスとキャッシュ保存の確認
+    # Verify database access and cache save
     mock_connection.fetchrow.assert_awaited_once()
     async_service_dependencies["redis_client"].setex.assert_awaited_once()
 
-# 非同期統合テスト（実際のサービスを使用）
+# Asynchronous integration test (using real services)
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_real_async_service_integration():
-    """実際のサービスを使用した統合テスト"""
-    # 実際のRedis接続
+    """Integration test using real services"""
+    # Real Redis connection
     redis_client = await aioredis.from_url("redis://localhost")
     
-    # 実際のHTTPクライアント
+    # Real HTTP client
     async with aiohttp.ClientSession() as http_client:
-        # テストキーの設定
+        # Test key setup
         test_key = "integration_test"
         test_value = {"message": "integration test data"}
         
-        # Redis書き込み・読み込みテスト
+        # Redis write/read test
         await redis_client.setex(test_key, 60, json.dumps(test_value))
         
         cached_data = await redis_client.get(test_key)
@@ -459,23 +484,23 @@ async def test_real_async_service_integration():
         
         assert retrieved_value == test_value
         
-        # HTTPリクエストテスト
+        # HTTP request test
         async with http_client.get("https://httpbin.org/json") as response:
             assert response.status == 200
             data = await response.json()
             assert "slideshow" in data
         
-        # クリーンアップ
+        # Cleanup
         await redis_client.delete(test_key)
     
     await redis_client.close()
 
-# 複数の非同期操作の並行テスト
+# Concurrent asynchronous operations testing
 @pytest.mark.asyncio
 async def test_concurrent_async_operations():
-    """並行非同期操作のテスト"""
+    """Test concurrent asynchronous operations"""
     async def async_operation(operation_id: int, delay: float) -> Dict[str, Any]:
-        """非同期操作のシミュレーション"""
+        """Simulate asynchronous operation"""
         await asyncio.sleep(delay)
         return {
             "operation_id": operation_id,
@@ -483,7 +508,7 @@ async def test_concurrent_async_operations():
             "delay": delay
         }
     
-    # 複数の操作を並行実行
+    # Execute multiple operations concurrently
     operations = [
         async_operation(i, 0.1 * i) for i in range(1, 6)
     ]
@@ -492,18 +517,18 @@ async def test_concurrent_async_operations():
     results = await asyncio.gather(*operations)
     total_time = time.time() - start_time
     
-    # 並行実行により総時間が短縮されることを確認
-    assert total_time < 1.5  # 逐次実行なら1.5秒かかる
+    # Verify concurrent execution reduces total time
+    assert total_time < 1.5  # Sequential execution would take 1.5 seconds
     assert len(results) == 5
     
-    # 結果の順序が保持されることを確認
+    # Verify result order is preserved
     for i, result in enumerate(results, 1):
         assert result["operation_id"] == i
 
-# エラー処理とリトライのテスト
+# Error handling and retry testing
 @pytest.mark.asyncio
 async def test_async_retry_mechanism():
-    """非同期リトライメカニズムのテスト"""
+    """Test asynchronous retry mechanism"""
     call_count = 0
     
     async def unreliable_async_function():
@@ -516,7 +541,7 @@ async def test_async_retry_mechanism():
         return "Success after retries"
     
     async def retry_async_function(func, max_retries=3, delay=0.1):
-        """非同期リトライ関数"""
+        """Asynchronous retry function"""
         for attempt in range(max_retries):
             try:
                 return await func()
@@ -525,10 +550,95 @@ async def test_async_retry_mechanism():
                     raise e
                 await asyncio.sleep(delay)
     
-    # リトライメカニズムのテスト
+    # Test retry mechanism
     result = await retry_async_function(unreliable_async_function)
     
     assert result == "Success after retries"
     assert call_count == 3
-```
 
+# Advanced async testing with streaming data
+@pytest.mark.asyncio
+async def test_async_streaming_data_processing():
+    """Test asynchronous streaming data processing"""
+    async def data_stream():
+        """Simulate streaming data source"""
+        for i in range(10):
+            await asyncio.sleep(0.01)
+            yield {"id": i, "value": i * 2}
+    
+    async def process_stream(stream):
+        """Process streaming data"""
+        processed_items = []
+        async for item in stream:
+            processed_item = {
+                "id": item["id"],
+                "processed_value": item["value"] + 1,
+                "timestamp": time.time()
+            }
+            processed_items.append(processed_item)
+        return processed_items
+    
+    # Process the stream
+    results = await process_stream(data_stream())
+    
+    assert len(results) == 10
+    for i, result in enumerate(results):
+        assert result["id"] == i
+        assert result["processed_value"] == (i * 2) + 1
+        assert "timestamp" in result
+
+# Test async context manager with error handling
+@pytest.mark.asyncio
+async def test_async_context_manager_error_handling():
+    """Test async context manager with error handling"""
+    cleanup_called = False
+    
+    class AsyncResourceWithCleanup:
+        async def __aenter__(self):
+            return self
+        
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            nonlocal cleanup_called
+            cleanup_called = True
+            # Handle exceptions gracefully
+            if exc_type:
+                print(f"Exception occurred: {exc_val}")
+            return False  # Don't suppress exceptions
+    
+    # Test with exception
+    with pytest.raises(ValueError):
+        async with AsyncResourceWithCleanup():
+            raise ValueError("Test exception")
+    
+    assert cleanup_called
+
+# Load testing with async
+@pytest.mark.asyncio
+@pytest.mark.performance
+async def test_async_load_performance():
+    """Test asynchronous load performance"""
+    async def simulate_user_request(user_id: int):
+        """Simulate user request"""
+        await asyncio.sleep(0.01)  # Simulate processing time
+        return {
+            "user_id": user_id,
+            "response_time": 0.01,
+            "status": "success"
+        }
+    
+    # Simulate 100 concurrent users
+    concurrent_users = 100
+    start_time = time.time()
+    
+    tasks = [simulate_user_request(i) for i in range(concurrent_users)]
+    results = await asyncio.gather(*tasks)
+    
+    total_time = time.time() - start_time
+    throughput = len(results) / total_time
+    
+    assert len(results) == concurrent_users
+    assert all(result["status"] == "success" for result in results)
+    assert throughput > 50  # Minimum 50 requests per second
+    
+    print(f"Load test: {concurrent_users} users, {throughput:.2f} req/s")
+```

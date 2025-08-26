@@ -1,13 +1,13 @@
-# CSS Modules 実践ガイド
+# CSS Modules Practical Guide
 
-## 基本設定と型安全性
+## Basic Setup and Type Safety
 
-### Next.js 14+ での設定
+### Next.js 14+ Configuration
 
 ```typescript
 // next.config.js
 const nextConfig = {
-  // CSS Modules の自動型生成を有効化
+  // Enable automatic type generation for CSS Modules
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -20,8 +20,8 @@ const nextConfig = {
           options: {
             modules: {
               localIdentName: process.env.NODE_ENV === 'production'
-                ? '[hash:base64:8]' // 本番環境: 短縮化
-                : '[path][name]__[local]--[hash:base64:5]', // 開発環境: デバッグ可能
+                ? '[hash:base64:8]' // Production: minified
+                : '[path][name]__[local]--[hash:base64:5]', // Development: debuggable
               exportLocalsConvention: 'camelCase',
             },
           },
@@ -33,7 +33,7 @@ const nextConfig = {
 };
 ```
 
-### TypeScript 型定義の自動生成
+### TypeScript Type Definition Auto-generation
 
 ```typescript
 // typed-css-modules.config.js
@@ -54,21 +54,21 @@ module.exports = {
 }
 ```
 
-## 高度なパターンと実装
+## Advanced Patterns and Implementation
 
-### 1. 動的スタイリングとテーマ統合
+### 1. Dynamic Styling and Theme Integration
 
 ```typescript
 // styles/Button.module.css
 .button {
-  /* CSS変数を活用したテーマ対応 */
+  /* Theme support with CSS variables */
   background-color: var(--button-bg, #007bff);
   color: var(--button-color, white);
   padding: var(--button-padding, 8px 16px);
   border-radius: var(--button-radius, 4px);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
-  /* 状態管理のためのデータ属性セレクタ */
+  /* Data attribute selectors for state management */
   &[data-variant="primary"] {
     --button-bg: var(--color-primary);
   }
@@ -103,40 +103,40 @@ module.exports = {
   to { transform: rotate(360deg); }
 }
 
-/* Composition API を活用した複数クラスの組み合わせ */
+/* Composition API for combining multiple classes */
 .button.primary {
   composes: button;
   composes: primary from "./themes.module.css";
 }
 
-/* パフォーマンス最適化: will-change の適切な使用 */
+/* Performance optimization: proper use of will-change */
 .button:hover {
   will-change: transform, background-color;
   transform: translateY(-1px);
 }
 
 .button:active {
-  will-change: auto; /* 終了後にリセット */
+  will-change: auto; /* Reset after animation */
   transform: translateY(0);
 }
 ```
 
-### 2. TypeScript統合とユーティリティ関数
+### 2. TypeScript Integration and Utility Functions
 
 ```typescript
 // utils/cssModules.ts
 import { clsx, type ClassValue } from 'clsx';
 
 /**
- * CSS Modules のクラス名を安全に結合
- * 条件付きクラス、動的クラス、未定義値の処理を統一
+ * Safely combine CSS Modules class names
+ * Handles conditional classes, dynamic classes, and undefined values
  */
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
 /**
- * CSS Modules の型安全なバリアント生成
+ * Type-safe variant generation for CSS Modules
  */
 export function createStyleVariants<T extends Record<string, string>>(
   styles: T,
@@ -151,7 +151,7 @@ export function createStyleVariants<T extends Record<string, string>>(
   };
 }
 
-// 使用例
+// Usage example
 // components/Button.tsx
 import styles from './Button.module.css';
 import { cn, createStyleVariants } from '@/utils/cssModules';
@@ -193,7 +193,7 @@ export function Button({
 }
 ```
 
-### 3. SSR/SSG 最適化とクリティカルCSS
+### 3. SSR/SSG Optimization and Critical CSS
 
 ```typescript
 // utils/criticalCss.ts
@@ -201,15 +201,15 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 /**
- * クリティカルCSSの抽出と最適化
- * ビルド時に実行し、初期レンダリングのパフォーマンスを向上
+ * Extract and optimize critical CSS
+ * Run at build time to improve initial render performance
  */
 export function extractCriticalCss(moduleFiles: string[]) {
   const critical = new Set<string>();
   
   moduleFiles.forEach(file => {
     const content = readFileSync(resolve(process.cwd(), file), 'utf-8');
-    // ファーストビューに必要なセレクタのみ抽出
+    // Extract only selectors needed for first view
     const criticalSelectors = content.match(
       /\.(button|header|nav|hero|container)[^{]*{[^}]*}/g
     );
@@ -222,7 +222,7 @@ export function extractCriticalCss(moduleFiles: string[]) {
   return Array.from(critical).join('\n');
 }
 
-// pages/_document.tsx での使用
+// pages/_document.tsx usage
 import { Html, Head, Main, NextScript } from 'next/document';
 
 export default function Document() {
@@ -249,9 +249,9 @@ export default function Document() {
 }
 ```
 
-## パフォーマンス最適化
+## Performance Optimization
 
-### 1. バンドルサイズの削減
+### 1. Bundle Size Reduction
 
 ```javascript
 // webpack.config.js
@@ -266,18 +266,18 @@ module.exports = {
           preset: [
             'default',
             {
-              // 未使用のCSS変数を削除
+              // Remove unused CSS variables
               discardUnused: { fontFace: false },
-              // 重複ルールをマージ
+              // Merge duplicate rules
               mergeRules: true,
-              // セレクタの最適化
+              // Optimize selectors
               normalizeWhitespace: true,
             },
           ],
         },
       }),
     ],
-    // CSS Modules のツリーシェイキング
+    // Tree shaking for CSS Modules
     sideEffects: false,
   },
   module: {
@@ -290,9 +290,9 @@ module.exports = {
             loader: 'css-loader',
             options: {
               modules: {
-                // 本番環境では短いクラス名を生成
+                // Generate short class names in production
                 localIdentName: '[hash:base64:5]',
-                // 未使用のエクスポートを削除
+                // Remove unused exports
                 exportOnlyLocals: false,
               },
             },
@@ -316,15 +316,15 @@ module.exports = {
 };
 ```
 
-### 2. ランタイムパフォーマンス
+### 2. Runtime Performance
 
 ```typescript
 // hooks/useLazyStyles.ts
 import { useEffect, useState } from 'react';
 
 /**
- * CSS Modules の遅延読み込み
- * 大規模なスタイルシートを必要時にのみロード
+ * Lazy load CSS Modules
+ * Load large stylesheets only when needed
  */
 export function useLazyStyles(
   importFn: () => Promise<{ default: Record<string, string> }>
@@ -348,7 +348,7 @@ export function useLazyStyles(
   return { styles, loading };
 }
 
-// 使用例
+// Usage example
 function HeavyComponent() {
   const { styles, loading } = useLazyStyles(
     () => import('./HeavyComponent.module.css')
@@ -360,13 +360,13 @@ function HeavyComponent() {
 }
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### 1. 本番環境でのクラス名不一致
+### 1. Class Name Mismatch in Production
 
 ```typescript
-// 問題: 開発環境と本番環境でクラス名が異なる
-// 解決策: 一貫したハッシュ生成設定
+// Problem: Different class names in development and production
+// Solution: Consistent hash generation configuration
 
 // css-loader.config.js
 const getLocalIdent = (context, localIdentName, localName) => {
@@ -381,16 +381,16 @@ const getLocalIdent = (context, localIdentName, localName) => {
 
 module.exports = {
   modules: {
-    getLocalIdent, // カスタム関数で一貫性を保証
+    getLocalIdent, // Custom function for consistency
   },
 };
 ```
 
-### 2. Hydration エラーの回避
+### 2. Avoiding Hydration Errors
 
 ```typescript
-// 問題: SSR/CSR でのクラス名不一致
-// 解決策: isomorphic な実装
+// Problem: SSR/CSR class name mismatch
+// Solution: Isomorphic implementation
 
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphic';
 
@@ -401,28 +401,28 @@ function DynamicStyledComponent() {
     setMounted(true);
   }, []);
   
-  // クライアントサイドのみのスタイル適用
+  // Client-side only style application
   const dynamicClass = mounted ? styles.clientOnly : '';
   
   return <div className={cn(styles.base, dynamicClass)} />;
 }
 ```
 
-### 3. CSS Modules とサードパーティライブラリの統合
+### 3. CSS Modules and Third-party Library Integration
 
 ```css
-/* グローバルスタイルとの共存 */
+/* Coexisting with global styles */
 .container {
-  /* ローカルスコープ */
+  /* Local scope */
   padding: 1rem;
   
-  /* グローバルクラスの上書き */
+  /* Override global classes */
   :global(.third-party-class) {
     margin: 0;
     padding: inherit;
   }
   
-  /* 子要素のグローバルスタイル制御 */
+  /* Control global styles in children */
   :global {
     .react-select__control {
       border-color: var(--border-color);
@@ -435,12 +435,12 @@ function DynamicStyledComponent() {
 }
 ```
 
-## ベストプラクティス
+## Best Practices
 
-1. **命名規則**: BEM風の命名でコンポーネント構造を明確化
-2. **Composition**: 共通スタイルの再利用で保守性向上
-3. **CSS変数**: テーマとレスポンシブ対応の統一
-4. **PostCSS**: 自動プレフィックス、最適化の自動化
-5. **型安全性**: TypeScript統合で開発体験向上
-6. **パフォーマンス**: Critical CSS、遅延読み込みの活用
-7. **テスト**: スナップショットテストでスタイル変更を検知
+1. **Naming Convention**: Use BEM-style naming for clear component structure
+2. **Composition**: Reuse common styles for better maintainability
+3. **CSS Variables**: Unify theme and responsive handling
+4. **PostCSS**: Automate prefixing and optimization
+5. **Type Safety**: TypeScript integration for better developer experience
+6. **Performance**: Utilize Critical CSS and lazy loading
+7. **Testing**: Snapshot testing to detect style changes

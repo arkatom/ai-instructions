@@ -1,6 +1,6 @@
 # Hybrid Concurrency Patterns
 
-## 1. Async + Threading ハイブリッド
+## 1. Async + Threading Hybrid
 
 ```python
 import asyncio
@@ -12,7 +12,7 @@ import queue
 import weakref
 
 class AsyncThreadBridge:
-    """非同期とスレッドの橋渡し"""
+    """Bridge between async and threading"""
     
     def __init__(self, max_thread_workers: int = 10):
         self.max_thread_workers = max_thread_workers
@@ -20,7 +20,7 @@ class AsyncThreadBridge:
             max_workers=max_thread_workers
         )
         
-        # 非同期コンテキストでのスレッド実行結果管理
+        # Manage thread execution results in async context
         self.pending_tasks: Dict[str, asyncio.Future] = {}
         self.task_counter = 0
         
@@ -30,7 +30,7 @@ class AsyncThreadBridge:
         *args, 
         **kwargs
     ) -> Any:
-        """非同期コンテキストでスレッド関数を実行"""
+        """Run thread function in async context"""
         
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
@@ -45,13 +45,13 @@ class AsyncThreadBridge:
         coro: Awaitable, 
         callback: Optional[Callable[[Any], None]] = None
     ) -> str:
-        """スレッドコンテキストで非同期関数を実行"""
+        """Run async function in thread context"""
         
         task_id = f"async_task_{self.task_counter}"
         self.task_counter += 1
         
         def thread_runner():
-            # 新しいイベントループを作成
+            # Create new event loop
             new_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(new_loop)
             
@@ -73,13 +73,13 @@ class AsyncThreadBridge:
         chunk_size: int = 10,
         progress_callback: Optional[Callable[[int, int], None]] = None
     ) -> List[Any]:
-        """CPU集約的タスクの並列実行（進捗監視付き）"""
+        """Parallel execution of CPU-intensive tasks with progress monitoring"""
         
         chunks = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
         completed = 0
         results = []
         
-        # スレッドでチャンク処理
+        # Process chunks in threads
         async def process_chunk(chunk):
             nonlocal completed
             
@@ -93,22 +93,22 @@ class AsyncThreadBridge:
                 
             return chunk_result
         
-        # 並列実行
+        # Parallel execution
         tasks = [process_chunk(chunk) for chunk in chunks]
         chunk_results = await asyncio.gather(*tasks)
         
-        # 結果をフラット化
+        # Flatten results
         for chunk_result in chunk_results:
             results.extend(chunk_result)
         
         return results
     
     def shutdown(self, wait: bool = True):
-        """エグゼキューターのシャットダウン"""
+        """Shutdown executor"""
         self.thread_executor.shutdown(wait=wait)
 
 class HybridWorkerPool:
-    """ハイブリッドワーカープール（async + thread）"""
+    """Hybrid worker pool (async + thread)"""
     
     def __init__(
         self, 
@@ -121,16 +121,16 @@ class HybridWorkerPool:
         self.bridge = AsyncThreadBridge(max_thread_workers=thread_workers)
         self.async_semaphore = asyncio.Semaphore(async_workers)
         
-        # タスクキュー
+        # Task queues
         self.async_queue: asyncio.Queue = asyncio.Queue()
         self.thread_queue: queue.Queue = queue.Queue()
         
-        # ワーカー管理
+        # Worker management
         self.async_worker_tasks: List[asyncio.Task] = []
         self.thread_workers_active = threading.Event()
         self.thread_worker_threads: List[threading.Thread] = []
         
-        # 統計情報
+        # Statistics
         self.stats = {
             "async_tasks_completed": 0,
             "thread_tasks_completed": 0,
@@ -138,14 +138,14 @@ class HybridWorkerPool:
         }
         
     async def start_workers(self):
-        """ワーカーの開始"""
+        """Start workers"""
         
-        # 非同期ワーカーの開始
+        # Start async workers
         for i in range(self.async_workers):
             task = asyncio.create_task(self._async_worker(f"async_worker_{i}"))
             self.async_worker_tasks.append(task)
         
-        # スレッドワーカーの開始
+        # Start thread workers
         self.thread_workers_active.set()
         for i in range(self.thread_workers):
             thread = threading.Thread(
@@ -157,11 +157,11 @@ class HybridWorkerPool:
             self.thread_worker_threads.append(thread)
     
     async def _async_worker(self, worker_id: str):
-        """非同期ワーカー"""
+        """Async worker"""
         
         while True:
             try:
-                # セマフォで同時実行数を制御
+                # Control concurrent execution with semaphore
                 async with self.async_semaphore:
                     try:
                         task_data = await asyncio.wait_for(
@@ -171,7 +171,7 @@ class HybridWorkerPool:
                     except asyncio.TimeoutError:
                         continue
                     
-                    if task_data is None:  # 終了シグナル
+                    if task_data is None:  # Shutdown signal
                         break
                     
                     func, args, kwargs, callback = task_data
@@ -198,7 +198,7 @@ class HybridWorkerPool:
                 logger.error(f"Async worker {worker_id} error: {e}")
     
     def _thread_worker(self, worker_id: str):
-        """スレッドワーカー"""
+        """Thread worker"""
         
         while self.thread_workers_active.is_set():
             try:
@@ -207,7 +207,7 @@ class HybridWorkerPool:
                 except queue.Empty:
                     continue
                 
-                if task_data is None:  # 終了シグナル
+                if task_data is None:  # Shutdown signal
                     break
                 
                 func, args, kwargs, callback = task_data
@@ -237,7 +237,7 @@ class HybridWorkerPool:
         callback: Optional[Callable] = None,
         **kwargs
     ):
-        """非同期タスクの投入"""
+        """Submit async task"""
         await self.async_queue.put((func, args, kwargs, callback))
     
     def submit_thread_task(
@@ -247,7 +247,7 @@ class HybridWorkerPool:
         callback: Optional[Callable] = None,
         **kwargs
     ):
-        """スレッドタスクの投入"""
+        """Submit thread task"""
         self.thread_queue.put((func, args, kwargs, callback))
     
     async def submit_cpu_intensive(
@@ -256,11 +256,11 @@ class HybridWorkerPool:
         *args,
         **kwargs
     ) -> Any:
-        """CPU集約的タスクの投入（結果を返す）"""
+        """Submit CPU-intensive task (returns result)"""
         return await self.bridge.run_in_thread(func, *args, **kwargs)
     
     async def wait_completion(self, timeout: Optional[float] = None):
-        """全タスクの完了待機"""
+        """Wait for all tasks to complete"""
         
         async_wait = self.async_queue.join()
         thread_wait = asyncio.create_task(
@@ -276,15 +276,15 @@ class HybridWorkerPool:
             await asyncio.gather(async_wait, thread_wait)
     
     async def shutdown(self):
-        """プールのシャットダウン"""
+        """Shutdown pool"""
         
-        # 非同期ワーカーの停止
+        # Stop async workers
         for _ in range(self.async_workers):
             await self.async_queue.put(None)
         
         await asyncio.gather(*self.async_worker_tasks, return_exceptions=True)
         
-        # スレッドワーカーの停止
+        # Stop thread workers
         self.thread_workers_active.clear()
         
         for _ in range(self.thread_workers):
@@ -296,7 +296,7 @@ class HybridWorkerPool:
         self.bridge.shutdown()
     
     def get_stats(self) -> Dict[str, Any]:
-        """統計情報の取得"""
+        """Get statistics"""
         return {
             **self.stats,
             "async_queue_size": self.async_queue.qsize(),
@@ -305,26 +305,26 @@ class HybridWorkerPool:
             "active_thread_workers": len([t for t in self.thread_worker_threads if t.is_alive()])
         }
 
-# CPU集約的関数の例
+# CPU-intensive function example
 def fibonacci_cpu(n: int) -> int:
-    """CPU集約的なフィボナッチ計算"""
+    """CPU-intensive Fibonacci calculation"""
     if n <= 1:
         return n
     return fibonacci_cpu(n - 1) + fibonacci_cpu(n - 2)
 
 async def network_request(url: str) -> dict:
-    """ネットワークリクエストのシミュレート"""
-    await asyncio.sleep(0.1)  # ネットワーク遅延をシミュレート
+    """Network request simulation"""
+    await asyncio.sleep(0.1)  # Simulate network delay
     return {"url": url, "status": 200, "data": f"response_from_{url}"}
 
-# 使用例
+# Usage example
 async def hybrid_example():
     pool = HybridWorkerPool(async_workers=3, thread_workers=2)
     
-    # ワーカーの開始
+    # Start workers
     await pool.start_workers()
     
-    # 非同期タスク（I/Oバウンド）の投入
+    # Submit async tasks (I/O bound)
     urls = [f"https://api{i}.example.com" for i in range(10)]
     
     results = []
@@ -339,7 +339,7 @@ async def hybrid_example():
             callback=collect_result
         )
     
-    # CPU集約的タスク（別スレッド実行）
+    # Submit CPU-intensive tasks (separate thread execution)
     cpu_results = []
     
     def collect_cpu_result(result):
@@ -352,32 +352,32 @@ async def hybrid_example():
             callback=collect_cpu_result
         )
     
-    # 混合タスクの例（結果を直接取得）
+    # Mixed task example (get results directly)
     mixed_tasks = []
     for i in range(5):
         if i % 2 == 0:
-            # 非同期タスク
+            # Async task
             task = asyncio.create_task(network_request(f"https://mixed{i}.example.com"))
         else:
-            # CPU集約的タスク
+            # CPU-intensive task
             task = asyncio.create_task(pool.submit_cpu_intensive(fibonacci_cpu, 10 + i))
         
         mixed_tasks.append(task)
     
-    # 全タスクの完了を待機
+    # Wait for all tasks to complete
     await pool.wait_completion(timeout=10.0)
     
-    # 混合タスクの結果を取得
+    # Get mixed task results
     mixed_results = await asyncio.gather(*mixed_tasks)
     
-    # 統計情報の表示
+    # Display statistics
     stats = pool.get_stats()
     logger.info(f"Pool statistics: {stats}")
     logger.info(f"Async results: {len(results)}")
     logger.info(f"CPU results: {len(cpu_results)}")
     logger.info(f"Mixed results: {len(mixed_results)}")
     
-    # プールのシャットダウン
+    # Shutdown pool
     await pool.shutdown()
     
     return results, cpu_results, mixed_results

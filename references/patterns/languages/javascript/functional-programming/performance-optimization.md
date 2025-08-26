@@ -1,9 +1,9 @@
-# パフォーマンス最適化
+# Performance Optimization
 
-## 遅延評価パターン
+## Lazy Evaluation Patterns
 
 ```javascript
-// 遅延評価シーケンス
+// Lazy evaluation sequence
 class LazySequence {
   constructor(generator) {
     this.generator = generator;
@@ -76,7 +76,7 @@ class LazySequence {
   }
 }
 
-// 大量データの効率的な処理
+// Efficient processing of large datasets
 const processLargeDataset = (data) =>
   LazySequence.of(data)
     .filter(x => x % 2 === 0)
@@ -84,7 +84,7 @@ const processLargeDataset = (data) =>
     .take(1000)
     .collect();
 
-// 無限シーケンス
+// Infinite sequences
 const fibonacci = new LazySequence(function* () {
   let [a, b] = [0, 1];
   while (true) {
@@ -97,10 +97,10 @@ const first10Fibs = fibonacci.take(10).collect();
 console.log(first10Fibs); // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
 ```
 
-## メモ化の最適化
+## Memoization Optimization
 
 ```javascript
-// 高性能メモ化
+// High-performance memoization
 const createMemoizedFunction = (fn, options = {}) => {
   const {
     maxSize = 100,
@@ -154,26 +154,26 @@ const createMemoizedFunction = (fn, options = {}) => {
   return memoized;
 };
 
-// フィボナッチの高速計算
+// Fast Fibonacci calculation
 const fastFibonacci = createMemoizedFunction((n) => {
   if (n <= 1) return n;
   return fastFibonacci(n - 1) + fastFibonacci(n - 2);
 });
 
 console.time('fibonacci');
-console.log(fastFibonacci(40)); // 高速
+console.log(fastFibonacci(40)); // Fast execution
 console.timeEnd('fibonacci');
 ```
 
-## 関数合成の最適化
+## Function Composition Optimization
 
 ```javascript
-// 最適化された pipe 実装
+// Optimized pipe implementation
 const optimizedPipe = (...fns) => {
   if (fns.length === 0) return identity;
   if (fns.length === 1) return fns[0];
   
-  // 連続する同じ変換を最適化
+  // Optimize consecutive same transformations
   const optimizedFns = fns.reduce((acc, fn) => {
     const last = acc[acc.length - 1];
     if (last && canCompose(last, fn)) {
@@ -187,7 +187,7 @@ const optimizedPipe = (...fns) => {
   return (value) => optimizedFns.reduce((acc, fn) => fn(acc), value);
 };
 
-// 特定の変換パターンを最適化
+// Optimize specific transformation patterns
 const canCompose = (f1, f2) => {
   return (f1.name === 'map' && f2.name === 'map') ||
          (f1.name === 'filter' && f2.name === 'filter');
@@ -218,10 +218,10 @@ const createFilterFunction = (fn) => {
 };
 ```
 
-## イミュータブル構造の最適化
+## Immutable Structure Optimization
 
 ```javascript
-// Persistent Data Structure (簡易版)
+// Persistent Data Structure (simplified version)
 class PersistentVector {
   constructor(items = [], shift = 0, length = items.length) {
     this.items = items;
@@ -247,14 +247,14 @@ class PersistentVector {
   }
   
   push(value) {
-    // 末尾に余裕がある場合は構造共有
+    // Share structure when there's tail room
     if (this.shift + this.length < this.items.length) {
       const newItems = [...this.items];
       newItems[this.shift + this.length] = value;
       return new PersistentVector(newItems, this.shift, this.length + 1);
     }
     
-    // 新しいバッファが必要
+    // Need new buffer
     const newItems = [...this.items, value];
     return new PersistentVector(newItems, this.shift, this.length + 1);
   }
@@ -280,7 +280,7 @@ class PersistentVector {
   }
 }
 
-// Copy-on-Write 最適化
+// Copy-on-Write optimization
 class COWMap {
   constructor(data = {}, isCopied = false) {
     this._data = data;
@@ -296,7 +296,7 @@ class COWMap {
   
   set(key, value) {
     if (this._data[key] === value) {
-      return this; // 値が同じなら新しいインスタンスを作らない
+      return this; // Don't create new instance if value is the same
     }
     
     const newMap = new COWMap(this._data, false);
@@ -307,7 +307,7 @@ class COWMap {
   
   delete(key) {
     if (!(key in this._data)) {
-      return this; // キーが存在しなければ何もしない
+      return this; // Do nothing if key doesn't exist
     }
     
     const newMap = new COWMap(this._data, false);
@@ -326,10 +326,10 @@ class COWMap {
 }
 ```
 
-## トランスデューサの最適化
+## Transducer Optimization
 
 ```javascript
-// 効率的なトランスデューサ実装
+// Efficient transducer implementation
 const createTransducer = () => {
   const protocols = {
     '@@transducer/init': Symbol('init'),
@@ -387,7 +387,7 @@ const createTransducer = () => {
   return { map, filter, take, protocols };
 };
 
-// 高性能なデータ処理パイプライン
+// High-performance data processing pipeline
 const { map, filter, take } = createTransducer();
 
 const processLargeArray = (data) => {
@@ -405,7 +405,7 @@ const processLargeArray = (data) => {
   );
 };
 
-// ベンチマーク例
+// Benchmark example
 const largeArray = Array.from({ length: 1000000 }, (_, i) => i);
 
 console.time('transducer');

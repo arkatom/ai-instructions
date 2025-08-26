@@ -1,6 +1,6 @@
 ## Parametrized Testing
 
-### 1. 高度なパラメータ化テスト
+### 1. Advanced Parametrized Testing
 
 ```python
 import pytest
@@ -17,7 +17,7 @@ class TestCategory(Enum):
 
 @dataclass
 class TestCase:
-    """構造化テストケース"""
+    """Structured test case"""
     name: str
     input_data: Dict[str, Any]
     expected_result: Any
@@ -26,15 +26,15 @@ class TestCase:
     marks: List[str] = None
     timeout: float = None
 
-# 複雑なパラメータ化パターン
+# Complex parametrization patterns
 class TestDataBuilder:
-    """テストデータビルダー"""
+    """Test data builder"""
     
     def __init__(self):
         self.test_cases: List[TestCase] = []
     
     def add_positive_case(self, name: str, input_data: Dict[str, Any], expected: Any, **kwargs):
-        """ポジティブテストケースの追加"""
+        """Add positive test case"""
         self.test_cases.append(TestCase(
             name=name,
             input_data=input_data,
@@ -45,7 +45,7 @@ class TestDataBuilder:
         return self
     
     def add_negative_case(self, name: str, input_data: Dict[str, Any], exception: Exception, **kwargs):
-        """ネガティブテストケースの追加"""
+        """Add negative test case"""
         self.test_cases.append(TestCase(
             name=name,
             input_data=input_data,
@@ -57,7 +57,7 @@ class TestDataBuilder:
         return self
     
     def add_edge_case(self, name: str, input_data: Dict[str, Any], expected: Any, **kwargs):
-        """エッジケースの追加"""
+        """Add edge case"""
         self.test_cases.append(TestCase(
             name=name,
             input_data=input_data,
@@ -68,7 +68,7 @@ class TestDataBuilder:
         return self
     
     def add_performance_case(self, name: str, input_data: Dict[str, Any], expected: Any, timeout: float, **kwargs):
-        """パフォーマンステストケースの追加"""
+        """Add performance test case"""
         self.test_cases.append(TestCase(
             name=name,
             input_data=input_data,
@@ -81,15 +81,15 @@ class TestDataBuilder:
         return self
     
     def build(self) -> List[TestCase]:
-        """テストケースリストの構築"""
+        """Build test case list"""
         return self.test_cases
 
-# 数学関数のテストケース例
+# Mathematical function test case example
 def create_math_function_test_cases():
-    """数学関数テストケースの作成"""
+    """Create mathematical function test cases"""
     builder = TestDataBuilder()
     
-    # ポジティブケース
+    # Positive cases
     builder.add_positive_case(
         "basic_addition",
         {"a": 2, "b": 3},
@@ -104,7 +104,7 @@ def create_math_function_test_cases():
         4.2
     )
     
-    # ネガティブケース
+    # Negative cases
     builder.add_negative_case(
         "invalid_type_string",
         {"a": "invalid", "b": 3},
@@ -115,7 +115,7 @@ def create_math_function_test_cases():
         TypeError
     )
     
-    # エッジケース
+    # Edge cases
     builder.add_edge_case(
         "zero_values",
         {"a": 0, "b": 0},
@@ -130,7 +130,7 @@ def create_math_function_test_cases():
         3e-10
     )
     
-    # パフォーマンスケース
+    # Performance cases
     builder.add_performance_case(
         "large_computation",
         {"a": 10**6, "b": 10**6},
@@ -140,7 +140,7 @@ def create_math_function_test_cases():
     
     return builder.build()
 
-# パラメータ化テストの実装
+# Parametrized test implementation
 math_test_cases = create_math_function_test_cases()
 
 @pytest.mark.parametrize(
@@ -149,14 +149,14 @@ math_test_cases = create_math_function_test_cases()
     ids=[case.name for case in math_test_cases]
 )
 def test_math_function(test_case: TestCase):
-    """数学関数の包括的テスト"""
+    """Comprehensive mathematical function test"""
     from myapp.math_utils import add_numbers
     
-    # タイムアウト設定
+    # Timeout configuration
     if test_case.timeout:
         pytest.mark.timeout(test_case.timeout)
     
-    # テストカテゴリに応じた処理
+    # Process according to test category
     if test_case.category == TestCategory.NEGATIVE:
         with pytest.raises(test_case.should_raise):
             add_numbers(**test_case.input_data)
@@ -166,46 +166,46 @@ def test_math_function(test_case: TestCase):
         if test_case.category == TestCategory.POSITIVE:
             assert result == test_case.expected_result
         elif test_case.category == TestCategory.EDGE_CASE:
-            # エッジケースは許容誤差を考慮
+            # Consider tolerance for edge cases
             if isinstance(result, float):
                 assert abs(result - test_case.expected_result) < 1e-10
             else:
                 assert result == test_case.expected_result
         elif test_case.category == TestCategory.PERFORMANCE:
             assert result == test_case.expected_result
-            # パフォーマンス要件は @pytest.mark.timeout で制御
+            # Performance requirements controlled by @pytest.mark.timeout
 
-# カテゴリフィルタリング
+# Category filtering
 @pytest.mark.parametrize(
     "test_case",
     [case for case in math_test_cases if case.category == TestCategory.POSITIVE],
     ids=[case.name for case in math_test_cases if case.category == TestCategory.POSITIVE]
 )
 def test_math_function_positive_only(test_case: TestCase):
-    """ポジティブテストケースのみ"""
+    """Positive test cases only"""
     from myapp.math_utils import add_numbers
     result = add_numbers(**test_case.input_data)
     assert result == test_case.expected_result
 
-# 組み合わせテスト（Combinatorial Testing）
+# Combinatorial testing
 @pytest.mark.parametrize("method", ["GET", "POST", "PUT", "DELETE"])
 @pytest.mark.parametrize("status_code", [200, 404, 500])
 @pytest.mark.parametrize("content_type", ["application/json", "text/html"])
 def test_api_combinations(method, status_code, content_type):
-    """API エンドポイントの組み合わせテスト"""
-    # 全ての組み合わせをテスト（4 × 3 × 2 = 24 テストケース）
+    """API endpoint combination testing"""
+    # Test all combinations (4 × 3 × 2 = 24 test cases)
     response = simulate_api_call(method, status_code, content_type)
     
-    # 基本的な検証
+    # Basic validation
     assert response.method == method
     assert response.status_code == status_code
     assert response.content_type == content_type
 
-# 条件付きパラメータ化
+# Conditional parametrization
 def pytest_generate_tests(metafunc):
-    """動的パラメータ化"""
+    """Dynamic parametrization"""
     if "database_config" in metafunc.fixturenames:
-        # 環境変数に基づいてデータベース設定を変更
+        # Change database configuration based on environment variables
         import os
         
         configs = []
@@ -217,25 +217,25 @@ def pytest_generate_tests(metafunc):
             configs.append(("mysql", "mysql://localhost/testdb"))
         
         if not configs:
-            configs = [("sqlite", "sqlite:///:memory:")]  # デフォルト
+            configs = [("sqlite", "sqlite:///:memory:")]  # Default
         
         metafunc.parametrize("database_config", configs, ids=[config[0] for config in configs])
 
-# データドリブンテスト
+# Data-driven testing
 @pytest.mark.parametrize(
     "user_data,expected_validation",
     [
-        # 有効なユーザーデータ
+        # Valid user data
         (
             {"username": "validuser", "email": "user@example.com", "age": 25},
             {"valid": True, "errors": []}
         ),
-        # 無効なユーザーデータ
+        # Invalid user data
         (
             {"username": "", "email": "invalid-email", "age": -1},
             {"valid": False, "errors": ["username_required", "invalid_email", "invalid_age"]}
         ),
-        # エッジケース
+        # Edge cases
         (
             {"username": "a" * 100, "email": "edge@example.com", "age": 0},
             {"valid": False, "errors": ["username_too_long", "invalid_age"]}
@@ -243,7 +243,7 @@ def pytest_generate_tests(metafunc):
     ]
 )
 def test_user_validation(user_data, expected_validation):
-    """ユーザーデータ検証のテスト"""
+    """User data validation test"""
     from myapp.validators import validate_user
     
     result = validate_user(user_data)
@@ -252,7 +252,7 @@ def test_user_validation(user_data, expected_validation):
     assert set(result["errors"]) == set(expected_validation["errors"])
 ```
 
-### 2. 外部データソースからのパラメータ化
+### 2. External Data Source Parametrization
 
 ```python
 import pytest
@@ -264,29 +264,29 @@ from typing import List, Dict, Any
 import pandas as pd
 
 class ExternalTestDataLoader:
-    """外部テストデータローダー"""
+    """External test data loader"""
     
     @staticmethod
     def load_csv(file_path: str) -> List[Dict[str, Any]]:
-        """CSVファイルからテストデータを読み込み"""
+        """Load test data from CSV file"""
         test_data = []
         with open(file_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                # 型変換の試行
+                # Attempt type conversion
                 converted_row = {}
                 for key, value in row.items():
-                    # 数値変換の試行
+                    # Attempt numeric conversion
                     try:
                         if '.' in value:
                             converted_row[key] = float(value)
                         else:
                             converted_row[key] = int(value)
                     except ValueError:
-                        # ブール値変換の試行
+                        # Attempt boolean conversion
                         if value.lower() in ('true', 'false'):
                             converted_row[key] = value.lower() == 'true'
-                        # NULL値の処理
+                        # Handle NULL values
                         elif value.lower() in ('null', 'none', ''):
                             converted_row[key] = None
                         else:
@@ -298,49 +298,49 @@ class ExternalTestDataLoader:
     
     @staticmethod
     def load_json(file_path: str) -> List[Dict[str, Any]]:
-        """JSONファイルからテストデータを読み込み"""
+        """Load test data from JSON file"""
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     
     @staticmethod
     def load_yaml(file_path: str) -> List[Dict[str, Any]]:
-        """YAMLファイルからテストデータを読み込み"""
+        """Load test data from YAML file"""
         with open(file_path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
     
     @staticmethod
     def load_excel(file_path: str, sheet_name: str = None) -> List[Dict[str, Any]]:
-        """Excelファイルからテストデータを読み込み"""
+        """Load test data from Excel file"""
         df = pd.read_excel(file_path, sheet_name=sheet_name)
         return df.to_dict('records')
 
-# テストデータファイルパス
+# Test data file paths
 TEST_DATA_DIR = Path(__file__).parent / "test_data"
 
-# CSVからのデータ読み込み例
+# CSV data loading example
 def load_api_test_data():
-    """API テストデータの読み込み"""
+    """Load API test data"""
     csv_file = TEST_DATA_DIR / "api_test_cases.csv"
     if csv_file.exists():
         return ExternalTestDataLoader.load_csv(str(csv_file))
     else:
-        # フォールバックデータ
+        # Fallback data
         return [
             {"endpoint": "/api/users", "method": "GET", "expected_status": 200},
             {"endpoint": "/api/users/1", "method": "GET", "expected_status": 200},
             {"endpoint": "/api/users/999", "method": "GET", "expected_status": 404}
         ]
 
-# JSONからの複雑なテストシナリオ
+# Complex test scenarios from JSON
 def load_integration_test_scenarios():
-    """統合テストシナリオの読み込み"""
+    """Load integration test scenarios"""
     json_file = TEST_DATA_DIR / "integration_scenarios.json"
     if json_file.exists():
         return ExternalTestDataLoader.load_json(str(json_file))
     else:
         return []
 
-# パラメータ化テストの実装
+# Parametrized test implementation
 api_test_data = load_api_test_data()
 
 @pytest.mark.parametrize(
@@ -349,17 +349,17 @@ api_test_data = load_api_test_data()
     ids=[f"{data['method']}_{data['endpoint']}" for data in api_test_data]
 )
 def test_api_endpoints(test_data, client):
-    """外部データドリブンAPIテスト"""
+    """External data-driven API test"""
     method = test_data["method"].lower()
     endpoint = test_data["endpoint"]
     expected_status = test_data["expected_status"]
     
-    # HTTP メソッドの動的呼び出し
+    # Dynamic HTTP method invocation
     response = getattr(client, method)(endpoint)
     
     assert response.status_code == expected_status
     
-    # 追加の検証ルール
+    # Additional validation rules
     if "expected_keys" in test_data:
         response_json = response.json()
         for key in test_data["expected_keys"]:
@@ -381,34 +381,34 @@ def test_api_endpoints(test_data, client):
             elif condition == "min_length":
                 assert len(response_json[field]) >= value
 
-# YAMLベースのテストシナリオ
+# YAML-based test scenarios
 @pytest.mark.parametrize(
     "scenario",
     load_integration_test_scenarios(),
     ids=lambda scenario: scenario.get("name", "unnamed_scenario")
 )
 def test_integration_scenarios(scenario, complete_test_environment):
-    """YAML定義による統合テストシナリオ"""
+    """YAML-defined integration test scenarios"""
     steps = scenario.get("steps", [])
     setup = scenario.get("setup", {})
     teardown = scenario.get("teardown", {})
     
-    # セットアップ実行
+    # Execute setup
     for setup_step in setup.get("actions", []):
         execute_test_action(setup_step, complete_test_environment)
     
     try:
-        # テストステップの実行
+        # Execute test steps
         for step in steps:
             execute_test_action(step, complete_test_environment)
     
     finally:
-        # ティアダウン実行
+        # Execute teardown
         for teardown_step in teardown.get("actions", []):
             execute_test_action(teardown_step, complete_test_environment)
 
 def execute_test_action(action: Dict[str, Any], test_env: Dict[str, Any]):
-    """テストアクションの実行"""
+    """Execute test action"""
     action_type = action["type"]
     
     if action_type == "http_request":
@@ -418,7 +418,7 @@ def execute_test_action(action: Dict[str, Any], test_env: Dict[str, Any]):
         
         response = getattr(client, method)(url, **action.get("params", {}))
         
-        # アサーション
+        # Assertions
         if "assertions" in action:
             for assertion in action["assertions"]:
                 assert_type = assertion["type"]
@@ -450,10 +450,10 @@ def execute_test_action(action: Dict[str, Any], test_env: Dict[str, Any]):
             file_path = temp_dir / action["filename"]
             assert file_path.exists()
 
-# データファイル生成ヘルパー
+# Test data file generation helper
 def generate_test_data_files():
-    """テストデータファイルの生成（開発用）"""
-    # CSV テストデータの生成
+    """Generate test data files (for development)"""
+    # Generate CSV test data
     csv_data = [
         {"endpoint": "/api/users", "method": "GET", "expected_status": 200, "expected_keys": "id,username,email"},
         {"endpoint": "/api/users/1", "method": "GET", "expected_status": 200, "expected_keys": "id,username,email"},
@@ -469,11 +469,11 @@ def generate_test_data_files():
         writer.writeheader()
         writer.writerows(csv_data)
     
-    # JSON テストシナリオの生成
+    # Generate JSON test scenarios
     scenarios = [
         {
             "name": "user_registration_flow",
-            "description": "ユーザー登録フローのテスト",
+            "description": "User registration flow test",
             "setup": {
                 "actions": [
                     {"type": "database_query", "query": "DELETE FROM users WHERE username = 'testuser'"}
@@ -510,7 +510,73 @@ def generate_test_data_files():
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(scenarios, f, indent=2, ensure_ascii=False)
 
+# Advanced parametrization patterns for enterprise testing
+@pytest.mark.parametrize("test_environment", ["development", "staging", "production"])
+@pytest.mark.parametrize("user_role", ["admin", "user", "guest"])
+@pytest.mark.parametrize("feature_flag", [True, False])
+def test_feature_access_control(test_environment, user_role, feature_flag):
+    """Feature access control testing across different environments and roles"""
+    from myapp.access_control import check_feature_access
+    
+    # Environment-specific logic
+    if test_environment == "production" and user_role == "guest":
+        pytest.skip("Guest access not tested in production")
+    
+    access_granted = check_feature_access(
+        environment=test_environment,
+        user_role=user_role,
+        feature_enabled=feature_flag
+    )
+    
+    # Validate access logic
+    if feature_flag and user_role in ["admin", "user"]:
+        assert access_granted
+    elif not feature_flag or user_role == "guest":
+        assert not access_granted
+
+@pytest.mark.parametrize(
+    "load_config",
+    [
+        {"concurrent_users": 10, "duration": 30},
+        {"concurrent_users": 50, "duration": 60},
+        {"concurrent_users": 100, "duration": 120}
+    ],
+    ids=["light_load", "medium_load", "heavy_load"]
+)
+@pytest.mark.performance
+def test_api_performance_under_load(load_config, api_client):
+    """API performance testing under various load conditions"""
+    import asyncio
+    import time
+    
+    concurrent_users = load_config["concurrent_users"]
+    duration = load_config["duration"]
+    
+    async def user_simulation():
+        """Simulate user behavior"""
+        start_time = time.time()
+        requests_made = 0
+        
+        while time.time() - start_time < duration:
+            response = await api_client.get("/api/health")
+            assert response.status_code == 200
+            requests_made += 1
+            await asyncio.sleep(0.1)  # Small delay between requests
+        
+        return requests_made
+    
+    # Run concurrent user simulations
+    loop = asyncio.get_event_loop()
+    tasks = [user_simulation() for _ in range(concurrent_users)]
+    results = loop.run_until_complete(asyncio.gather(*tasks))
+    
+    total_requests = sum(results)
+    requests_per_second = total_requests / duration
+    
+    # Performance assertions
+    assert requests_per_second > 10  # Minimum performance threshold
+    print(f"Load test: {concurrent_users} users, {total_requests} requests, {requests_per_second:.2f} req/s")
+
 if __name__ == "__main__":
     generate_test_data_files()
 ```
-

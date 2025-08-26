@@ -1,196 +1,268 @@
-# Microservices Architecture
+# Microservices アーキテクチャ
 
-## What
-アプリケーションを小さな独立したサービスの集合として構築するアーキテクチャスタイル。各サービスは単一のビジネス機能を担当し、独立してデプロイ可能。
+分散システムとマイクロサービスのパターン。
 
-## Why
-- 独立したデプロイメント（サービス単位でリリース）
-- 技術的多様性（サービスごとに最適な技術選択）
-- 障害の分離（1つのサービス障害が全体に波及しない）
-- スケーラビリティ（必要なサービスのみスケール）
-- チームの自律性（サービス単位でチーム編成）
+## サービス設計
 
-## Core Principles
+### ドメイン境界
+```yaml
+# サービス分割例
+services:
+  user-service:
+    responsibilities:
+      - ユーザー認証
+      - プロファイル管理
+    database: PostgreSQL
+    
+  order-service:
+    responsibilities:
+      - 注文処理
+      - 在庫管理
+    database: MongoDB
+    
+  payment-service:
+    responsibilities:
+      - 決済処理
+      - 請求管理
+    database: PostgreSQL
+```
 
-### 1. サービス分割の原則
-- **単一責任**: 1サービス1ビジネス機能
-- **自律性**: 他サービスに依存せず独立動作
-- **疎結合**: サービス間の依存を最小化
-- **高凝集**: 関連機能を同一サービスに
+### API Gateway
+```typescript
+// API Gateway実装例 (Express)
+const gateway = express();
 
-### 2. 通信パターン
-- **同期通信**: REST API, gRPC（即座の応答が必要）
-- **非同期通信**: メッセージキュー, イベントストリーム（疎結合）
-- **API Gateway**: 単一エントリーポイント
+// ルーティング
+gateway.use('/api/users', 
+  createProxyMiddleware({
+    target: 'http://user-service:3001'
+  })
+);
 
-### 3. データ管理
-- **データベース per サービス**: 各サービスが独自のDBスキーマを所有
-  - 他サービスのDBへの直接アクセス禁止
-  - データ共有はAPI経由のみ
-- **分散トランザクション回避**: 2相コミットではなくSagaパターン使用
-  - Choreography: イベント駆動での協調
-  - Orchestration: 中央コーディネーターによる制御
-- **結果整合性**: 強い整合性を諦め、最終的な整合性を保証
-  - 補償トランザクションでロールバック
-  - イベントソーシングで状態復元
+gateway.use('/api/orders',
+  createProxyMiddleware({
+    target: 'http://order-service:3002'
+  })
+);
 
-### 4. サービス発見とレジリエンス
-- **サービスディスカバリー**: 動的なサービス発見
-- **サーキットブレーカー**: カスケード障害防止
-- **リトライ/タイムアウト**: 一時的障害への対処
+// 認証
+gateway.use(authMiddleware);
+```
 
-## Best Practices
+## サービス間通信
 
-1. **適切なサービス境界の設定**
-   - DDDの境界づけられたコンテキストを活用
-   - データの整合性境界を考慮
-   - チームの組織構造に合わせる（逆コンウェイの法則）
-
-2. **API設計の標準化**
-   - RESTful原則の遵守
-   - バージョニング戦略の確立
-   - 後方互換性の維持
-
-3. **分散システムの複雑性への対処**
-   - 分散トレーシングの実装
-   - 集中ログ管理
-   - メトリクス監視の充実
-
-4. **データ整合性の管理**
-   - 結果整合性の受け入れ
-   - Sagaパターンでのトランザクション管理
-   - イベント駆動での同期
-
-5. **デプロイメントとCI/CD**
-   - コンテナ化（Docker）
-   - オーケストレーション（Kubernetes）
-   - 自動化されたテストとデプロイ
-
-6. **セキュリティ**
-   - サービス間認証（mTLS）
-   - APIゲートウェイでの認可
-   - シークレット管理
-
-## Simple Example
-
-```pseudocode
-// Order Service
-Service OrderService {
-  API:
-    POST /orders - 注文作成
-    GET /orders/{id} - 注文取得
-  
-  createOrder(orderData) {
-    // 在庫確認（Inventory Service呼び出し）
+### REST API
+```typescript
+// サービス間HTTP通信
+class OrderService {
+  async createOrder(orderData) {
+    // ユーザー検証
+    const user = await fetch(`http://user-service/users/${orderData.userId}`);
+    if (!user.ok) throw new Error('User not found');
+    
+    // 在庫確認
+    const inventory = await fetch(`http://inventory-service/check`, {
+      method: 'POST',
+      body: JSON.stringify(orderData.items)
+    });
+    
     // 注文作成
-    // OrderCreatedイベント発行
+    return await this.orderRepository.create(orderData);
   }
-}
-
-// Inventory Service
-Service InventoryService {
-  API:
-    GET /inventory/{productId} - 在庫確認
-    PUT /inventory/reserve - 在庫予約
-  
-  EventHandler:
-    on OrderCreated -> 在庫減少
-    on OrderCancelled -> 在庫戻し
-}
-
-// API Gateway
-Gateway {
-  route("/api/orders/*") -> OrderService
-  route("/api/products/*") -> ProductService
-  authentication()
-  rateLimit()
 }
 ```
 
-## Anti-patterns
+### メッセージキュー
+```typescript
+// RabbitMQ/Kafka実装
+const amqp = require('amqplib');
 
-1. **分散モノリス**
-   - サービス間の同期的依存が多い
-   - 全サービスを同時デプロイ必要
-   - データベース共有
+// Publisher
+async function publishOrder(order) {
+  const connection = await amqp.connect('amqp://localhost');
+  const channel = await connection.createChannel();
+  
+  await channel.assertQueue('orders');
+  channel.sendToQueue('orders', Buffer.from(JSON.stringify(order)));
+}
 
-2. **過度な細分化**
-   - サービスが小さすぎる
-   - ネットワーク通信のオーバーヘッド
-   - 運用複雑性の増大
+// Subscriber
+async function consumeOrders() {
+  const connection = await amqp.connect('amqp://localhost');
+  const channel = await connection.createChannel();
+  
+  await channel.assertQueue('orders');
+  channel.consume('orders', (msg) => {
+    const order = JSON.parse(msg.content.toString());
+    processOrder(order);
+    channel.ack(msg);
+  });
+}
+```
 
-3. **不適切なサービス境界**
-   - 頻繁なサービス間通信
-   - 分散トランザクションの必要性
-   - データの重複
+## データ管理
 
-4. **共有ライブラリの乱用**
-   - サービス間の暗黙的結合
-   - 独立デプロイメントの阻害
+### Database per Service
+```typescript
+// 各サービスが独自のDB
+// user-service/db.ts
+const userDB = new PrismaClient({
+  datasources: { db: { url: process.env.USER_DB_URL } }
+});
 
-5. **監視の不足**
-   - 分散トレーシングなし
-   - ログの分散
-   - メトリクスの欠如
+// order-service/db.ts
+const orderDB = new MongoClient(process.env.ORDER_DB_URL);
+```
 
-## Distributed Patterns
+### Saga パターン
+```typescript
+// 分散トランザクション
+class OrderSaga {
+  async execute(order) {
+    const steps = [
+      { service: 'payment', action: 'reserve', compensate: 'cancel' },
+      { service: 'inventory', action: 'reserve', compensate: 'release' },
+      { service: 'shipping', action: 'schedule', compensate: 'cancel' }
+    ];
+    
+    const executed = [];
+    
+    try {
+      for (const step of steps) {
+        await this.executeStep(step, order);
+        executed.push(step);
+      }
+    } catch (error) {
+      // ロールバック
+      for (const step of executed.reverse()) {
+        await this.compensate(step, order);
+      }
+      throw error;
+    }
+  }
+}
+```
 
-### Saga Pattern
-- 長時間実行トランザクションの管理
-- 補償トランザクションでロールバック
-- Choreography（イベント駆動）vs Orchestration（中央制御）
+## サービスディスカバリー
+
+### Consul/Eureka統合
+```typescript
+// サービス登録
+const consul = require('consul')();
+
+consul.agent.service.register({
+  name: 'user-service',
+  id: 'user-service-1',
+  address: '192.168.1.100',
+  port: 3001,
+  check: {
+    http: 'http://192.168.1.100:3001/health',
+    interval: '10s'
+  }
+});
+
+// サービス発見
+async function getService(serviceName) {
+  const services = await consul.health.service(serviceName);
+  const healthy = services.filter(s => s.Checks.every(c => c.Status === 'passing'));
+  return healthy[Math.floor(Math.random() * healthy.length)];
+}
+```
+
+## レジリエンス
 
 ### Circuit Breaker
-- 障害サービスへの呼び出し停止
-- 自動復旧の試行
-- カスケード障害の防止
+```typescript
+class CircuitBreaker {
+  constructor(threshold = 5, timeout = 60000) {
+    this.failureCount = 0;
+    this.threshold = threshold;
+    this.timeout = timeout;
+    this.state = 'CLOSED';
+    this.nextAttempt = Date.now();
+  }
+  
+  async call(fn) {
+    if (this.state === 'OPEN') {
+      if (Date.now() < this.nextAttempt) {
+        throw new Error('Circuit breaker is OPEN');
+      }
+      this.state = 'HALF_OPEN';
+    }
+    
+    try {
+      const result = await fn();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+  
+  onSuccess() {
+    this.failureCount = 0;
+    this.state = 'CLOSED';
+  }
+  
+  onFailure() {
+    this.failureCount++;
+    if (this.failureCount >= this.threshold) {
+      this.state = 'OPEN';
+      this.nextAttempt = Date.now() + this.timeout;
+    }
+  }
+}
+```
 
-### CQRS
-- 読み取りと書き込みの分離
-- イベントソーシングとの組み合わせ
-- 結果整合性の活用
+### Retry with Backoff
+```typescript
+async function retryWithBackoff(fn, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      
+      const delay = Math.pow(2, i) * 1000; // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+```
 
-## When to Use
-- **大規模システム**: 20万行以上、または10以上の独立機能
-- **異なるスケール要件**: サービス間で10倍以上の負荷差
-- **複数チーム**: 3チーム以上、各チーム3-8人
-- **頻繁なリリース**: 週2回以上の本番デプロイ必要
-- **技術多様性**: 3つ以上の言語/フレームワーク活用
+## 監視とロギング
 
-## When NOT to Use
-- **小規模システム**: 5万行未満のコードベース
-- **少人数チーム**: 5人未満の開発者
-- **強い整合性要求**: 金融取引等、ACID必須
-- **運用体制不足**: DevOpsエンジニア2人未満
-- **経験不足**: 分散システム経験1年未満
+### 分散トレーシング
+```typescript
+// OpenTelemetry
+const { trace } = require('@opentelemetry/api');
+const tracer = trace.getTracer('order-service');
 
-## Security Considerations
-- **サービス間認証**: mTLS、JWT による相互認証
-- **APIゲートウェイ**: 単一認証ポイント、Rate Limiting
-- **シークレット管理**: Vault等での集中管理
-- **ネットワーク分離**: サービスメッシュでのトラフィック制御
-- **監査ログ**: 分散トレーシングでの操作追跡
+async function processOrder(order) {
+  const span = tracer.startSpan('process-order');
+  span.setAttribute('order.id', order.id);
+  
+  try {
+    // 処理
+    const result = await orderLogic(order);
+    span.setStatus({ code: SpanStatusCode.OK });
+    return result;
+  } catch (error) {
+    span.recordException(error);
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    throw error;
+  } finally {
+    span.end();
+  }
+}
+```
 
-## Progressive Adoption
-1. **Phase 1 - モノリス分析** (2-3週間)
-   - 機能境界の特定
-   - データ依存関係の分析
-
-2. **Phase 2 - 最初のサービス抽出** (3-4週間)
-   - 最も独立性の高い機能を分離
-   - API Gateway導入
-
-3. **Phase 3 - データ分離** (4-6週間)
-   - サービスごとのDB分離
-   - Sagaパターン実装
-
-4. **Phase 4 - 運用基盤** (3-4週間)
-   - 監視・ログ基盤構築
-   - CI/CDパイプライン整備
-
-## Related Patterns
-- **DDD**: 境界づけられたコンテキスト = サービス境界
-- **Clean Architecture**: 各サービス内部の構造化
-- **Event Sourcing**: サービス間の非同期通信
-- **CQRS**: 読み書き専用サービスの分離
-- **API Gateway**: サービスの統一エントリーポイント
+## チェックリスト
+- [ ] サービス境界明確化
+- [ ] API Gateway実装
+- [ ] サービス間通信戦略
+- [ ] データ一貫性対策
+- [ ] サービスディスカバリー
+- [ ] 障害対策（Circuit Breaker）
+- [ ] 監視・ロギング体制

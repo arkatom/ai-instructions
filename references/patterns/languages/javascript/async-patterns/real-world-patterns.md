@@ -1,6 +1,6 @@
-# 実世界のパターン
+# Real-World Patterns
 
-## 高度なAPIクライアント
+## Advanced API Client
 
 ```javascript
 class AdvancedApiClient {
@@ -21,12 +21,12 @@ class AdvancedApiClient {
   
   async request(config) {
     return this.semaphore.use(async () => {
-      // リクエストインターセプター適用
+      // Apply request interceptors
       for (const interceptor of this.interceptors.request) {
         config = await interceptor(config);
       }
       
-      // キャッシュチェック
+      // Check cache
       const cacheKey = this.getCacheKey(config);
       if (config.method === 'GET' && this.cache.has(cacheKey)) {
         const cached = this.cache.get(cacheKey);
@@ -36,7 +36,7 @@ class AdvancedApiClient {
         this.cache.delete(cacheKey);
       }
       
-      // リトライ付きリクエスト実行
+      // Execute request with retry
       let lastError;
       for (let attempt = 0; attempt <= this.retryOptions.maxRetries; attempt++) {
         try {
@@ -56,7 +56,7 @@ class AdvancedApiClient {
             throw new Error(`HTTP ${response.status}`);
           }
           
-          // 成功時はキャッシュ
+          // Cache on success
           if (config.method === 'GET') {
             const data = await response.clone().json();
             this.cache.set(cacheKey, { data, timestamp: Date.now() });
@@ -86,7 +86,7 @@ class AdvancedApiClient {
 }
 ```
 
-## バックグラウンドタスクマネージャー
+## Background Task Manager
 
 ```javascript
 class BackgroundTaskManager {
@@ -148,7 +148,7 @@ class BackgroundTaskManager {
         task.retries++;
         
         if (task.retries < task.maxRetries) {
-          // 指数バックオフでリトライ
+          // Exponential backoff retry
           const retryDelay = Math.pow(2, task.retries) * 1000;
           setTimeout(() => {
             this.queues.get(queueName).unshift(task);

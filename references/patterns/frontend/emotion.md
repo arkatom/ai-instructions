@@ -1,8 +1,8 @@
-# Emotion 実践ガイド v11
+# Emotion Practical Guide v11
 
-## セットアップと最適化設定
+## Setup and Optimized Configuration
 
-### Next.js 14+ App Router完全対応
+### Next.js 14+ App Router Complete Support
 
 ```typescript
 // next.config.js
@@ -85,7 +85,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
+    <html lang="en">
       <body>
         <EmotionRegistry>{children}</EmotionRegistry>
       </body>
@@ -94,7 +94,7 @@ export default function RootLayout({
 }
 ```
 
-### TypeScript完全統合
+### Complete TypeScript Integration
 
 ```typescript
 // emotion.d.ts
@@ -231,16 +231,16 @@ declare module '@emotion/react' {
 }
 ```
 
-## 高度なスタイリングパターン
+## Advanced Styling Patterns
 
-### 1. css prop vs styled API の使い分け
+### 1. css prop vs styled API Usage
 
 ```typescript
 /** @jsxImportSource @emotion/react */
 import { css, Theme } from '@emotion/react';
 import styled from '@emotion/styled';
 
-// 1. css prop パターン（動的スタイル向き）
+// 1. css prop pattern (for dynamic styles)
 interface DynamicBoxProps {
   color?: string;
   size?: 'small' | 'medium' | 'large';
@@ -259,7 +259,7 @@ const dynamicBoxStyles = (theme: Theme, props: DynamicBoxProps) => css`
     box-shadow: ${theme.shadows.lg};
   }
   
-  /* メディアクエリミックスイン */
+  /* Media query mixin */
   ${theme.breakpoints.md} {
     padding: ${theme.spacing[8]};
   }
@@ -273,7 +273,7 @@ export function DynamicBox({ color, size = 'medium', isActive, children }: Dynam
   );
 }
 
-// 2. styled API パターン（静的コンポーネント向き）
+// 2. styled API pattern (for static components)
 const StyledCard = styled.div<{ $elevated?: boolean }>`
   background: ${({ theme }) => theme.colors.background.paper};
   border-radius: ${({ theme }) => theme.radii.lg};
@@ -287,9 +287,9 @@ const StyledCard = styled.div<{ $elevated?: boolean }>`
   }
 `;
 
-// 3. 複合パターン（最大の柔軟性）
+// 3. Composite pattern (maximum flexibility)
 const BaseButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-  /* 基本スタイル */
+  /* Base styles */
   font-family: ${({ theme }) => theme.typography.fontFamily.sans};
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   border-radius: ${({ theme }) => theme.radii.default};
@@ -298,7 +298,7 @@ const BaseButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   border: none;
   outline: none;
   
-  /* バリアントスタイル */
+  /* Variant styles */
   ${({ theme, $variant }) => {
     const styles = {
       primary: css`
@@ -322,7 +322,7 @@ const BaseButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   }}
 `;
 
-// 動的拡張
+// Dynamic extension
 export function Button({ loading, ...props }: any) {
   return (
     <BaseButton
@@ -355,7 +355,7 @@ export function Button({ loading, ...props }: any) {
 }
 ```
 
-### 2. 高性能セレクタとキャッシング
+### 2. High-Performance Selectors and Caching
 
 ```typescript
 // utils/emotion-utils.ts
@@ -363,7 +363,7 @@ import { css, SerializedStyles, Theme } from '@emotion/react';
 import createCache from '@emotion/cache';
 import weakMemoize from '@emotion/weak-memoize';
 
-// セレクタキャッシング
+// Selector caching
 const selectorCache = new Map<string, SerializedStyles>();
 
 export const cachedSelector = (key: string, styles: SerializedStyles) => {
@@ -373,7 +373,7 @@ export const cachedSelector = (key: string, styles: SerializedStyles) => {
   return selectorCache.get(key)!;
 };
 
-// メディアクエリヘルパー
+// Media query helpers
 export const mq = weakMemoize((breakpoints: Theme['breakpoints']) => ({
   sm: `@media (min-width: ${breakpoints.sm})`,
   md: `@media (min-width: ${breakpoints.md})`,
@@ -381,7 +381,7 @@ export const mq = weakMemoize((breakpoints: Theme['breakpoints']) => ({
   xl: `@media (min-width: ${breakpoints.xl})`,
   '2xl': `@media (min-width: ${breakpoints['2xl']})`,
   
-  // カスタムクエリ
+  // Custom queries
   hover: '@media (hover: hover)',
   touch: '@media (hover: none)',
   motion: '@media (prefers-reduced-motion: no-preference)',
@@ -389,7 +389,7 @@ export const mq = weakMemoize((breakpoints: Theme['breakpoints']) => ({
   print: '@media print',
 }));
 
-// 条件付きスタイルヘルパー
+// Conditional style helper
 export const conditionalStyles = <P extends object>(
   conditions: Array<[boolean | ((props: P) => boolean), SerializedStyles | string]>
 ) => (props: P) => css`
@@ -400,12 +400,12 @@ export const conditionalStyles = <P extends object>(
     .map(([, styles]) => styles)}
 `;
 
-// バリアントマッピング
+// Variant mapping
 export const createVariants = <V extends string>(
   variants: Record<V, SerializedStyles | ((theme: Theme) => SerializedStyles)>
 ) => variants;
 
-// 使用例
+// Usage example
 const buttonVariants = createVariants({
   primary: (theme: Theme) => css`
     background: ${theme.colors.primary};
@@ -435,7 +435,7 @@ const buttonVariants = createVariants({
 });
 ```
 
-### 3. 高度なテーマとコンテキスト管理
+### 3. Advanced Theme and Context Management
 
 ```typescript
 // contexts/ThemeContext.tsx
@@ -470,13 +470,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   
   useEffect(() => {
-    // localStorage と システム設定の同期
+    // Sync with localStorage and system preference
     const stored = localStorage.getItem('theme-mode') as 'light' | 'dark' | null;
     const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     setMode(stored || (systemPreference ? 'dark' : 'light'));
     
-    // リアルタイム変更の監視
+    // Real-time change monitoring
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
       if (!localStorage.getItem('theme-mode')) {
@@ -493,7 +493,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setMode(newMode);
     localStorage.setItem('theme-mode', newMode);
     
-    // カスタムイベントの発火
+    // Fire custom event
     window.dispatchEvent(new CustomEvent('theme-change', { detail: newMode }));
   };
   
@@ -517,20 +517,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         background: ${theme.colors.background.default};
         transition: ${theme.transitions.normal};
         
-        /* スムーズスクロール */
+        /* Smooth scrolling */
         scroll-behavior: smooth;
         
-        /* タップハイライトの無効化 */
+        /* Disable tap highlight */
         -webkit-tap-highlight-color: transparent;
       }
       
-      /* フォーカススタイル */
+      /* Focus styles */
       :focus-visible {
         outline: 2px solid ${theme.colors.primary};
         outline-offset: 2px;
       }
       
-      /* スクロールバーのスタイリング */
+      /* Scrollbar styling */
       ::-webkit-scrollbar {
         width: 12px;
         height: 12px;
@@ -549,7 +549,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      /* アニメーション設定 */
+      /* Animation settings */
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -574,16 +574,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 ```
 
-## パフォーマンス最適化
+## Performance Optimization
 
-### 1. ランタイム最小化とバンドル最適化
+### 1. Runtime Minimization and Bundle Optimization
 
 ```javascript
 // webpack.config.js
 module.exports = {
   resolve: {
     alias: {
-      // 本番環境では軽量版を使用
+      // Use lightweight version in production
       '@emotion/react': process.env.NODE_ENV === 'production' 
         ? '@emotion/react/dist/emotion-react.cjs.prod.js'
         : '@emotion/react',
@@ -608,7 +608,7 @@ module.exports = {
     ],
   },
   plugins: [
-    // Emotionの静的抽出
+    // Emotion static extraction
     new (require('@emotion/babel-plugin-extract-static'))({
       outputDir: './static-styles',
       filename: '[name].[hash].css',
@@ -617,7 +617,7 @@ module.exports = {
 };
 ```
 
-### 2. 動的スタイルの最適化
+### 2. Dynamic Style Optimization
 
 ```typescript
 // hooks/useOptimizedStyles.ts
@@ -632,7 +632,7 @@ export function useOptimizedStyles<T extends object>(
   const prevDepsRef = useRef(deps);
   
   useLayoutEffect(() => {
-    // 深い比較で不要な再計算を防ぐ
+    // Deep comparison to prevent unnecessary recalculation
     if (!deepEqual(prevDepsRef.current, deps)) {
       setStyles(styleFactory(deps));
       prevDepsRef.current = deps;
@@ -642,7 +642,7 @@ export function useOptimizedStyles<T extends object>(
   return styles;
 }
 
-// 仮想スタイルシート for ランタイムパフォーマンス
+// Virtual stylesheet for runtime performance
 export function createVirtualStyleSheet() {
   const styleMap = new Map<string, string>();
   let updateScheduled = false;
@@ -676,12 +676,12 @@ export function createVirtualStyleSheet() {
 }
 ```
 
-## ベストプラクティス
+## Best Practices
 
-1. **css prop vs styled**: 動的にはcss prop、静的にはstyled API
-2. **TypeScript統合**: Theme型定義で完全な型安全性
-3. **SSR/SSG**: EmotionRegistry、extractStatic の活用
-4. **パフォーマンス**: weakMemoize、キャッシング、静的抽出
-5. **開発体験**: sourceMap、autoLabel でデバッグ効率化
-6. **バンドルサイズ**: 本番環境では軽量版、不要な機能の除外
-7. **保守性**: テーマ管理、バリアント、ユーティリティの体系化
+1. **css prop vs styled**: Use css prop for dynamic styles, styled API for static
+2. **TypeScript Integration**: Complete type safety with Theme type definitions
+3. **SSR/SSG**: EmotionRegistry, extractStatic utilization
+4. **Performance**: weakMemoize, caching, static extraction
+5. **Developer Experience**: sourceMap, autoLabel for efficient debugging
+6. **Bundle Size**: Lightweight version in production, exclude unnecessary features
+7. **Maintainability**: Systematize theme management, variants, and utilities

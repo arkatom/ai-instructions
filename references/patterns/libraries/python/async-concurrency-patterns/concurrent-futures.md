@@ -1,6 +1,6 @@
 # Concurrent Futures Patterns
 
-## 1. ThreadPoolExecutor高度な使用法
+## 1. Advanced ThreadPoolExecutor Usage
 
 ```python
 import concurrent.futures
@@ -12,7 +12,7 @@ import psutil
 import os
 
 class AdaptiveThreadPool:
-    """適応的スレッドプール"""
+    """Adaptive thread pool"""
     
     def __init__(
         self, 
@@ -44,7 +44,7 @@ class AdaptiveThreadPool:
         }
         
     def _monitor_performance(self):
-        """パフォーマンス監視と動的調整"""
+        """Performance monitoring and dynamic adjustment"""
         
         while True:
             try:
@@ -54,7 +54,7 @@ class AdaptiveThreadPool:
                 self.performance_metrics["cpu_usage"].append(cpu_percent)
                 self.performance_metrics["queue_size"].append(queue_size)
                 
-                # 最新10件の平均を保持
+                # Keep latest 10 samples
                 if len(self.performance_metrics["cpu_usage"]) > 10:
                     self.performance_metrics["cpu_usage"].pop(0)
                     self.performance_metrics["queue_size"].pop(0)
@@ -62,7 +62,7 @@ class AdaptiveThreadPool:
                 avg_cpu = sum(self.performance_metrics["cpu_usage"]) / len(self.performance_metrics["cpu_usage"])
                 avg_queue = sum(self.performance_metrics["queue_size"]) / len(self.performance_metrics["queue_size"])
                 
-                # 動的スケーリング
+                # Dynamic scaling
                 if avg_cpu < self.cpu_threshold and avg_queue > 5 and self.current_workers < self.max_workers:
                     self._scale_up()
                 elif avg_cpu > self.cpu_threshold and self.current_workers > self.min_workers:
@@ -74,41 +74,41 @@ class AdaptiveThreadPool:
             time.sleep(5)
     
     def _scale_up(self):
-        """スレッドプールのスケールアップ"""
+        """Scale up thread pool"""
         new_workers = min(self.current_workers + 1, self.max_workers)
         if new_workers != self.current_workers:
             old_executor = self.executor
             self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=new_workers)
             self.current_workers = new_workers
             
-            # 古いエグゼキューターをグレースフルシャットダウン
+            # Gracefully shutdown old executor
             threading.Thread(target=old_executor.shutdown, args=(True,), daemon=True).start()
             logger.info(f"Scaled up to {new_workers} workers")
     
     def _scale_down(self):
-        """スレッドプールのスケールダウン"""
+        """Scale down thread pool"""
         new_workers = max(self.current_workers - 1, self.min_workers)
         if new_workers != self.current_workers:
             old_executor = self.executor
             self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=new_workers)
             self.current_workers = new_workers
             
-            # 古いエグゼキューターをグレースフルシャットダウン
+            # Gracefully shutdown old executor
             threading.Thread(target=old_executor.shutdown, args=(True,), daemon=True).start()
             logger.info(f"Scaled down to {new_workers} workers")
     
     def submit(self, fn: Callable, *args, **kwargs) -> concurrent.futures.Future:
-        """タスクの投入"""
+        """Submit task"""
         future = self.executor.submit(fn, *args, **kwargs)
         self.task_queue.put(future)
         
-        # 完了コールバック
+        # Completion callback
         future.add_done_callback(self._task_completed)
         
         return future
     
     def _task_completed(self, future: concurrent.futures.Future):
-        """タスク完了時の処理"""
+        """Task completion handler"""
         try:
             self.task_queue.get_nowait()
         except queue.Empty:
@@ -120,11 +120,11 @@ class AdaptiveThreadPool:
             self.performance_metrics["failed_tasks"] += 1
     
     def shutdown(self, wait: bool = True):
-        """プールのシャットダウン"""
+        """Shutdown pool"""
         self.executor.shutdown(wait=wait)
         
     def get_stats(self) -> Dict[str, Any]:
-        """パフォーマンス統計の取得"""
+        """Get performance statistics"""
         return {
             "current_workers": self.current_workers,
             "queue_size": self.task_queue.qsize(),
@@ -135,13 +135,13 @@ class AdaptiveThreadPool:
         }
 
 def cpu_intensive_computation(data: int) -> int:
-    """CPU集約的な計算の例"""
+    """CPU-intensive computation example"""
     result = 0
     for i in range(data * 1000):
         result += i ** 0.5
     return int(result)
 
-# 使用例
+# Usage example
 def adaptive_pool_example():
     pool = AdaptiveThreadPool(min_workers=2, max_workers=8)
     
@@ -150,7 +150,7 @@ def adaptive_pool_example():
         future = pool.submit(cpu_intensive_computation, i % 10 + 1)
         futures.append(future)
     
-    # 結果の取得
+    # Get results
     results = []
     for future in concurrent.futures.as_completed(futures, timeout=60):
         try:
@@ -166,7 +166,7 @@ def adaptive_pool_example():
     return results
 ```
 
-## 2. ProcessPoolExecutor高度な使用法
+## 2. Advanced ProcessPoolExecutor Usage
 
 ```python
 import concurrent.futures
@@ -179,7 +179,7 @@ import numpy as np
 import time
 
 class OptimizedProcessPool:
-    """最適化されたプロセスプール"""
+    """Optimized process pool"""
     
     def __init__(
         self, 
@@ -191,7 +191,7 @@ class OptimizedProcessPool:
         self.max_workers = max_workers or multiprocessing.cpu_count()
         self.chunk_size = chunk_size
         
-        # プロセス間通信の最適化
+        # Optimize inter-process communication
         multiprocessing.set_start_method('spawn', force=True)
         
         self.executor = concurrent.futures.ProcessPoolExecutor(
@@ -208,16 +208,16 @@ class OptimizedProcessPool:
         iterable: List[Any],
         chunk_size: Optional[int] = None
     ) -> List[Any]:
-        """チャンク単位での並列マッピング"""
+        """Parallel mapping with chunking"""
         
         chunk_size = chunk_size or self.chunk_size
         chunks = [iterable[i:i + chunk_size] for i in range(0, len(iterable), chunk_size)]
         
-        # チャンク処理関数
+        # Chunk processing function
         def process_chunk(chunk):
             return [func(item) for item in chunk]
         
-        # 並列実行
+        # Parallel execution
         futures = [self.executor.submit(process_chunk, chunk) for chunk in chunks]
         
         results = []
@@ -237,7 +237,7 @@ class OptimizedProcessPool:
         iterable: List[Any],
         progress_callback: Optional[Callable[[int, int], None]] = None
     ) -> List[Any]:
-        """進捗監視付きマッピング"""
+        """Mapping with progress monitoring"""
         
         total_items = len(iterable)
         completed = 0
@@ -272,12 +272,12 @@ class OptimizedProcessPool:
         iterable: List[Any],
         chunk_size: Optional[int] = None
     ) -> Any:
-        """分散MapReduce"""
+        """Distributed MapReduce"""
         
-        # Map フェーズ
+        # Map phase
         mapped_results = self.map_chunked(map_func, iterable, chunk_size)
         
-        # Reduce フェーズ（段階的に削減）
+        # Reduce phase (progressive reduction)
         while len(mapped_results) > 1:
             chunk_size = max(1, len(mapped_results) // self.max_workers)
             chunks = [
@@ -297,30 +297,30 @@ class OptimizedProcessPool:
         return mapped_results[0] if mapped_results else None
     
     def shutdown(self, wait: bool = True):
-        """プールのシャットダウン"""
+        """Shutdown pool"""
         self.executor.shutdown(wait=wait)
 
-# 重い計算処理の例
+# Heavy computation examples
 def matrix_multiplication(matrices_data):
-    """行列積の計算"""
+    """Matrix multiplication computation"""
     a, b = matrices_data
     return np.dot(a, b)
 
 def fibonacci(n):
-    """フィボナッチ数列（CPU集約的）"""
+    """Fibonacci sequence (CPU-intensive)"""
     if n <= 1:
         return n
     return fibonacci(n - 1) + fibonacci(n - 2)
 
 def sum_reducer(a, b):
-    """合計の削減関数"""
+    """Sum reduction function"""
     return a + b
 
-# 使用例
+# Usage example
 def process_pool_example():
     pool = OptimizedProcessPool(max_workers=4)
     
-    # 行列計算の並列処理
+    # Parallel matrix calculations
     matrices = []
     for _ in range(20):
         a = np.random.rand(100, 100)
@@ -340,10 +340,10 @@ def process_pool_example():
     execution_time = time.time() - start_time
     logger.info(f"Matrix calculations completed in {execution_time:.2f} seconds")
     
-    # MapReduce の例
+    # MapReduce example
     numbers = list(range(1, 101))
     
-    # 各数値を2乗するMap関数
+    # Square each number (Map function)
     def square_map(x):
         return x ** 2
     

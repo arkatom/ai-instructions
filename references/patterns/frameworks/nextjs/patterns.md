@@ -1,6 +1,6 @@
-# Next.js パターン (2024)
+# Next.js パターン
 
-Next.js 14+ App Router と React Server Components (RSC) を活用した最新パターン。
+App Router (Next.js 13+) を活用したフルスタックReactパターン。
 
 ## App Router 構造
 

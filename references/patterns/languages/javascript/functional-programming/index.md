@@ -1,28 +1,28 @@
-# 関数型プログラミング パターン索引
+# Functional Programming Patterns Index
 
-JavaScript/TypeScriptでの関数型プログラミング実践パターン集（各100-200行）。
+JavaScript/TypeScript functional programming practice pattern collection (100-200 lines each).
 
-## 🎯 基礎概念
+## 🎯 Core Concepts
 
-- [純粋関数と副作用](./pure-functions.md) - 純粋性の原則と副作用の管理
-- [高階関数](./higher-order-functions.md) - map, filter, reduce等の活用
-- [不変性パターン](./immutability-patterns.md) - イミュータブルデータ構造
+- [Pure Functions and Side Effects](./pure-functions.md) - Principles of purity and side effect management
+- [Higher-Order Functions](./higher-order-functions.md) - Utilizing map, filter, reduce, etc.
+- [Immutability Patterns](./immutability-patterns.md) - Immutable data structures
 
-## 🚀 高度なパターン
+## 🚀 Advanced Patterns
 
-- [モナドとファンクタ](./monads-functors.md) - Maybe, Either, IOモナド
-- [関数合成](./composition-patterns.md) - パイプライン、カリー化、部分適用
-- [型安全な関数型プログラミング](./type-safe-fp.md) - TypeScriptでの型付け
+- [Monads and Functors](./monads-functors.md) - Maybe, Either, IO monads
+- [Function Composition](./composition-patterns.md) - Pipelines, currying, partial application
+- [Type-Safe Functional Programming](./type-safe-fp.md) - TypeScript typing approaches
 
-## ⚡ 実践と最適化
+## ⚡ Practice and Optimization
 
-- [パフォーマンス最適化](./performance-optimization.md) - 遅延評価とメモ化
-- [実世界の応用](./real-world-applications.md) - 実践的なユースケース
+- [Performance Optimization](./performance-optimization.md) - Lazy evaluation and memoization
+- [Real-World Applications](./real-world-applications.md) - Practical use cases
 
-## 📚 参照
+## 📚 Reference
 
-関数型プログラミングの原則をJavaScript/TypeScriptで実装する方法を学習できます。
+Learn how to implement functional programming principles in JavaScript/TypeScript.
 
-### タグ
+### Tags
 
 `#functional` `#fp` `#javascript` `#typescript` `#immutability` `#monad`

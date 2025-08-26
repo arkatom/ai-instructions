@@ -1,14 +1,14 @@
 # Pytest Advanced Testing Patterns
 
-本番環境で使用される高度なPytestテストパターン集です。企業レベルのテスト戦略、CI/CD統合、品質保証まで包括的にカバーします。
+A comprehensive collection of advanced Pytest testing patterns used in production environments. Covers enterprise-level testing strategies, CI/CD integration, and quality assurance practices.
 
-## 目次
+## Table of Contents
 
-1. [Advanced Fixtures Patterns](./fixtures-patterns.md) - 階層化フィクスチャシステムと動的生成
-2. [Parametrized Testing](./parametrized-testing.md) - 高度なパラメータ化テストと外部データソース
-3. [Async Testing Patterns](./async-testing.md) - 非同期テストと統合テストパターン
-4. [Mocking Strategies](./mocking-strategies.md) - 高度なモッキングパターンとテストダブル
-5. [Property-Based Testing](./property-based-testing.md) - Hypothesisを使用したプロパティベーステスト
-6. [Integration & E2E Testing](./integration-e2e-testing.md) - 統合テストとエンドツーエンドテストパターン
+1. [Advanced Fixtures Patterns](./fixtures-patterns.md) - Hierarchical fixture systems and dynamic generation
+2. [Parametrized Testing](./parametrized-testing.md) - Advanced parametrized tests and external data sources
+3. [Async Testing Patterns](./async-testing.md) - Asynchronous testing and integration test patterns
+4. [Mocking Strategies](./mocking-strategies.md) - Advanced mocking patterns and test doubles
+5. [Property-Based Testing](./property-based-testing.md) - Property-based testing with Hypothesis
+6. [Integration & E2E Testing](./integration-e2e-testing.md) - Integration and end-to-end testing patterns
 
-各モジュールは独立して使用可能で、プロジェクトの要件に応じて組み合わせることができます。
+Each module can be used independently and combined according to project requirements.

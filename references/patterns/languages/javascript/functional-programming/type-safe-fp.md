@@ -1,9 +1,9 @@
-# 型安全な関数型プログラミング
+# Type-Safe Functional Programming
 
-## TypeScript での高度な型定義
+## Advanced Type Definitions in TypeScript
 
 ```typescript
-// 関数合成の型安全な実装
+// Type-safe function composition implementation
 type Fn<A, B> = (a: A) => B;
 
 const pipe = <A>() => <B>(f: Fn<A, B>) => ({
@@ -14,7 +14,7 @@ const pipe = <A>() => <B>(f: Fn<A, B>) => ({
 const compose = <A, B, C>(g: Fn<B, C>, f: Fn<A, B>): Fn<A, C> =>
   (a: A) => g(f(a));
 
-// 使用例
+// Usage example
 const addOne = (x: number): number => x + 1;
 const toString = (x: number): string => x.toString();
 const addExclamation = (s: string): string => `${s}!`;
@@ -26,7 +26,7 @@ const pipeline = pipe<number>()
 
 console.log(pipeline.value(5)); // "6!"
 
-// カリー化の型安全な実装
+// Type-safe currying implementation
 type Curry<P extends readonly unknown[], R> = 
   P extends readonly [infer A, ...infer Rest]
     ? (arg: A) => Curry<Rest, R>
@@ -41,17 +41,17 @@ const curry = <P extends readonly unknown[], R>(
       : curry((fn as any).bind(null, ...args))
   ) as Curry<P, R>;
 
-// 使用例
+// Usage example
 const add3 = (a: number, b: number, c: number): number => a + b + c;
 const curriedAdd3 = curry(add3);
 
-const result = curriedAdd3(1)(2)(3); // number型
+const result = curriedAdd3(1)(2)(3); // number type
 ```
 
-## 型安全なモナド実装
+## Type-Safe Monad Implementation
 
 ```typescript
-// Maybe モナドの型定義
+// Maybe monad type definitions
 abstract class Maybe<T> {
   abstract map<U>(f: (value: T) => U): Maybe<U>;
   abstract flatMap<U>(f: (value: T) => Maybe<U>): Maybe<U>;
@@ -111,7 +111,7 @@ class Nothing<T> extends Maybe<T> {
   }
 }
 
-// Either モナドの型定義
+// Either monad type definitions
 abstract class Either<L, R> {
   abstract map<T>(f: (value: R) => T): Either<L, T>;
   abstract flatMap<T>(f: (value: R) => Either<L, T>): Either<L, T>;
@@ -172,10 +172,10 @@ class Right<L, R> extends Either<L, R> {
 }
 ```
 
-## 関数型データ構造
+## Functional Data Structures
 
 ```typescript
-// イミュータブルリストの型安全実装
+// Type-safe immutable list implementation
 class List<T> {
   constructor(private items: ReadonlyArray<T>) {}
   
@@ -233,7 +233,7 @@ class List<T> {
   }
 }
 
-// 使用例
+// Usage example
 const numbers = List.of(1, 2, 3, 4, 5);
 const doubled = numbers.map(x => x * 2);
 const evens = numbers.filter(x => x % 2 === 0);
@@ -245,27 +245,27 @@ const nested = List.of(
 const flattened = nested.flatMap(x => x);
 ```
 
-## 高階型とKind
+## Higher Kinded Types and Kind
 
 ```typescript
-// HKT (Higher Kinded Type) の実装
+// HKT (Higher Kinded Type) implementation
 interface HKT<F, A> {
   readonly _F: F;
   readonly _A: A;
 }
 
-// Functor 型クラス
+// Functor type class
 interface Functor<F> {
   map<A, B>(fa: HKT<F, A>, f: (a: A) => B): HKT<F, B>;
 }
 
-// Monad 型クラス
+// Monad type class
 interface Monad<F> extends Functor<F> {
   of<A>(a: A): HKT<F, A>;
   flatMap<A, B>(fa: HKT<F, A>, f: (a: A) => HKT<F, B>): HKT<F, B>;
 }
 
-// Maybe の HKT 実装
+// Maybe HKT implementation
 const MaybeURI = 'Maybe';
 type MaybeURI = typeof MaybeURI;
 
@@ -286,7 +286,7 @@ const MaybeMonad: Monad<MaybeURI> = {
     fa.flatMap(f)
 };
 
-// 汎用的な関数
+// Generic functions
 const sequence = <F>(M: Monad<F>) => 
   <A>(mas: Array<HKT<F, A>>): HKT<F, Array<A>> =>
     mas.reduce(
@@ -294,16 +294,16 @@ const sequence = <F>(M: Monad<F>) =>
       M.of([])
     );
 
-// 使用例
+// Usage example
 const maybeSequence = sequence(MaybeMonad);
 const maybes = [Maybe.of(1), Maybe.of(2), Maybe.of(3)] as Array<Maybe<number>>;
 const result = maybeSequence(maybes); // Maybe<number[]>
 ```
 
-## 型レベルプログラミング
+## Type-Level Programming
 
 ```typescript
-// 型レベル計算
+// Type-level calculations
 type Length<T extends readonly unknown[]> = T['length'];
 type Head<T extends readonly unknown[]> = T extends readonly [infer H, ...unknown[]] ? H : never;
 type Tail<T extends readonly unknown[]> = T extends readonly [unknown, ...infer Rest] ? Rest : [];
@@ -312,7 +312,7 @@ type Reverse<T extends readonly unknown[]> = T extends readonly [...infer Rest, 
   ? [Last, ...Reverse<Rest>]
   : [];
 
-// 型安全なPath操作
+// Type-safe Path operations
 type PathValue<T, P extends string> = 
   P extends `${infer Key}.${infer Rest}`
     ? Key extends keyof T
@@ -337,7 +337,7 @@ type SetPath<T, P extends string, V> =
         }
       : never;
 
-// 型安全なレンズ
+// Type-safe lens
 type Lens<S, A> = {
   get: (s: S) => A;
   set: (a: A) => (s: S) => S;
@@ -354,7 +354,7 @@ const prop = <S, K extends keyof S>(key: K): Lens<S, S[K]> =>
     (value: S[K]) => (s: S) => ({ ...s, [key]: value })
   );
 
-// 使用例
+// Usage example
 interface User {
   name: string;
   age: number;
@@ -373,8 +373,8 @@ const user: User = {
 const nameLens = prop<User, 'name'>('name');
 const newUser = nameLens.set('Jane')(user);
 
-// 型レベルでのパス検証
+// Type-level path validation
 type UserNamePath = PathValue<User, 'name'>; // string
 type UserCityPath = PathValue<User, 'address.city'>; // string
-// type InvalidPath = PathValue<User, 'invalid.path'>; // never (コンパイルエラー)
+// type InvalidPath = PathValue<User, 'invalid.path'>; // never (compile error)
 ```

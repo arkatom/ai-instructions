@@ -1,6 +1,6 @@
-# エラーハンドリングパターン
+# Error Handling Patterns
 
-## Safe Asyncラッパー
+## Safe Async Wrapper
 
 ```javascript
 function safeAsync(asyncFn) {
@@ -14,7 +14,7 @@ function safeAsync(asyncFn) {
   };
 }
 
-// 使用例
+// Usage example
 const safeApiCall = safeAsync(async (url) => {
   const response = await fetch(url);
   if (!response.ok) {
@@ -31,7 +31,7 @@ if (error) {
 }
 ```
 
-## 高度なエラーハンドラ
+## Advanced Error Handler
 
 ```javascript
 class AsyncErrorHandler {
@@ -69,7 +69,7 @@ class AsyncErrorHandler {
 }
 ```
 
-## サーキットブレーカーパターン
+## Circuit Breaker Pattern
 
 ```javascript
 class CircuitBreaker {
@@ -119,7 +119,7 @@ class CircuitBreaker {
   }
 }
 
-// 使用例
+// Usage example
 const breaker = new CircuitBreaker({ failureThreshold: 3, resetTimeout: 10000 });
 const protectedApiCall = () => breaker.execute(() => fetch('/api/data').then(r => r.json()));
 ```

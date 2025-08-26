@@ -1,6 +1,6 @@
 ## Property-Based Testing
 
-### 1. Hypothesisを使用したプロパティベーステスト
+### 1. Property-Based Testing with Hypothesis
 
 ```python
 import pytest
@@ -11,19 +11,19 @@ import re
 from typing import List, Dict, Any
 import json
 
-# 基本的なプロパティベーステスト
+# Basic property-based testing
 @given(st.integers(min_value=0, max_value=1000))
 def test_fibonacci_properties(n):
-    """フィボナッチ数列のプロパティテスト"""
+    """Property test for Fibonacci sequence"""
     from myapp.math_utils import fibonacci
     
     result = fibonacci(n)
     
-    # プロパティ1: 結果は非負整数
+    # Property 1: Result is non-negative integer
     assert isinstance(result, int)
     assert result >= 0
     
-    # プロパティ2: フィボナッチ数列の性質
+    # Property 2: Fibonacci sequence properties
     if n >= 2:
         assert result == fibonacci(n-1) + fibonacci(n-2)
     elif n == 1:
@@ -33,42 +33,42 @@ def test_fibonacci_properties(n):
 
 @given(st.lists(st.integers(), min_size=1))
 def test_sorting_properties(numbers):
-    """ソート関数のプロパティテスト"""
+    """Property test for sorting function"""
     from myapp.algorithms import custom_sort
     
     sorted_numbers = custom_sort(numbers.copy())
     
-    # プロパティ1: 長さが保持される
+    # Property 1: Length is preserved
     assert len(sorted_numbers) == len(numbers)
     
-    # プロパティ2: 全ての要素が含まれる
+    # Property 2: All elements are included
     assert sorted(sorted_numbers) == sorted(numbers)
     
-    # プロパティ3: ソートされている
+    # Property 3: Result is sorted
     for i in range(len(sorted_numbers) - 1):
         assert sorted_numbers[i] <= sorted_numbers[i + 1]
     
-    # プロパティ4: 冪等性（すでにソートされたリストをソートしても変わらない）
+    # Property 4: Idempotent (sorting already sorted list doesn't change it)
     assert custom_sort(sorted_numbers) == sorted_numbers
 
-# 文字列処理のプロパティテスト
+# String processing property tests
 @given(st.text(alphabet=string.ascii_letters + string.digits, min_size=1, max_size=100))
 def test_string_validation_properties(input_string):
-    """文字列検証のプロパティテスト"""
+    """Property test for string validation"""
     from myapp.validators import validate_username
     
     result = validate_username(input_string)
     
-    # プロパティ1: 結果は辞書型
+    # Property 1: Result is a dictionary
     assert isinstance(result, dict)
     assert "is_valid" in result
     assert "errors" in result
     
-    # プロパティ2: is_validがTrueならエラーは空
+    # Property 2: If is_valid is True, errors is empty
     if result["is_valid"]:
         assert len(result["errors"]) == 0
     
-    # プロパティ3: 特定の条件での検証
+    # Property 3: Validation under specific conditions
     if len(input_string) < 3:
         assert not result["is_valid"]
         assert "too_short" in result["errors"]
@@ -77,7 +77,7 @@ def test_string_validation_properties(input_string):
         assert not result["is_valid"]
         assert "too_long" in result["errors"]
 
-# 複合データ型のプロパティテスト
+# Complex data type property testing
 user_strategy = st.fixed_dictionaries({
     "username": st.text(alphabet=string.ascii_letters, min_size=3, max_size=20),
     "email": st.emails(),
@@ -87,55 +87,55 @@ user_strategy = st.fixed_dictionaries({
 
 @given(user_strategy)
 def test_user_serialization_properties(user_data):
-    """ユーザーデータシリアライゼーションのプロパティテスト"""
+    """Property test for user data serialization"""
     from myapp.serializers import UserSerializer
     
     serializer = UserSerializer(user_data)
     
-    # シリアライゼーション
+    # Serialization
     serialized = serializer.serialize()
     
-    # プロパティ1: シリアライズされたデータはJSON文字列
+    # Property 1: Serialized data is JSON string
     assert isinstance(serialized, str)
     
-    # プロパティ2: JSONとしてパース可能
+    # Property 2: Parseable as JSON
     parsed_data = json.loads(serialized)
     
-    # プロパティ3: 元のデータと一致
+    # Property 3: Matches original data
     assert parsed_data["username"] == user_data["username"]
     assert parsed_data["email"] == user_data["email"]
     assert parsed_data["age"] == user_data["age"]
     assert parsed_data["is_active"] == user_data["is_active"]
     
-    # プロパティ4: デシリアライゼーション
+    # Property 4: Deserialization
     deserialized = UserSerializer.deserialize(serialized)
     assert deserialized == user_data
 
-# 事前条件を含むプロパティテスト
+# Property testing with preconditions
 @given(st.lists(st.integers(), min_size=2))
 def test_binary_search_properties(numbers):
-    """バイナリサーチのプロパティテスト"""
+    """Property test for binary search"""
     from myapp.algorithms import binary_search
     
-    # 事前条件: リストをソート
+    # Precondition: Sort the list
     sorted_numbers = sorted(numbers)
     
-    # テスト対象の要素を選択
+    # Select target element
     target = sorted_numbers[len(sorted_numbers) // 2]
     
     result = binary_search(sorted_numbers, target)
     
-    # プロパティ1: 見つかった場合のインデックス
+    # Property 1: Index when found
     if result is not None:
         assert 0 <= result < len(sorted_numbers)
         assert sorted_numbers[result] == target
     
-    # プロパティ2: 存在しない要素は見つからない
-    assume(target + 1 not in sorted_numbers)  # 仮定
+    # Property 2: Non-existent element not found
+    assume(target + 1 not in sorted_numbers)  # Assumption
     not_found_result = binary_search(sorted_numbers, target + 1)
     assert not_found_result is None
 
-# 設定付きプロパティテスト
+# Property testing with settings
 @settings(max_examples=1000, deadline=None)
 @given(
     st.lists(
@@ -145,52 +145,52 @@ def test_binary_search_properties(numbers):
     )
 )
 def test_database_operations_properties(records):
-    """データベース操作のプロパティテスト"""
+    """Property test for database operations"""
     from myapp.database import InMemoryDatabase
     
     db = InMemoryDatabase()
     
-    # レコード挿入
+    # Insert records
     for name, value in records:
         db.insert(name, value)
     
-    # プロパティ1: 挿入したレコード数と格納されたレコード数が一致
-    assert db.count() == len(set(name for name, _ in records))  # 重複を除く
+    # Property 1: Inserted record count matches stored record count
+    assert db.count() == len(set(name for name, _ in records))  # Excluding duplicates
     
-    # プロパティ2: 挿入した値を取得できる
+    # Property 2: Can retrieve inserted values
     for name, value in records:
         retrieved_value = db.get(name)
-        if retrieved_value is not None:  # 重複で上書きされた可能性
+        if retrieved_value is not None:  # May be overwritten by duplicate
             assert isinstance(retrieved_value, int)
 
-# 例外処理のプロパティテスト
+# Exception handling property tests
 @given(st.text())
 def test_email_validation_properties(input_text):
-    """メール検証のプロパティテスト"""
+    """Property test for email validation"""
     from myapp.validators import validate_email
     
     result = validate_email(input_text)
     
-    # プロパティ1: 結果はブール値
+    # Property 1: Result is boolean
     assert isinstance(result, bool)
     
-    # プロパティ2: 基本的なメール形式の特性
+    # Property 2: Basic email format properties
     has_at_symbol = "@" in input_text
     has_domain_dot = "@" in input_text and "." in input_text.split("@")[-1]
     
     if result:
-        # 有効なメールアドレスの条件
+        # Valid email conditions
         assert has_at_symbol
         assert has_domain_dot
-        assert len(input_text) > 5  # 最小長
+        assert len(input_text) > 5  # Minimum length
     
-    # プロパティ3: 明らかに無効なケース
+    # Property 3: Obviously invalid cases
     if not has_at_symbol or input_text.count("@") != 1:
         assert not result
 
-# ステートフルプロパティテスト
+# Stateful property testing
 class ShoppingCartStateMachine(RuleBasedStateMachine):
-    """ショッピングカートのステートマシンテスト"""
+    """Shopping cart state machine test"""
     
     def __init__(self):
         super().__init__()
@@ -200,7 +200,7 @@ class ShoppingCartStateMachine(RuleBasedStateMachine):
     @rule(product_id=st.integers(min_value=1, max_value=100),
           quantity=st.integers(min_value=1, max_value=10))
     def add_item(self, product_id, quantity):
-        """商品追加ルール"""
+        """Add item rule"""
         self.cart.add_item(product_id, quantity)
         
         if product_id in self.expected_items:
@@ -210,7 +210,7 @@ class ShoppingCartStateMachine(RuleBasedStateMachine):
     
     @rule(product_id=st.integers(min_value=1, max_value=100))
     def remove_item(self, product_id):
-        """商品削除ルール"""
+        """Remove item rule"""
         if product_id in self.expected_items:
             self.cart.remove_item(product_id)
             del self.expected_items[product_id]
@@ -218,41 +218,41 @@ class ShoppingCartStateMachine(RuleBasedStateMachine):
     @rule(product_id=st.integers(min_value=1, max_value=100),
           new_quantity=st.integers(min_value=1, max_value=10))
     def update_quantity(self, product_id, new_quantity):
-        """数量更新ルール"""
+        """Update quantity rule"""
         if product_id in self.expected_items:
             self.cart.update_quantity(product_id, new_quantity)
             self.expected_items[product_id] = new_quantity
     
     @rule()
     def clear_cart(self):
-        """カートクリアルール"""
+        """Clear cart rule"""
         self.cart.clear()
         self.expected_items.clear()
     
     @invariant()
     def cart_consistency(self):
-        """カート一貫性の不変条件"""
-        # 商品数の一致
+        """Cart consistency invariant"""
+        # Item count matches
         assert len(self.cart.items) == len(self.expected_items)
         
-        # 各商品の数量一致
+        # Each item quantity matches
         for product_id, expected_quantity in self.expected_items.items():
             assert self.cart.get_quantity(product_id) == expected_quantity
         
-        # 総数量の一致
+        # Total quantity matches
         expected_total = sum(self.expected_items.values())
         assert self.cart.total_quantity() == expected_total
         
-        # 空でない場合の総額は正の値
+        # Total price is positive when not empty
         if self.expected_items:
             assert self.cart.total_price() > 0
 
 class ShoppingCart:
-    """ショッピングカート（テスト対象）"""
+    """Shopping cart (test target)"""
     
     def __init__(self):
         self.items = {}
-        self.price_per_item = 10  # 固定価格
+        self.price_per_item = 10  # Fixed price
     
     def add_item(self, product_id: int, quantity: int):
         if product_id in self.items:
@@ -280,34 +280,34 @@ class ShoppingCart:
     def total_price(self) -> float:
         return sum(quantity * self.price_per_item for quantity in self.items.values())
 
-# ステートフルテストの実行
+# Execute stateful test
 TestShoppingCart = ShoppingCartStateMachine.TestCase
 
-# 回帰テスト用の例
+# Examples for regression testing
 @given(st.lists(st.integers()))
-@example([])  # 空リストの場合
-@example([1])  # 単一要素の場合
-@example([1, 2, 3, 4, 5])  # 順序リストの場合
-@example([5, 4, 3, 2, 1])  # 逆順リストの場合
+@example([])  # Empty list case
+@example([1])  # Single element case
+@example([1, 2, 3, 4, 5])  # Ordered list case
+@example([5, 4, 3, 2, 1])  # Reverse ordered list case
 def test_list_operations_with_examples(numbers):
-    """具体例付きリスト操作テスト"""
+    """List operation test with concrete examples"""
     from myapp.list_utils import process_list
     
     result = process_list(numbers)
     
-    # 基本プロパティ
+    # Basic properties
     assert isinstance(result, list)
     assert len(result) == len(numbers)
     
-    # 空リストの特別処理
+    # Special handling for empty list
     if not numbers:
         assert result == []
     
-    # 単一要素の処理
+    # Single element processing
     if len(numbers) == 1:
-        assert result[0] == numbers[0] * 2  # 仮の処理ルール
+        assert result[0] == numbers[0] * 2  # Hypothetical processing rule
 
-# データベースクエリのプロパティテスト
+# Database query property testing
 @given(
     st.lists(
         st.fixed_dictionaries({
@@ -320,28 +320,28 @@ def test_list_operations_with_examples(numbers):
     )
 )
 def test_database_query_properties(records):
-    """データベースクエリのプロパティテスト"""
+    """Property test for database queries"""
     from myapp.database import QueryBuilder
     
-    # テストデータの挿入
+    # Insert test data
     query_builder = QueryBuilder()
     
     for record in records:
         query_builder.insert("products", record)
     
-    # カテゴリ別検索のプロパティ
+    # Category search properties
     for category in ["A", "B", "C"]:
         results = query_builder.select("products").where("category", category).execute()
         
-        # プロパティ1: 結果の全てが指定カテゴリ
+        # Property 1: All results have specified category
         for result in results:
             assert result["category"] == category
         
-        # プロパティ2: 期待される数と一致
+        # Property 2: Count matches expected
         expected_count = len([r for r in records if r["category"] == category])
         assert len(results) == expected_count
     
-    # 範囲検索のプロパティ
+    # Range search properties
     if records:
         min_id = min(r["id"] for r in records)
         max_id = max(r["id"] for r in records)
@@ -349,12 +349,131 @@ def test_database_query_properties(records):
         results = query_builder.select("products").where("id", ">=", min_id).execute()
         assert len(results) == len(records)
         
-        # 中間値での検索
+        # Search with middle value
         mid_id = (min_id + max_id) // 2
         results = query_builder.select("products").where("id", ">", mid_id).execute()
         expected_count = len([r for r in records if r["id"] > mid_id])
         assert len(results) == expected_count
+
+# Advanced property testing patterns
+@given(st.data())
+def test_data_transformation_properties(data):
+    """Test data transformation properties using data strategy"""
+    from myapp.transformers import DataTransformer
+    
+    # Generate related data
+    input_data = data.draw(st.lists(st.integers(), min_size=1))
+    transformation_type = data.draw(st.sampled_from(["scale", "shift", "normalize"]))
+    
+    transformer = DataTransformer(transformation_type)
+    transformed = transformer.transform(input_data)
+    
+    # General properties
+    assert len(transformed) == len(input_data)
+    
+    # Transformation-specific properties
+    if transformation_type == "scale":
+        scale_factor = data.draw(st.floats(min_value=0.1, max_value=10))
+        expected = [x * scale_factor for x in input_data]
+        assert all(abs(a - b) < 0.001 for a, b in zip(transformed, expected))
+    
+    elif transformation_type == "shift":
+        shift_amount = data.draw(st.integers())
+        expected = [x + shift_amount for x in input_data]
+        assert transformed == expected
+    
+    elif transformation_type == "normalize":
+        # Check normalization properties
+        if len(input_data) > 1:
+            mean = sum(transformed) / len(transformed)
+            assert abs(mean) < 0.001  # Mean should be close to 0
+            
+            variance = sum((x - mean) ** 2 for x in transformed) / len(transformed)
+            assert abs(variance - 1.0) < 0.1  # Variance should be close to 1
+
+# Composite strategies for complex testing
+address_strategy = st.fixed_dictionaries({
+    "street": st.text(min_size=5, max_size=50),
+    "city": st.text(min_size=2, max_size=30),
+    "state": st.text(alphabet=string.ascii_uppercase, min_size=2, max_size=2),
+    "zip_code": st.text(alphabet=string.digits, min_size=5, max_size=5)
+})
+
+person_strategy = st.fixed_dictionaries({
+    "name": st.text(alphabet=string.ascii_letters + " ", min_size=2, max_size=50),
+    "age": st.integers(min_value=0, max_value=120),
+    "email": st.emails(),
+    "address": address_strategy,
+    "phone_numbers": st.lists(
+        st.text(alphabet=string.digits, min_size=10, max_size=10),
+        min_size=0,
+        max_size=3
+    )
+})
+
+@given(person_strategy)
+def test_person_validation_properties(person_data):
+    """Test person data validation properties"""
+    from myapp.validators import PersonValidator
+    
+    validator = PersonValidator()
+    result = validator.validate(person_data)
+    
+    # Basic validation properties
+    assert isinstance(result, dict)
+    assert "is_valid" in result
+    assert "errors" in result
+    
+    # Age-specific validations
+    if person_data["age"] < 0:
+        assert not result["is_valid"]
+        assert "invalid_age" in result["errors"]
+    
+    if person_data["age"] > 120:
+        assert not result["is_valid"]
+        assert "age_too_high" in result["errors"]
+    
+    # Address validation
+    if len(person_data["address"]["zip_code"]) != 5:
+        assert not result["is_valid"]
+        assert "invalid_zip_code" in result["errors"]
+    
+    # Phone number validation
+    for phone in person_data["phone_numbers"]:
+        if len(phone) != 10:
+            assert not result["is_valid"]
+            assert "invalid_phone_number" in result["errors"]
+            break
+
+# Custom strategies for domain-specific testing
+@st.composite
+def valid_url_strategy(draw):
+    """Generate valid URLs"""
+    protocol = draw(st.sampled_from(["http", "https"]))
+    domain = draw(st.text(alphabet=string.ascii_lowercase, min_size=3, max_size=20))
+    tld = draw(st.sampled_from(["com", "org", "net", "io"]))
+    path = draw(st.text(alphabet=string.ascii_letters + "/", min_size=0, max_size=50))
+    
+    return f"{protocol}://{domain}.{tld}/{path}"
+
+@given(valid_url_strategy())
+def test_url_parsing_properties(url):
+    """Test URL parsing properties"""
+    from myapp.parsers import URLParser
+    
+    parser = URLParser()
+    parsed = parser.parse(url)
+    
+    # Parsing properties
+    assert parsed is not None
+    assert "protocol" in parsed
+    assert "domain" in parsed
+    assert "path" in parsed
+    
+    # Protocol validation
+    assert parsed["protocol"] in ["http", "https"]
+    
+    # Reconstruction property
+    reconstructed = f"{parsed['protocol']}://{parsed['domain']}{parsed['path']}"
+    assert reconstructed == url or reconstructed == url.rstrip("/")
 ```
-
-続きを作成いたします。
-

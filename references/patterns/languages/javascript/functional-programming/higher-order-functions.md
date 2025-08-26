@@ -1,21 +1,21 @@
-# 高階関数
+# Higher-Order Functions
 
-## 基本的な高階関数
+## Basic Higher-Order Functions
 
 ```javascript
-// カスタム map, filter, reduce
+// Custom map, filter, reduce
 const map = (fn) => (array) => array.map(fn);
 const filter = (predicate) => (array) => array.filter(predicate);
 const reduce = (reducer, initial) => (array) => array.reduce(reducer, initial);
 
-// 関数合成
+// Function composition
 const compose = (...fns) => (value) => 
   fns.reduceRight((acc, fn) => fn(acc), value);
 
 const pipe = (...fns) => (value) => 
   fns.reduce((acc, fn) => fn(acc), value);
 
-// 使用例
+// Usage example
 const numbers = [1, 2, 3, 4, 5];
 const double = x => x * 2;
 const isEven = x => x % 2 === 0;
@@ -30,17 +30,17 @@ const processNumbers = pipe(
 console.log(processNumbers(numbers)); // 30
 ```
 
-## 高度な配列操作
+## Advanced Array Operations
 
 ```javascript
-// インデックス付きマップとフィルタ
+// Indexed map and filter
 const mapWithIndex = (fn) => (array) => 
   array.map((item, index) => fn(item, index));
 
 const filterWithIndex = (predicate) => (array) =>
   array.filter((item, index) => predicate(item, index));
 
-// 条件に基づく要素の取得
+// Conditional element extraction
 const takeWhile = (predicate) => (array) => {
   const result = [];
   for (const item of array) {
@@ -64,7 +64,7 @@ const dropWhile = (predicate) => (array) => {
   });
 };
 
-// 配列のチャンク化
+// Array chunking
 const chunk = (size) => (array) => {
   const chunks = [];
   for (let i = 0; i < array.length; i += size) {
@@ -73,7 +73,7 @@ const chunk = (size) => (array) => {
   return chunks;
 };
 
-// 配列の zip操作
+// Array zip operations
 const zip = (...arrays) => {
   const length = Math.min(...arrays.map(arr => arr.length));
   return Array.from({ length }, (_, i) => arrays.map(arr => arr[i]));
@@ -87,10 +87,10 @@ const zipWith = (fn) => (...arrays) => {
 };
 ```
 
-## 関数デコレータ
+## Function Decorators
 
 ```javascript
-// メモ化
+// Memoization
 const memoize = (fn) => {
   const cache = new Map();
   return (...args) => {
@@ -104,7 +104,7 @@ const memoize = (fn) => {
   };
 };
 
-// デバウンス
+// Debouncing
 const debounce = (delay) => (fn) => {
   let timeoutId;
   return (...args) => {
@@ -113,7 +113,7 @@ const debounce = (delay) => (fn) => {
   };
 };
 
-// スロットリング
+// Throttling
 const throttle = (limit) => (fn) => {
   let inThrottle;
   return (...args) => {
@@ -125,7 +125,7 @@ const throttle = (limit) => (fn) => {
   };
 };
 
-// 再帰関数の最適化
+// Recursive function optimization
 const trampoline = (fn) => {
   return (...args) => {
     let result = fn(...args);
@@ -136,7 +136,7 @@ const trampoline = (fn) => {
   };
 };
 
-// 使用例
+// Usage example
 const fibonacciTrampoline = trampoline((n, a = 0, b = 1) => {
   if (n === 0) return a;
   if (n === 1) return b;
@@ -144,10 +144,10 @@ const fibonacciTrampoline = trampoline((n, a = 0, b = 1) => {
 });
 ```
 
-## トランスデューサ
+## Transducers
 
 ```javascript
-// トランスデューサの基本実装
+// Basic transducer implementation
 const transducer = {
   map: (fn) => (reducer) => (acc, value) => reducer(acc, fn(value)),
   
@@ -175,14 +175,14 @@ const transducer = {
   }
 };
 
-// トランスデューサの合成
+// Transducer composition
 const composeTransducers = (...transducers) => (reducer) =>
   transducers.reduceRight((acc, t) => t(acc), reducer);
 
 const transduce = (transducer, reducer, initial, collection) =>
   collection.reduce(transducer(reducer), initial);
 
-// 使用例
+// Usage example
 const xform = composeTransducers(
   transducer.map(x => x * 2),
   transducer.filter(x => x > 5),

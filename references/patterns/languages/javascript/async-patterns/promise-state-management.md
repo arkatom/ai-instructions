@@ -1,4 +1,4 @@
-# Promise状態管理
+# Promise State Management
 
 ## StatefulPromise
 
@@ -41,7 +41,7 @@ class StatefulPromise {
 }
 ```
 
-## Promiseプール
+## Promise Pool
 
 ```javascript
 class PromisePool {
@@ -77,7 +77,7 @@ class PromisePool {
 }
 ```
 
-## キャンセル可能Promise
+## Cancellable Promise
 
 ```javascript
 class CancellablePromise {
@@ -113,7 +113,7 @@ class CancellablePromise {
 }
 ```
 
-## Promiseメモ化
+## Promise Memoization
 
 ```javascript
 class PromiseCache {
@@ -147,7 +147,7 @@ class PromiseCache {
   }
 }
 
-// 使用例
+// Usage example
 const cache = new PromiseCache();
 const cachedFetch = cache.memoize(
   async (url) => fetch(url).then(r => r.json()),

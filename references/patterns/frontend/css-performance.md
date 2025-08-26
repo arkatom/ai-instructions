@@ -1,558 +1,750 @@
-# CSS Performance 最適化ガイド 2025
+# CSS Performance Optimization Complete Guide
 
-## Critical CSS とレンダリング最適化
+## Critical CSS Extraction and Inlining
 
-### 1. Critical CSS の抽出と実装
-
+### Automated Critical CSS Generation
 ```javascript
-// critical-css-extractor.js
-const critical = require('critical');
-const fs = require('fs').promises;
-const path = require('path');
+// Critical CSS extraction with Critters
+const Critters = require('critters');
 
-class CriticalCSSExtractor {
-  constructor(options = {}) {
-    this.options = {
-      inline: true,
-      minify: true,
-      extract: true,
-      width: 1300,
-      height: 900,
-      penthouse: {
-        blockJSRequests: false,
-        renderWaitTime: 100,
-        timeout: 30000,
-      },
-      ...options
-    };
-  }
-  
-  async extractCriticalCSS(htmlPath, outputPath) {
-    try {
-      const result = await critical.generate({
-        ...this.options,
-        src: htmlPath,
-        target: {
-          html: outputPath,
-          css: path.join(path.dirname(outputPath), 'critical.css'),
-        },
-      });
-      
-      // インライン化とプリロード設定
-      const optimizedHTML = await this.optimizeHTML(result.html, result.css);
-      await fs.writeFile(outputPath, optimizedHTML);
-      
-      return {
-        criticalCSS: result.css,
-        uncriticalCSS: result.uncritical,
-        originalSize: result.original.length,
-        criticalSize: result.css.length,
-        savings: ((1 - result.css.length / result.original.length) * 100).toFixed(2),
-      };
-    } catch (error) {
-      console.error('Critical CSS extraction failed:', error);
-      throw error;
+const critters = new Critters({
+  path: 'dist',
+  publicPath: '/',
+  inlineThreshold: 2048, // Inline if under 2KB
+  minimumExternalSize: 10000, // Don't inline large sheets
+  pruneSource: true, // Remove inlined rules from external CSS
+  logLevel: 'info',
+  fonts: true, // Inline critical font-face rules
+  preload: 'swap', // Preload strategy
+  noscriptFallback: true, // Add noscript fallback
+  mergeStylesheets: true, // Merge multiple stylesheets
+  additionalStylesheets: ['critical-overrides.css']
+});
+
+// Webpack plugin configuration
+module.exports = {
+  plugins: [
+    new HtmlWebpackPlugin(),
+    new Critters({
+      preload: 'swap',
+      includeSelectors: [
+        // Force include specific selectors
+        '.critical-class',
+        '#important-id'
+      ],
+      excludeSelectors: [
+        // Never inline these
+        '.lazy-load',
+        '[data-deferred]'
+      ]
+    })
+  ]
+};
+```
+
+### Manual Critical CSS Implementation
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Inline critical CSS -->
+  <style>
+    /* Critical above-the-fold styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-  }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+    }
+    
+    .header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      height: 60px;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+    
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    
+    /* Critical animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.6s ease-out;
+    }
+  </style>
   
-  async optimizeHTML(html, criticalCSS) {
-    // Critical CSS のインライン化
-    const criticalInline = `
-      <style id="critical-css">
-        ${criticalCSS}
-      </style>
-    `;
-    
-    // 非Critical CSS の遅延読み込み
-    const lazyLoadCSS = `
-      <link rel="preload" href="/css/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-      <noscript><link rel="stylesheet" href="/css/main.css"></noscript>
-      <script>
-        // CSS読み込みポリフィル
-        !function(w){"use strict";w.loadCSS||(w.loadCSS=function(){});var rp=loadCSS.relpreload={};if(rp.support=function(){var ret;try{ret=w.document.createElement("link").relList.supports("preload")}catch(e){ret=!1}return function(){return ret}}(),rp.bindMediaToggle=function(link){var finalMedia=link.media||"all";function enableStylesheet(){link.media=finalMedia}if(link.addEventListener){link.addEventListener("load",enableStylesheet)}else if(link.attachEvent){link.attachEvent("onload",enableStylesheet)}setTimeout(function(){link.rel="stylesheet";link.media="only x"}),setTimeout(enableStylesheet,3000)},!rp.support()){var links=w.document.getElementsByTagName("link");for(var i=0;i<links.length;i++){var link=links[i];if("preload"===link.rel&&"style"===link.as&&!link.getAttribute("data-loadcss")){link.setAttribute("data-loadcss",!0),rp.bindMediaToggle(link)}}}}(window);
-      </script>
-    `;
-    
-    // HTMLに挿入
-    return html
-      .replace('</head>', `${criticalInline}${lazyLoadCSS}</head>`)
-      .replace(/<link[^>]*stylesheet[^>]*>/gi, ''); // 既存のスタイルシートリンクを削除
-  }
-}
-
-// 使用例
-const extractor = new CriticalCSSExtractor();
-await extractor.extractCriticalCSS('./dist/index.html', './dist/optimized.html');
+  <!-- Preload non-critical CSS -->
+  <link rel="preload" href="/css/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/css/main.css"></noscript>
+  
+  <!-- Preload fonts -->
+  <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
+  
+  <!-- Preconnect to external domains -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://cdn.example.com">
+</head>
+</html>
 ```
 
-### 2. CSS最小化とツリーシェイキング
+## Advanced CSS Optimization Techniques
 
+### PostCSS Optimization Pipeline
 ```javascript
-// css-optimizer.js
-const postcss = require('postcss');
-const cssnano = require('cssnano');
-const purgecss = require('@fullhuman/postcss-purgecss');
-const autoprefixer = require('autoprefixer');
-
-class CSSOptimizer {
-  constructor() {
-    this.plugins = [
-      // 未使用CSSの削除
-      purgecss({
-        content: [
-          './src/**/*.html',
-          './src/**/*.js',
-          './src/**/*.jsx',
-          './src/**/*.ts',
-          './src/**/*.tsx',
-        ],
-        defaultExtractor: content => {
-          // Tailwind CSS対応
-          const broadMatches = content.match(/[^<>"'`\s]*[^<>"'`\s:]/g) || [];
-          const innerMatches = content.match(/[^<>"'`\s.()]*[^<>"'`\s.():]/g) || [];
-          return broadMatches.concat(innerMatches);
-        },
-        safelist: {
-          standard: [
-            /^(hover|focus|active|visited|disabled):/,
-            /^(sm|md|lg|xl|2xl):/,
-            /^animate-/,
-            /data-/,
-          ],
-          deep: [/^npm-/, /^v-/],
-          greedy: [/tooltip/, /modal/, /dropdown/],
-        },
-        fontFace: true,
-        keyframes: true,
-        variables: true,
-      }),
-      
-      // ベンダープレフィックス
-      autoprefixer({
-        grid: 'autoplace',
-        flexbox: true,
-      }),
-      
-      // CSS最小化
-      cssnano({
-        preset: ['advanced', {
-          discardComments: { removeAll: true },
-          reduceIdents: false, // アニメーション名を保持
-          zindex: false, // z-indexの再計算を無効化
-          cssDeclarationSorter: { order: 'smacss' },
-          calc: { precision: 5 },
-          colormin: { legacy: true },
-          convertValues: {
-            length: false, // 単位変換を無効化（精度の問題）
-          },
-          minifyFontValues: { removeQuotes: false },
-          minifyGradients: true,
-          minifyParams: true,
-          minifySelectors: true,
-          normalizeCharset: true,
-          normalizeDisplayValues: true,
-          normalizePositions: true,
-          normalizeRepeatStyle: true,
-          normalizeString: true,
-          normalizeTimingFunctions: true,
-          normalizeUnicode: true,
-          normalizeUrl: true,
-          normalizeWhitespace: true,
-          orderedValues: true,
-          reduceInitial: true,
-          reduceTransforms: true,
-          svgo: true,
-          uniqueSelectors: true,
-          mergeRules: true,
-          mergeLonghand: true,
-        }],
-      }),
-    ];
-  }
-  
-  async optimize(css, options = {}) {
-    const result = await postcss(this.plugins)
-      .process(css, { from: undefined, ...options });
+// postcss.config.js
+module.exports = {
+  plugins: [
+    // Autoprefixer for vendor prefixes
+    require('autoprefixer')({
+      overrideBrowserslist: ['last 2 versions', '> 1%'],
+      grid: 'autoplace'
+    }),
     
-    return {
-      css: result.css,
-      map: result.map,
-      warnings: result.warnings(),
-      stats: {
-        originalSize: css.length,
-        optimizedSize: result.css.length,
-        reduction: ((1 - result.css.length / css.length) * 100).toFixed(2),
+    // CSS Nano for minification
+    require('cssnano')({
+      preset: ['advanced', {
+        discardComments: { removeAll: true },
+        reduceIdents: true,
+        mergeIdents: true,
+        reduceInitial: true,
+        minifySelectors: true,
+        minifyParams: true,
+        minifyFontValues: true,
+        normalizeWhitespace: true,
+        normalizeUrl: true,
+        colormin: true,
+        calc: true,
+        convertValues: {
+          length: true,
+          time: true,
+          angle: true
+        },
+        orderedValues: true,
+        mergeLonghand: true,
+        discardDuplicates: true,
+        discardEmpty: true,
+        uniqueSelectors: true,
+        mergeRules: true,
+        zindex: false // Preserve z-index values
+      }]
+    }),
+    
+    // PurgeCSS for removing unused CSS
+    require('@fullhuman/postcss-purgecss')({
+      content: [
+        './src/**/*.html',
+        './src/**/*.jsx',
+        './src/**/*.tsx',
+        './src/**/*.vue'
+      ],
+      defaultExtractor: content => {
+        // Custom extractor for complex class names
+        const broadMatches = content.match(/[^<>"'`\s]*[^<>"'`\s:]/g) || [];
+        const innerMatches = content.match(/[^<>"'`\s.()]*[^<>"'`\s.():]/g) || [];
+        return broadMatches.concat(innerMatches);
       },
-    };
-  }
-}
+      safelist: {
+        standard: [/^(hover|focus|active|disabled):/, /^data-/],
+        deep: [/^modal/, /^tooltip/],
+        greedy: [/^animate-/]
+      },
+      blocklist: ['unused-*', 'obsolete-*'],
+      keyframes: true,
+      fontFace: true,
+      variables: true
+    }),
+    
+    // CSS Variables optimization
+    require('postcss-custom-properties')({
+      preserve: false, // Remove fallbacks in production
+      importFrom: './src/css/variables.css'
+    }),
+    
+    // Media query packing
+    require('css-mqpacker')({
+      sort: true // Sort media queries by min-width
+    }),
+    
+    // Optimize CSS calc()
+    require('postcss-calc')({
+      precision: 5,
+      preserve: false
+    })
+  ]
+};
 ```
 
-## セレクタとレンダリング最適化
-
-### 1. 高性能セレクタパターン
-
-```css
-/* ❌ 避けるべきセレクタ */
-* { } /* ユニバーサルセレクタ */
-div > * { } /* 子セレクタ + ユニバーサル */
-[data-*] { } /* 部分属性セレクタ */
-.class1.class2.class3.class4 { } /* 過度な詳細度 */
-body .container .row .col .card .header .title { } /* 深いネスト */
-div:nth-child(3n+1) { } /* 複雑な擬似クラス */
-
-/* ✅ 推奨セレクタ */
-.specific-class { } /* 単一クラス */
-#unique-id { } /* ID（控えめに使用） */
-.parent > .direct-child { } /* 直接の子のみ */
-.component__element { } /* BEM命名 */
-[data-state="active"] { } /* 完全一致属性 */
-
-/* セレクタ最適化のベストプラクティス */
-/* 1. 右から左への評価を意識 */
-.navigation li a { } /* ❌ 全aタグを評価後、親を確認 */
-.nav-link { } /* ✅ 直接クラスで指定 */
-
-/* 2. 詳細度の管理 */
-.btn { 
-  /* ベーススタイル */
-  padding: 10px 20px;
-}
-
-.btn--primary {
-  /* バリアント（詳細度同じ） */
-  background: blue;
-}
-
-/* 3. レイヤーによる詳細度制御 */
-@layer reset, base, components, utilities;
-
-@layer reset {
-  * {
-    margin: 0;
-    padding: 0;
+### Tailwind CSS Production Optimization
+```javascript
+// tailwind.config.js
+module.exports = {
+  content: [
+    './src/**/*.{js,jsx,ts,tsx,html}',
+    './public/index.html',
+    // Include dynamic class generation patterns
+    './src/utils/classNames.js'
+  ],
+  
+  // Safelist critical classes
+  safelist: [
+    'animate-spin',
+    'animate-pulse',
+    {
+      pattern: /^(bg|text|border)-(red|green|blue)-(100|500|900)/,
+      variants: ['hover', 'focus', 'lg:hover']
+    }
+  ],
+  
+  theme: {
+    extend: {
+      // Custom optimized animations
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-in-out',
+        'slide-up': 'slideUp 0.3s ease-out'
+      },
+      
+      // Optimized transitions
+      transitionTimingFunction: {
+        'bounce-in': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+      }
+    }
+  },
+  
+  plugins: [
+    // Custom plugin for performance utilities
+    function({ addUtilities, addComponents, e, config }) {
+      addUtilities({
+        '.gpu-accelerated': {
+          'transform': 'translateZ(0)',
+          'will-change': 'transform',
+          'backface-visibility': 'hidden',
+          'perspective': '1000px'
+        },
+        '.contain-layout': {
+          'contain': 'layout style paint'
+        },
+        '.contain-strict': {
+          'contain': 'strict'
+        }
+      });
+    }
+  ],
+  
+  // Production optimizations
+  future: {
+    hoverOnlyWhenSupported: true,
+    respectDefaultRingColorOpacity: true
+  },
+  
+  experimental: {
+    optimizeUniversalDefaults: true,
+    matchVariant: true
   }
-}
-
-@layer components {
-  .btn {
-    /* コンポーネントスタイル */
-  }
-}
-
-@layer utilities {
-  .mt-4 {
-    margin-top: 1rem !important; /* utilityレイヤーでのみ!important許可 */
-  }
-}
+};
 ```
 
-### 2. レンダリングパフォーマンス最適化
+## CSS-in-JS Performance Optimization
 
-```css
-/* Compositing Layer の活用 */
-.gpu-accelerated {
-  /* GPU レイヤー生成 */
-  transform: translateZ(0); /* または translate3d(0,0,0) */
-  will-change: transform; /* 事前最適化ヒント */
-  backface-visibility: hidden; /* 裏面計算スキップ */
-  perspective: 1000px; /* 3D コンテキスト */
-}
+### Emotion with Static Extraction
+```typescript
+// Emotion babel configuration for static extraction
+// babel.config.js
+module.exports = {
+  plugins: [
+    [
+      '@emotion/babel-plugin',
+      {
+        sourceMap: false,
+        autoLabel: 'never', // Disable in production
+        labelFormat: '[local]',
+        cssPropOptimization: true,
+        
+        // Extract static styles
+        extractStatic: {
+          rules: [
+            {
+              test: /\.css$/,
+              loader: 'css-loader'
+            }
+          ]
+        }
+      }
+    ]
+  ]
+};
 
-/* Paint と Layout の最適化 */
-.optimized-animation {
-  /* Composite のみ影響するプロパティ */
-  transform: scale(1.1); /* ✅ */
-  opacity: 0.8; /* ✅ */
+// Component with optimized Emotion
+import { css, keyframes } from '@emotion/react';
+import styled from '@emotion/styled';
+
+// Static styles extracted at build time
+const staticStyles = css`
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 8px;
+`;
+
+// Dynamic styles with memoization
+const dynamicStyles = (theme: Theme, isActive: boolean) => css`
+  ${staticStyles};
+  background: ${isActive ? theme.colors.primary : theme.colors.secondary};
+  transition: background 0.3s ease;
   
-  /* 避けるべきプロパティ（Paint/Layout発生） */
-  /* width, height ❌ */
-  /* top, left (position: absolute時) ❌ */
-  /* background-color ❌ */
-}
-
-/* Contain プロパティによる最適化 */
-.contained-element {
-  contain: layout; /* レイアウト計算を要素内に限定 */
-  contain: paint; /* ペイント領域を要素内に限定 */
-  contain: size; /* サイズ計算を独立 */
-  contain: style; /* スタイル継承をブロック */
+  /* Use CSS containment */
+  contain: layout style paint;
   
-  /* ショートハンド */
-  contain: layout paint; /* 複数指定 */
-  contain: strict; /* layout paint size の組み合わせ */
-  contain: content; /* layout paint の組み合わせ */
-}
+  /* Hardware acceleration */
+  will-change: ${isActive ? 'transform' : 'auto'};
+`;
 
-/* Content-visibility による遅延レンダリング */
-.lazy-render {
-  content-visibility: auto; /* ビューポート外の要素を遅延レンダリング */
-  contain-intrinsic-size: 0 500px; /* プレースホルダーサイズ */
-}
+// Memoized styled component
+const OptimizedButton = styled.button<{ isActive: boolean }>`
+  ${({ theme, isActive }) => dynamicStyles(theme, isActive)};
+  
+  /* Critical rendering path optimization */
+  content-visibility: auto;
+  contain-intrinsic-size: 100px 40px;
+`;
 
-/* Scroll-driven Animations */
-@keyframes reveal {
+// Lazy-loaded animation
+const slideIn = keyframes`
   from {
+    transform: translateX(-100%);
     opacity: 0;
-    transform: translateY(20px);
   }
   to {
+    transform: translateX(0);
     opacity: 1;
+  }
+`;
+```
+
+### styled-components v6 Optimization
+```typescript
+// styled-components optimization
+import styled, { createGlobalStyle, css } from 'styled-components';
+import { shouldForwardProp } from '@styled-system/should-forward-prop';
+
+// Configure babel plugin for better performance
+// babel.config.js
+{
+  plugins: [
+    [
+      'babel-plugin-styled-components',
+      {
+        ssr: true,
+        displayName: false, // Disable in production
+        fileName: false,
+        minify: true,
+        transpileTemplateLiterals: true,
+        pure: true
+      }
+    ]
+  ]
+}
+
+// Optimized global styles
+const GlobalStyles = createGlobalStyle`
+  /* Use CSS custom properties for theming */
+  :root {
+    --color-primary: ${props => props.theme.colors.primary};
+    --color-secondary: ${props => props.theme.colors.secondary};
+    --spacing-unit: ${props => props.theme.spacing.unit}px;
+  }
+  
+  /* Performance optimizations */
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* Optimize text rendering */
+    text-rendering: optimizeLegibility;
+    
+    /* Prevent layout shift */
+    overflow-y: scroll;
+    overflow-x: hidden;
+  }
+  
+  /* Optimize images */
+  img {
+    max-width: 100%;
+    height: auto;
+    content-visibility: auto;
+  }
+  
+  /* Reduce paint areas */
+  button, input, select, textarea {
+    font: inherit;
+    contain: layout style;
+  }
+`;
+
+// Memoized style utilities
+const buttonStyles = css<{ variant: 'primary' | 'secondary' }>`
+  /* Static styles */
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  
+  /* Dynamic styles with CSS variables */
+  background: ${({ variant }) => 
+    variant === 'primary' ? 'var(--color-primary)' : 'var(--color-secondary)'};
+  
+  /* Performance hints */
+  will-change: transform;
+  contain: layout style paint;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
     transform: translateY(0);
   }
+`;
+
+// Optimized component with prop filtering
+const Button = styled.button.withConfig({
+  shouldForwardProp: (prop) => shouldForwardProp(prop) && prop !== 'variant'
+})<{ variant: 'primary' | 'secondary' }>`
+  ${buttonStyles}
+`;
+```
+
+## Render Performance Optimization
+
+### CSS Containment and Content Visibility
+```css
+/* Layout containment for components */
+.card {
+  contain: layout style paint;
+  /* Component won't affect outside layout */
 }
 
-.scroll-animated {
-  animation: reveal linear;
-  animation-timeline: view();
-  animation-range: entry 0% cover 30%;
+.sidebar {
+  contain: strict;
+  /* Full containment - size, layout, style, paint */
+  width: 250px;
+  height: 100vh;
+}
+
+/* Content visibility for lazy rendering */
+.comment {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+  /* Browser can skip rendering off-screen comments */
+}
+
+.lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 1000px;
+  /* Improves initial page load */
+}
+
+/* Size containment for predictable layout */
+.ad-container {
+  contain: size layout;
+  width: 300px;
+  height: 250px;
+  /* Prevents layout shift from dynamic ads */
+}
+
+/* Paint containment for animations */
+.animated-element {
+  contain: paint;
+  will-change: transform;
+  /* Limits paint operations to element bounds */
 }
 ```
 
-## ロードストラテジー
+### Animation Performance
+```css
+/* GPU-accelerated animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
 
-### 1. CSS読み込み最適化
+.slide-animation {
+  animation: slideIn 0.3s ease-out;
+  
+  /* GPU acceleration hints */
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
 
-```html
-<!-- Critical CSS インライン -->
-<style>
-  /* ファーストビューに必要な最小限のCSS */
-  body { margin: 0; font-family: system-ui; }
-  .header { background: #fff; padding: 1rem; }
-  /* ... */
-</style>
+/* Avoid expensive properties */
+.bad-animation {
+  /* DON'T animate these */
+  animation: badAnimation 1s;
+}
 
-<!-- プリロード（高優先度） -->
-<link rel="preload" href="/css/main.css" as="style">
+@keyframes badAnimation {
+  from {
+    width: 100px; /* Triggers layout */
+    height: 100px; /* Triggers layout */
+    top: 0; /* Triggers layout */
+    left: 0; /* Triggers layout */
+  }
+}
 
-<!-- プリフェッチ（低優先度） -->
-<link rel="prefetch" href="/css/page-specific.css">
+/* Use transforms instead */
+.good-animation {
+  animation: goodAnimation 1s;
+}
 
-<!-- メディアクエリ分割 -->
-<link rel="stylesheet" href="/css/mobile.css" media="(max-width: 768px)">
-<link rel="stylesheet" href="/css/desktop.css" media="(min-width: 769px)">
-<link rel="stylesheet" href="/css/print.css" media="print">
+@keyframes goodAnimation {
+  from {
+    transform: scale(0.5) translate(-50px, -50px);
+    opacity: 0;
+  }
+}
 
-<!-- 条件付き読み込み -->
-<link rel="stylesheet" href="/css/dark-theme.css" 
-      media="(prefers-color-scheme: dark)">
+/* Reduce paint complexity */
+.optimized-shadow {
+  /* Use box-shadow sparingly */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  
+  /* Or use pseudo-element for better performance */
+  position: relative;
+}
 
-<!-- 遅延読み込み -->
-<link rel="stylesheet" href="/css/below-fold.css" 
-      media="print" onload="this.media='all'">
+.optimized-shadow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  pointer-events: none;
+  z-index: -1;
+}
 ```
 
-### 2. JavaScript での動的CSS管理
+## Bundle Size Optimization
+
+### CSS Splitting and Code Splitting
+```javascript
+// Webpack configuration for CSS splitting
+module.exports = {
+  optimization: {
+    splitChunks: {
+      cacheGroups: {
+        // Extract vendor CSS
+        vendorStyles: {
+          name: 'vendor',
+          test: /[\\/]node_modules[\\/].*\.css$/,
+          chunks: 'all',
+          enforce: true
+        },
+        
+        // Extract common CSS
+        commonStyles: {
+          name: 'common',
+          test: /[\\/]src[\\/]styles[\\/]common[\\/].*\.css$/,
+          chunks: 'all',
+          minChunks: 2
+        },
+        
+        // Route-based CSS splitting
+        pageStyles: {
+          test: /[\\/]src[\\/]pages[\\/].*\.css$/,
+          chunks: 'async',
+          minChunks: 1,
+          priority: 10,
+          reuseExistingChunk: true
+        }
+      }
+    }
+  },
+  
+  module: {
+    rules: [
+      {
+        test: /\.css$/,
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader,
+            options: {
+              // Enable HMR in development
+              hmr: process.env.NODE_ENV === 'development',
+              // Reduce runtime size
+              esModule: false
+            }
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1,
+              modules: {
+                auto: true,
+                localIdentName: '[hash:base64:5]'
+              }
+            }
+          },
+          'postcss-loader'
+        ]
+      }
+    ]
+  },
+  
+  plugins: [
+    new MiniCssExtractPlugin({
+      filename: '[name].[contenthash:8].css',
+      chunkFilename: '[name].[contenthash:8].chunk.css',
+      ignoreOrder: true // Prevent order warnings
+    }),
+    
+    // Compress CSS
+    new CompressionPlugin({
+      test: /\.css$/,
+      algorithm: 'brotli',
+      compressionOptions: { level: 11 }
+    })
+  ]
+};
+```
+
+## Measurement and Monitoring
 
 ```javascript
-// CSS動的読み込みクラス
-class CSSLoader {
+// Performance monitoring utilities
+class CSSPerformanceMonitor {
   constructor() {
-    this.loadedStyles = new Set();
-    this.observer = null;
-    this.initIntersectionObserver();
+    this.metrics = {
+      stylesheets: [],
+      cssRules: 0,
+      unusedRules: 0,
+      renderTime: 0
+    };
   }
-  
-  // 遅延読み込み
-  async loadCSS(href, options = {}) {
-    if (this.loadedStyles.has(href)) {
-      return Promise.resolve();
-    }
+
+  measureStylesheets() {
+    const stylesheets = Array.from(document.styleSheets);
     
-    return new Promise((resolve, reject) => {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = href;
-      
-      if (options.media) {
-        link.media = options.media;
-      }
-      
-      if (options.integrity) {
-        link.integrity = options.integrity;
-        link.crossOrigin = 'anonymous';
-      }
-      
-      link.onload = () => {
-        this.loadedStyles.add(href);
-        resolve(link);
-      };
-      
-      link.onerror = reject;
-      
-      document.head.appendChild(link);
-    });
-  }
-  
-  // Intersection Observer による遅延読み込み
-  initIntersectionObserver() {
-    this.observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const element = entry.target;
-            const cssFile = element.dataset.css;
-            
-            if (cssFile) {
-              this.loadCSS(cssFile);
-              this.observer.unobserve(element);
+    stylesheets.forEach(sheet => {
+      try {
+        const rules = Array.from(sheet.cssRules || []);
+        this.metrics.cssRules += rules.length;
+        
+        // Measure unused CSS
+        rules.forEach(rule => {
+          if (rule instanceof CSSStyleRule) {
+            const selector = rule.selectorText;
+            const elements = document.querySelectorAll(selector);
+            if (elements.length === 0) {
+              this.metrics.unusedRules++;
             }
           }
         });
-      },
-      {
-        rootMargin: '50px',
-      }
-    );
-  }
-  
-  // 要素監視
-  observe(element) {
-    if (this.observer && element.dataset.css) {
-      this.observer.observe(element);
-    }
-  }
-  
-  // CSSの削除
-  removeCSS(href) {
-    const link = document.querySelector(`link[href="${href}"]`);
-    if (link) {
-      link.remove();
-      this.loadedStyles.delete(href);
-    }
-  }
-  
-  // 条件付き読み込み
-  async loadConditionalCSS() {
-    // デバイス判定
-    if ('ontouchstart' in window) {
-      await this.loadCSS('/css/touch.css');
-    }
-    
-    // ネットワーク速度判定
-    if (navigator.connection) {
-      const connection = navigator.connection;
-      if (connection.saveData || connection.effectiveType === 'slow-2g') {
-        await this.loadCSS('/css/low-bandwidth.css');
-      }
-    }
-    
-    // Viewport サイズ
-    if (window.innerWidth > 1920) {
-      await this.loadCSS('/css/large-screen.css');
-    }
-  }
-}
-
-// 使用例
-const cssLoader = new CSSLoader();
-
-// ページ読み込み後
-document.addEventListener('DOMContentLoaded', () => {
-  // 遅延読み込み要素を監視
-  document.querySelectorAll('[data-css]').forEach(el => {
-    cssLoader.observe(el);
-  });
-  
-  // 条件付きCSS読み込み
-  cssLoader.loadConditionalCSS();
-});
-
-// ルート変更時の動的読み込み（SPA）
-function onRouteChange(route) {
-  // 古いルートのCSSを削除
-  cssLoader.removeCSS(`/css/routes/${previousRoute}.css`);
-  
-  // 新しいルートのCSSを読み込み
-  cssLoader.loadCSS(`/css/routes/${route}.css`);
-}
-```
-
-## 計測とモニタリング
-
-```javascript
-// パフォーマンス計測
-class CSSPerformanceMonitor {
-  measure() {
-    const metrics = {
-      stylesheets: this.measureStylesheets(),
-      cssRules: this.countCSSRules(),
-      renderBlocking: this.checkRenderBlocking(),
-      unusedCSS: this.estimateUnusedCSS(),
-    };
-    
-    return metrics;
-  }
-  
-  measureStylesheets() {
-    const stylesheets = Array.from(document.styleSheets);
-    return stylesheets.map(sheet => ({
-      href: sheet.href,
-      rules: sheet.cssRules?.length || 0,
-      size: this.estimateSize(sheet),
-      renderBlocking: !sheet.media || sheet.media.mediaText === 'all',
-    }));
-  }
-  
-  countCSSRules() {
-    let total = 0;
-    Array.from(document.styleSheets).forEach(sheet => {
-      try {
-        total += sheet.cssRules?.length || 0;
       } catch (e) {
-        // Cross-origin
+        console.warn('Cannot access stylesheet:', sheet.href);
       }
     });
-    return total;
-  }
-  
-  checkRenderBlocking() {
-    const links = document.querySelectorAll('link[rel="stylesheet"]');
-    return Array.from(links).filter(link => 
-      !link.media || link.media === 'all' || link.media === 'screen'
-    ).length;
-  }
-  
-  async estimateUnusedCSS() {
-    if (!window.chrome?.devtools) return null;
     
-    // Chrome DevTools Protocol使用（開発環境のみ）
-    const coverage = await startCSSCoverage();
-    const unused = coverage.reduce((acc, entry) => {
-      const unusedBytes = entry.ranges.reduce((sum, range) => 
-        sum + (range.end - range.start), 0
-      );
-      return acc + unusedBytes;
-    }, 0);
+    this.metrics.stylesheets = stylesheets.map(s => ({
+      href: s.href,
+      rules: s.cssRules?.length || 0,
+      media: s.media.mediaText
+    }));
+  }
+
+  measureRenderPerformance() {
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.entryType === 'paint') {
+          this.metrics.renderTime = entry.startTime;
+        }
+      }
+    });
+    
+    observer.observe({ entryTypes: ['paint'] });
+  }
+
+  getCSSCoverage() {
+    if ('CSS' in window && 'highlights' in CSS) {
+      // Use CSS Coverage API if available
+      return performance.measure('css-coverage');
+    }
     
     return {
-      totalBytes: coverage.reduce((sum, e) => sum + e.text.length, 0),
-      unusedBytes: unused,
-      percentage: (unused / totalBytes * 100).toFixed(2),
+      total: this.metrics.cssRules,
+      unused: this.metrics.unusedRules,
+      percentage: ((this.metrics.unusedRules / this.metrics.cssRules) * 100).toFixed(2)
     };
   }
-  
-  estimateSize(stylesheet) {
-    let size = 0;
-    try {
-      Array.from(stylesheet.cssRules).forEach(rule => {
-        size += rule.cssText.length;
+
+  report() {
+    console.table(this.metrics);
+    console.log('CSS Coverage:', this.getCSSCoverage());
+    
+    // Send to analytics
+    if (window.gtag) {
+      window.gtag('event', 'css_performance', {
+        total_rules: this.metrics.cssRules,
+        unused_rules: this.metrics.unusedRules,
+        render_time: this.metrics.renderTime
       });
-    } catch (e) {
-      // 推定値
-      size = stylesheet.cssRules?.length * 50 || 0;
     }
-    return size;
   }
 }
+
+// Usage
+const monitor = new CSSPerformanceMonitor();
+monitor.measureStylesheets();
+monitor.measureRenderPerformance();
+monitor.report();
 ```
 
-## ベストプラクティス
-
-1. **Critical CSS**: ファーストビューに必要な最小限をインライン化
-2. **コード分割**: ルート/コンポーネント単位でCSS分割
-3. **未使用CSS削除**: PurgeCSS、TreeShakingの活用
-4. **セレクタ最適化**: 単純で効率的なセレクタ使用
-5. **GPU活用**: transform、opacityでのアニメーション
-6. **遅延読み込み**: Intersection Observerでの動的読み込み
-7. **キャッシング**: 長期キャッシュとバージョニング戦略
+## Production Checklist
+- [ ] Critical CSS extracted and inlined
+- [ ] Non-critical CSS loaded asynchronously
+- [ ] Unused CSS removed with PurgeCSS
+- [ ] CSS minified and compressed
+- [ ] CSS bundled and code-split appropriately
+- [ ] Container queries used for responsive design
+- [ ] CSS containment applied to components
+- [ ] Animations use GPU-accelerated properties
+- [ ] Font loading optimized with font-display
+- [ ] Performance metrics tracked and monitored

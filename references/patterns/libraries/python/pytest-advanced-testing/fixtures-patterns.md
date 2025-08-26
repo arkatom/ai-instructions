@@ -1,6 +1,6 @@
 ## Advanced Fixtures Patterns
 
-### 1. 階層化フィクスチャシステム
+### 1. Hierarchical Fixture System
 
 ```python
 import pytest
@@ -14,17 +14,17 @@ import tempfile
 import shutil
 from pathlib import Path
 
-# スコープ別フィクスチャの構築
+# Scope-based fixture construction
 @pytest.fixture(scope="session")
 def docker_client():
-    """Dockerクライアント（セッション全体で共有）"""
+    """Docker client (shared across entire session)"""
     client = docker.from_env()
     yield client
     client.close()
 
 @pytest.fixture(scope="session")
 def postgres_container(docker_client):
-    """PostgreSQLコンテナ（セッション全体で共有）"""
+    """PostgreSQL container (shared across entire session)"""
     container = docker_client.containers.run(
         "postgres:14",
         environment={
@@ -37,11 +37,11 @@ def postgres_container(docker_client):
         remove=True
     )
     
-    # コンテナの起動を待機
+    # Wait for container startup
     import time
     time.sleep(5)
     
-    # 接続情報の取得
+    # Get connection information
     port = container.attrs['NetworkSettings']['Ports']['5432/tcp'][0]['HostPort']
     container.connection_url = f"postgresql://testuser:testpass@localhost:{port}/testdb"
     
@@ -51,45 +51,45 @@ def postgres_container(docker_client):
 
 @pytest.fixture(scope="module")
 def database_engine(postgres_container):
-    """データベースエンジン（モジュール全体で共有）"""
+    """Database engine (shared across module)"""
     engine = create_engine(postgres_container.connection_url)
     
-    # テーブルの作成
+    # Create tables
     from myapp.models import Base
     Base.metadata.create_all(engine)
     
     yield engine
     
-    # テーブルのクリーンアップ
+    # Table cleanup
     Base.metadata.drop_all(engine)
     engine.dispose()
 
 @pytest.fixture(scope="function")
 def db_session(database_engine):
-    """データベースセッション（テスト関数ごとに作成）"""
+    """Database session (created per test function)"""
     Session = sessionmaker(bind=database_engine)
     session = Session()
     
-    # トランザクションの開始
+    # Begin transaction
     transaction = session.begin()
     
     yield session
     
-    # ロールバック（テスト間の独立性を保証）
+    # Rollback (ensures test isolation)
     transaction.rollback()
     session.close()
 
 @pytest.fixture(scope="function")
 def temp_directory():
-    """一時ディレクトリ（テスト関数ごとに作成）"""
+    """Temporary directory (created per test function)"""
     temp_dir = Path(tempfile.mkdtemp())
     yield temp_dir
     shutil.rmtree(temp_dir, ignore_errors=True)
 
-# 複雑な依存関係を持つフィクスチャ
+# Fixtures with complex dependencies
 @pytest.fixture
 def test_user(db_session):
-    """テストユーザーの作成"""
+    """Test user creation"""
     from myapp.models import User
     
     user = User(
@@ -103,14 +103,14 @@ def test_user(db_session):
     
     yield user
     
-    # ユーザーの削除（必要に応じて）
+    # User cleanup (if needed)
     db_session.delete(user)
     db_session.commit()
 
 @pytest.fixture
 def authenticated_client(test_user, client):
-    """認証済みクライアント"""
-    # JWTトークンの生成
+    """Authenticated client"""
+    # Generate JWT token
     from myapp.auth import create_access_token
     
     token = create_access_token(data={"sub": test_user.username})
@@ -118,14 +118,14 @@ def authenticated_client(test_user, client):
     
     yield client
     
-    # ヘッダーのクリーンアップ
+    # Header cleanup
     if "Authorization" in client.headers:
         del client.headers["Authorization"]
 
-# フィクスチャファクトリーパターン
+# Fixture factory pattern
 @pytest.fixture
 def user_factory(db_session):
-    """ユーザーファクトリー"""
+    """User factory"""
     created_users = []
     
     def _create_user(username=None, email=None, **kwargs):
@@ -147,38 +147,38 @@ def user_factory(db_session):
     
     yield _create_user
     
-    # 作成されたユーザーのクリーンアップ
+    # Cleanup created users
     for user in created_users:
         db_session.delete(user)
     db_session.commit()
 
-# パラメータ化フィクスチャ
+# Parametrized fixtures
 @pytest.fixture(params=["sqlite", "postgresql", "mysql"])
 def database_url(request, postgres_container):
-    """複数のデータベースでテスト"""
+    """Test with multiple databases"""
     if request.param == "sqlite":
         return "sqlite:///:memory:"
     elif request.param == "postgresql":
         return postgres_container.connection_url
     elif request.param == "mysql":
-        # MySQL設定（実装は省略）
+        # MySQL configuration (implementation omitted)
         return "mysql://testuser:testpass@localhost/testdb"
 
-# 条件付きフィクスチャ
+# Conditional fixtures
 @pytest.fixture
 def redis_client():
-    """Redis接続（Redisが利用可能な場合のみ）"""
+    """Redis connection (only when Redis is available)"""
     pytest.importorskip("redis")
     
     try:
         import redis
         client = redis.Redis(host='localhost', port=6379, db=0)
-        client.ping()  # 接続テスト
+        client.ping()  # Connection test
         yield client
     except redis.ConnectionError:
         pytest.skip("Redis server not available")
 
-# フィクスチャ組み合わせパターン
+# Fixture combination patterns
 @pytest.fixture
 def complete_test_environment(
     db_session,
@@ -186,12 +186,12 @@ def complete_test_environment(
     temp_directory,
     user_factory
 ):
-    """完全なテスト環境"""
-    # 追加のテストデータ作成
+    """Complete test environment"""
+    # Create additional test data
     admin_user = user_factory(username="admin", is_admin=True)
     regular_users = [user_factory() for _ in range(5)]
     
-    # テスト設定ファイルの作成
+    # Create test configuration file
     config_file = temp_directory / "test_config.json"
     config_file.write_text('{"test_mode": true}')
     
@@ -205,7 +205,7 @@ def complete_test_environment(
     }
 ```
 
-### 2. 動的フィクスチャ生成
+### 2. Dynamic Fixture Generation
 
 ```python
 import pytest
@@ -214,31 +214,31 @@ import json
 import yaml
 
 class FixtureRegistry:
-    """動的フィクスチャレジストリ"""
+    """Dynamic fixture registry"""
     
     def __init__(self):
         self.fixtures: Dict[str, Any] = {}
         self.fixture_configs: Dict[str, Dict[str, Any]] = {}
     
     def register_fixture(self, name: str, factory_func, config: Dict[str, Any] = None):
-        """フィクスチャの動的登録"""
+        """Dynamic fixture registration"""
         self.fixtures[name] = factory_func
         self.fixture_configs[name] = config or {}
     
     def create_fixture(self, name: str, **kwargs):
-        """フィクスチャの動的作成"""
+        """Dynamic fixture creation"""
         if name not in self.fixtures:
             raise ValueError(f"Fixture {name} not registered")
         
         config = {**self.fixture_configs[name], **kwargs}
         return self.fixtures[name](**config)
 
-# グローバルレジストリ
+# Global registry
 fixture_registry = FixtureRegistry()
 
 def pytest_generate_tests(metafunc):
-    """テストケースの動的生成"""
-    # テストデータファイルからパラメータを読み込み
+    """Dynamic test case generation"""
+    # Load parameters from test data file
     if "test_data" in metafunc.fixturenames:
         test_data_file = metafunc.config.getoption("--test-data-file")
         if test_data_file:
@@ -251,8 +251,8 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize("test_data", test_data)
 
 def pytest_configure(config):
-    """pytest設定時の動的フィクスチャ登録"""
-    # 設定ファイルからフィクスチャを読み込み
+    """Dynamic fixture registration during pytest configuration"""
+    # Load fixtures from configuration file
     fixtures_config = config.getoption("--fixtures-config")
     if fixtures_config:
         with open(fixtures_config, 'r') as f:
@@ -262,7 +262,7 @@ def pytest_configure(config):
             register_dynamic_fixture(fixture_name, fixture_config)
 
 def register_dynamic_fixture(name: str, config: Dict[str, Any]):
-    """動的フィクスチャの登録"""
+    """Dynamic fixture registration"""
     fixture_type = config.get("type", "simple")
     
     if fixture_type == "database_record":
@@ -278,15 +278,15 @@ def register_dynamic_fixture(name: str, config: Dict[str, Any]):
         fixture_registry.register_fixture(name, factory, config)
 
 def create_database_record(model_name: str, data: Dict[str, Any]):
-    """データベースレコードの動的作成"""
-    # モデルクラスの動的取得
+    """Dynamic database record creation"""
+    # Dynamic model class retrieval
     from myapp.models import get_model_by_name
     
     model_class = get_model_by_name(model_name)
     return model_class(**data)
 
 def create_api_mock(endpoints: List[Dict[str, Any]], config: Dict[str, Any]):
-    """APIモックの動的作成"""
+    """Dynamic API mock creation"""
     from unittest.mock import Mock
     
     mock = Mock()
@@ -296,24 +296,24 @@ def create_api_mock(endpoints: List[Dict[str, Any]], config: Dict[str, Any]):
         path = endpoint["path"]
         response_data = endpoint.get("response", {})
         
-        # モックメソッドの設定
+        # Configure mock method
         mock_method = getattr(mock, method)
         mock_method.return_value.json.return_value = response_data
         mock_method.return_value.status_code = endpoint.get("status_code", 200)
     
     return mock
 
-# 設定ファイルベースのテストケース生成
+# Configuration file-based test case generation
 @pytest.fixture
 def dynamic_test_case(request):
-    """設定ファイルベースの動的テストケース"""
-    # マーカーからテストケース設定を取得
+    """Configuration file-based dynamic test case"""
+    # Get test case configuration from marker
     test_config = request.node.get_closest_marker("test_config")
     
     if test_config:
         config_data = test_config.args[0]
         
-        # 必要なフィクスチャを動的に作成
+        # Dynamically create required fixtures
         fixtures = {}
         for fixture_name, fixture_config in config_data.get("fixtures", {}).items():
             fixtures[fixture_name] = fixture_registry.create_fixture(fixture_name, **fixture_config)
@@ -327,7 +327,7 @@ def dynamic_test_case(request):
     
     return {}
 
-# 使用例
+# Usage example
 @pytest.mark.test_config({
     "fixtures": {
         "test_user": {
@@ -358,14 +358,77 @@ def dynamic_test_case(request):
     }
 })
 def test_dynamic_configuration(dynamic_test_case):
-    """動的設定ベースのテスト"""
+    """Dynamic configuration-based test"""
     config = dynamic_test_case["config"]
     fixtures = dynamic_test_case["fixtures"]
     test_data = dynamic_test_case["test_data"]
     expected = dynamic_test_case["expected_results"]
     
-    # テストロジック
+    # Test logic
     assert fixtures["test_user"].username == "dynamic_user"
     assert test_data["input_value"] * 2 == test_data["expected_output"]
-```
 
+# Advanced fixture patterns for enterprise testing
+@pytest.fixture
+def enterprise_test_suite(request):
+    """Enterprise-level test suite configuration"""
+    suite_config = {
+        "environment": request.config.getoption("--test-env", default="development"),
+        "parallel_workers": request.config.getoption("--workers", default=1),
+        "test_categories": request.config.getoption("--categories", default="unit,integration").split(","),
+        "cleanup_strategy": request.config.getoption("--cleanup", default="auto")
+    }
+    
+    # Environment-specific configurations
+    if suite_config["environment"] == "production":
+        suite_config.update({
+            "read_only_mode": True,
+            "anonymize_data": True,
+            "audit_logging": True
+        })
+    
+    return suite_config
+
+@pytest.fixture
+def performance_monitoring():
+    """Performance monitoring for test execution"""
+    import time
+    import psutil
+    import threading
+    
+    start_time = time.time()
+    start_memory = psutil.virtual_memory().used
+    monitoring_active = threading.Event()
+    monitoring_active.set()
+    
+    def monitor_resources():
+        peak_memory = start_memory
+        while monitoring_active.is_set():
+            current_memory = psutil.virtual_memory().used
+            peak_memory = max(peak_memory, current_memory)
+            time.sleep(0.1)
+        return peak_memory
+    
+    monitor_thread = threading.Thread(target=monitor_resources, daemon=True)
+    monitor_thread.start()
+    
+    yield {
+        "start_time": start_time,
+        "start_memory": start_memory
+    }
+    
+    # Stop monitoring and collect metrics
+    monitoring_active.clear()
+    end_time = time.time()
+    end_memory = psutil.virtual_memory().used
+    
+    execution_time = end_time - start_time
+    memory_delta = end_memory - start_memory
+    
+    # Log performance metrics
+    if execution_time > 5.0:  # Log slow tests
+        print(f"\n⚠️ Slow test detected: {execution_time:.2f}s")
+    
+    if memory_delta > 100 * 1024 * 1024:  # 100MB threshold
+        print(f"\n⚠️ High memory usage: {memory_delta / 1024 / 1024:.2f}MB")
+```

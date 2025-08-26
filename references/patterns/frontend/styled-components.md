@@ -1,8 +1,8 @@
-# styled-components 実践ガイド v6
+# styled-components Practical Guide v6
 
-## セットアップとTypeScript統合
+## Setup and TypeScript Integration
 
-### Next.js 14+ App Router対応
+### Next.js 14+ App Router Support
 
 ```typescript
 // next.config.js
@@ -70,7 +70,7 @@ export default function StyledComponentsRegistry({
 }
 ```
 
-### TypeScript完全統合
+### Complete TypeScript Integration
 
 ```typescript
 // styled.d.ts
@@ -159,9 +159,9 @@ declare module 'styled-components' {
 }
 ```
 
-## 高度なスタイリングパターン
+## Advanced Styling Patterns
 
-### 1. 動的スタイルとバリアント管理
+### 1. Dynamic Styles and Variant Management
 
 ```typescript
 // components/Button/Button.styles.ts
@@ -178,7 +178,7 @@ interface ButtonStyleProps {
   $loading?: boolean;
 }
 
-// バリアントスタイルマップ
+// Variant style map
 const variantStyles = {
   primary: css`
     background: ${({ theme }) => theme.colors.primary.main};
@@ -226,7 +226,7 @@ const variantStyles = {
   `,
 };
 
-// サイズスタイルマップ
+// Size style map
 const sizeStyles = {
   small: css`
     padding: ${({ theme }) => `${theme.spacing(1)} ${theme.spacing(2)}`};
@@ -245,7 +245,7 @@ const sizeStyles = {
   `,
 };
 
-// スタイル付きコンポーネント
+// Styled component
 export const StyledButton = styled(motion.button)<ButtonStyleProps>`
   position: relative;
   display: inline-flex;
@@ -261,13 +261,13 @@ export const StyledButton = styled(motion.button)<ButtonStyleProps>`
   user-select: none;
   outline: none;
   
-  /* バリアントスタイル適用 */
+  /* Apply variant styles */
   ${({ $variant }) => variantStyles[$variant]}
   
-  /* サイズスタイル適用 */
+  /* Apply size styles */
   ${({ $size }) => sizeStyles[$size]}
   
-  /* 条件付きスタイル */
+  /* Conditional styles */
   ${({ $fullWidth }) => $fullWidth && css`
     width: 100%;
   `}
@@ -305,7 +305,7 @@ export const StyledButton = styled(motion.button)<ButtonStyleProps>`
   }
 `;
 
-// アイコンラッパー
+// Icon wrapper
 export const IconWrapper = styled.span<{ $position?: 'left' | 'right' }>`
   display: inline-flex;
   align-items: center;
@@ -313,13 +313,13 @@ export const IconWrapper = styled.span<{ $position?: 'left' | 'right' }>`
 `;
 ```
 
-### 2. 高度なテーマシステム
+### 2. Advanced Theme System
 
 ```typescript
 // styles/theme.ts
 import { DefaultTheme } from 'styled-components';
 
-// テーマファクトリー関数
+// Theme factory function
 export const createTheme = (mode: 'light' | 'dark'): DefaultTheme => {
   const baseColors = {
     primary: {
@@ -445,7 +445,7 @@ export const createTheme = (mode: 'light' | 'dark'): DefaultTheme => {
   };
 };
 
-// テーマプロバイダー
+// Theme Provider
 // components/ThemeProvider.tsx
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import { createContext, useContext, useState, useEffect } from 'react';
@@ -472,7 +472,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const stored = localStorage.getItem('theme-mode') as 'light' | 'dark';
     if (stored) setMode(stored);
     
-    // システムテーマの検出
+    // System theme detection
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     if (!stored) setMode(mediaQuery.matches ? 'dark' : 'light');
     
@@ -504,13 +504,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 ```
 
-### 3. パフォーマンス最適化テクニック
+### 3. Performance Optimization Techniques
 
 ```typescript
 // utils/styled-utils.ts
 import { css } from 'styled-components';
 
-// メディアクエリヘルパー（メモ化）
+// Media query helpers (memoized)
 const breakpoints = {
   xs: '0px',
   sm: '600px',
@@ -551,7 +551,7 @@ export const media = {
   },
 };
 
-// 動的スタイル生成の最適化
+// Dynamic style generation optimization
 export const memoizedStyle = <P extends object>(
   styleFunction: (props: P) => ReturnType<typeof css>
 ) => {
@@ -565,7 +565,7 @@ export const memoizedStyle = <P extends object>(
   };
 };
 
-// バッチスタイル更新
+// Batch style updates
 export const batchedStyles = styled.div.attrs<{ $updates: string[] }>(
   ({ $updates = [] }) => ({
     style: {
@@ -573,14 +573,14 @@ export const batchedStyles = styled.div.attrs<{ $updates: string[] }>(
     },
   })
 )<{ $updates: string[] }>`
-  /* CSS変数を使用した効率的な更新 */
+  /* Efficient updates using CSS variables */
   transition: var(--batch-update);
 `;
 ```
 
-## SSR/SSG最適化
+## SSR/SSG Optimization
 
-### Critical CSS抽出
+### Critical CSS Extraction
 
 ```typescript
 // utils/critical-styles.ts
@@ -611,7 +611,7 @@ export async function extractCriticalStyles(
   }
 }
 
-// pages/_document.tsx での実装
+// pages/_document.tsx implementation
 import Document, { DocumentContext } from 'next/document';
 import { ServerStyleSheet } from 'styled-components';
 
@@ -642,12 +642,12 @@ export default class MyDocument extends Document {
 }
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
 ### 1. Flash of Unstyled Content (FOUC)
 
 ```typescript
-// 解決策: Babel設定とSSR最適化
+// Solution: Babel configuration and SSR optimization
 // .babelrc
 {
   "presets": ["next/babel"],
@@ -661,13 +661,13 @@ export default class MyDocument extends Document {
 }
 ```
 
-### 2. TypeScript型エラー
+### 2. TypeScript Type Errors
 
 ```typescript
-// 解決策: Transient props パターン
-// $ プレフィックスでDOM要素への props 漏れを防ぐ
+// Solution: Transient props pattern
+// Use $ prefix to prevent props from leaking to DOM
 interface StyledProps {
-  $isActive?: boolean;  // $ プレフィックスで transient prop
+  $isActive?: boolean;  // $ prefix for transient prop
   $color?: string;
 }
 
@@ -677,12 +677,12 @@ const StyledDiv = styled.div<StyledProps>`
 `;
 ```
 
-## ベストプラクティス
+## Best Practices
 
-1. **Transient Props**: `$` プレフィックスでDOM汚染を防ぐ
-2. **テーマ統合**: TypeScript型定義で完全な型安全性を確保
-3. **パフォーマンス**: メモ化、バッチ更新、Critical CSS抽出
-4. **SSR対応**: ServerStyleSheet、Babel設定の最適化
-5. **コード分割**: 動的インポートでバンドルサイズ削減
-6. **開発体験**: displayName、開発ツール統合で デバッグ効率化
-7. **保守性**: スタイルとロジックの明確な分離
+1. **Transient Props**: Use `$` prefix to prevent DOM pollution
+2. **Theme Integration**: Complete type safety with TypeScript type definitions
+3. **Performance**: Memoization, batch updates, Critical CSS extraction
+4. **SSR Support**: ServerStyleSheet, optimized Babel configuration
+5. **Code Splitting**: Dynamic imports to reduce bundle size
+6. **Developer Experience**: displayName, dev tools integration for efficient debugging
+7. **Maintainability**: Clear separation of styles and logic

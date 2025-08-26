@@ -1,9 +1,9 @@
-# ストリーミングとジェネレータ
+# Streaming and Generators
 
-## 非同期ジェネレータ
+## Async Generators
 
 ```javascript
-// ページネーション対応
+// Pagination support
 async function* fetchPaginatedData(baseUrl, pageSize = 10) {
   let page = 1;
   let hasMore = true;
@@ -20,12 +20,12 @@ async function* fetchPaginatedData(baseUrl, pageSize = 10) {
     page++;
     
     if (hasMore) {
-      await new Promise(r => setTimeout(r, 100)); // レート制限対策
+      await new Promise(r => setTimeout(r, 100)); // Rate limiting
     }
   }
 }
 
-// ストリーム変換
+// Stream transformation
 async function* transformStream(source, transformer) {
   for await (const item of source) {
     const transformed = await transformer(item);
@@ -35,7 +35,7 @@ async function* transformStream(source, transformer) {
   }
 }
 
-// バッチ処理
+// Batch processing
 async function* batchStream(source, batchSize) {
   let batch = [];
   
@@ -53,7 +53,7 @@ async function* batchStream(source, batchSize) {
   }
 }
 
-// 複数ストリームのマージ
+// Merge multiple streams
 async function* mergeStreams(...sources) {
   const iterators = sources.map(s => s[Symbol.asyncIterator]());
   const promises = new Map();
@@ -76,7 +76,7 @@ async function* mergeStreams(...sources) {
 }
 ```
 
-## ストリームプロセッサ
+## Stream Processor
 
 ```javascript
 class StreamProcessor {
@@ -165,7 +165,7 @@ class StreamProcessor {
 }
 ```
 
-## Observable風ストリーム
+## Observable-style Stream
 
 ```javascript
 class ObservableStream {
@@ -203,11 +203,11 @@ class ObservableStream {
   }
   
   stop() {
-    // キャンセレーション実装
+    // Cancellation implementation
   }
 }
 
-// 使用例
+// Usage example
 const dataStream = fetchPaginatedData('/api/users');
 
 const processor = new StreamProcessor()

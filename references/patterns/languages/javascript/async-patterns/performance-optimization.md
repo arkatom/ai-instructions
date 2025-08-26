@@ -1,9 +1,9 @@
-# パフォーマンス最適化
+# Performance Optimization
 
-## 並列実行の最適化
+## Parallel Execution Optimization
 
 ```javascript
-// ❌ 悪い例：順次実行
+// ❌ Bad example: Sequential execution
 async function slowProcess() {
   const user = await fetchUser();
   const posts = await fetchPosts();
@@ -11,7 +11,7 @@ async function slowProcess() {
   return { user, posts, comments };
 }
 
-// ✅ 良い例：並列実行
+// ✅ Good example: Parallel execution
 async function fastProcess() {
   const [user, posts, comments] = await Promise.all([
     fetchUser(),
@@ -21,7 +21,7 @@ async function fastProcess() {
   return { user, posts, comments };
 }
 
-// ✅ エラー処理も考慮した並列実行
+// ✅ Parallel execution with error handling
 async function robustProcess() {
   const results = await Promise.allSettled([
     fetchUser(),
@@ -39,10 +39,10 @@ async function robustProcess() {
 }
 ```
 
-## メモリ効率の改善
+## Memory Efficiency Improvements
 
 ```javascript
-// 大量データの効率的な処理
+// Efficient processing of large datasets
 async function* processLargeDataset(dataSource) {
   const batchSize = 1000;
   let offset = 0;
@@ -56,12 +56,12 @@ async function* processLargeDataset(dataSource) {
     }
     
     offset += batchSize;
-    // メモリ解放のための一時停止
+    // Pause for memory cleanup
     await new Promise(r => setImmediate(r));
   }
 }
 
-// WeakMapを使用したキャッシュ
+// WeakMap-based caching
 const cache = new WeakMap();
 async function cachedOperation(obj) {
   if (cache.has(obj)) {
@@ -74,10 +74,10 @@ async function cachedOperation(obj) {
 }
 ```
 
-## デバウンスとスロットリング
+## Debouncing and Throttling
 
 ```javascript
-// デバウンス実装
+// Debounce implementation
 function debounceAsync(fn, delay) {
   let timeoutId;
   let pendingPromise;
@@ -104,7 +104,7 @@ function debounceAsync(fn, delay) {
   };
 }
 
-// スロットリング実装
+// Throttle implementation
 function throttleAsync(fn, interval) {
   let lastCallTime = 0;
   let lastCallPromise;
@@ -124,10 +124,10 @@ function throttleAsync(fn, interval) {
 }
 ```
 
-## リソース管理
+## Resource Management
 
 ```javascript
-// 接続プール
+// Connection pool
 class ConnectionPool {
   constructor(maxConnections = 10) {
     this.connections = [];
@@ -172,29 +172,29 @@ class ConnectionPool {
 }
 ```
 
-## 早期リターンとショートサーキット
+## Early Returns and Short-Circuiting
 
 ```javascript
-// 条件付き実行の最適化
+// Optimized conditional execution
 async function optimizedFetch(id, options = {}) {
-  // キャッシュチェック（高速パス）
+  // Cache check (fast path)
   const cached = await cache.get(id);
   if (cached && !options.force) {
     return cached;
   }
   
-  // バリデーション（早期リターン）
+  // Validation (early return)
   if (!isValidId(id)) {
     throw new Error('Invalid ID');
   }
   
-  // 実際のフェッチ（低速パス）
+  // Actual fetch (slow path)
   const data = await fetch(`/api/items/${id}`);
   await cache.set(id, data);
   return data;
 }
 
-// Promise.raceによる早期終了
+// Early termination with Promise.race
 async function fetchWithTimeout(url, timeout = 5000) {
   return Promise.race([
     fetch(url),
@@ -205,11 +205,11 @@ async function fetchWithTimeout(url, timeout = 5000) {
 }
 ```
 
-## ベストプラクティス
+## Best Practices
 
-1. **並列化を最大限活用** - 独立したタスクは必ずPromise.allで並列実行
-2. **適切なキャッシュ戦略** - 頻繁にアクセスされるデータはメモ化
-3. **リソースの適切な管理** - 接続プールやセマフォでリソース制限
-4. **ストリーミング処理** - 大量データは一度に処理せずストリーム化
-5. **早期リターン** - 不要な処理を避けて高速パスを優先
-6. **エラー境界の設定** - エラーが全体に波及しないよう部分的な失敗を許容
+1. **Maximize parallelization** - Always use Promise.all for independent tasks
+2. **Appropriate caching strategy** - Memoize frequently accessed data
+3. **Proper resource management** - Use connection pools or semaphores for resource limits
+4. **Streaming processing** - Process large data as streams, not all at once
+5. **Early returns** - Prioritize fast paths and avoid unnecessary processing
+6. **Error boundaries** - Allow partial failures to prevent cascading errors

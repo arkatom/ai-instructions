@@ -1,29 +1,29 @@
-# Async/Await & Promise パターン索引
+# Async/Await & Promise Patterns Index
 
-JavaScriptの非同期処理に関する包括的なパターン集（各100-200行）。
+Comprehensive JavaScript asynchronous processing pattern collection (100-200 lines each).
 
-## 🎯 基礎パターン
+## 🎯 Core Patterns
 
-- [Promise組み合わせパターン](./promise-combinators.md) - all, race, any等の高度な使い方
-- [Promise状態管理](./promise-state-management.md) - 状態追跡とメモ化パターン
-- [エラーハンドリング](./error-handling.md) - 包括的なエラー処理戦略
+- [Promise Combinator Patterns](./promise-combinators.md) - Advanced usage of all, race, any, etc.
+- [Promise State Management](./promise-state-management.md) - State tracking and memoization patterns
+- [Error Handling](./error-handling.md) - Comprehensive error handling strategies
 
-## ⚡ 実践パターン
+## ⚡ Practical Patterns
 
-- [Async/Awaitベストプラクティス](./async-await-best-practices.md) - 効果的な非同期コード
-- [並行処理パターン](./concurrency-patterns.md) - 並列実行と同期制御
-- [Promiseユーティリティ](./promise-utilities.md) - カスタムユーティリティ関数
+- [Async/Await Best Practices](./async-await-best-practices.md) - Effective asynchronous code
+- [Concurrency Patterns](./concurrency-patterns.md) - Parallel execution and synchronization control
+- [Promise Utilities](./promise-utilities.md) - Custom utility functions
 
-## 🚀 高度なパターン
+## 🚀 Advanced Patterns
 
-- [ストリーミングとジェネレータ](./streaming-generators.md) - 非同期イテレータとストリーム処理
-- [実世界のパターン](./real-world-patterns.md) - APIクライアントとタスク管理
-- [パフォーマンス最適化](./performance-optimization.md) - 高速化とメモリ効率
+- [Streaming and Generators](./streaming-generators.md) - Async iterators and stream processing
+- [Real-World Patterns](./real-world-patterns.md) - API clients and task management
+- [Performance Optimization](./performance-optimization.md) - Speed optimization and memory efficiency
 
-## 📚 参照
+## 📚 Reference
 
-各ファイルは独立したトピックを扱い、実践的なコード例とベストプラクティスを含んでいます。
+Each file covers independent topics with practical code examples and best practices.
 
-### タグ
+### Tags
 
 `#async` `#await` `#promise` `#javascript` `#concurrency` `#performance`

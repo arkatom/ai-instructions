@@ -1,9 +1,9 @@
-# 実世界の応用
+# Real-World Applications
 
-## React関数型パターン
+## React Functional Patterns
 
 ```javascript
-// 高階コンポーネント (HOC) の関数型実装
+// Functional Higher-Order Component (HOC) implementation
 const withLoading = (WrappedComponent) => (props) => {
   const { isLoading, ...restProps } = props;
   
@@ -34,7 +34,7 @@ const withErrorBoundary = (WrappedComponent) => (props) => {
   return <WrappedComponent {...props} />;
 };
 
-// HOCの合成
+// HOC composition
 const enhance = pipe(
   withErrorBoundary,
   withLoading
@@ -42,7 +42,7 @@ const enhance = pipe(
 
 const EnhancedComponent = enhance(MyComponent);
 
-// Render Props パターン
+// Render Props pattern
 const DataFetcher = ({ render, url }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +64,7 @@ const DataFetcher = ({ render, url }) => {
   return render({ data, loading, error });
 };
 
-// 使用例
+// Usage example
 const UserProfile = ({ userId }) => (
   <DataFetcher 
     url={`/api/users/${userId}`}
@@ -77,10 +77,10 @@ const UserProfile = ({ userId }) => (
 );
 ```
 
-## 状態管理の関数型アプローチ
+## Functional State Management
 
 ```javascript
-// Redux風の関数型状態管理
+// Redux-style functional state management
 const createStore = (reducer, initialState, middleware = []) => {
   let state = initialState;
   const listeners = [];
@@ -110,7 +110,7 @@ const createStore = (reducer, initialState, middleware = []) => {
   return { dispatch, getState, subscribe };
 };
 
-// レンズベースの状態更新
+// Lens-based state updates
 const lens = (getter, setter) => ({ get: getter, set: setter });
 
 const prop = (key) => lens(
@@ -126,7 +126,7 @@ const path = (...keys) => keys.reduce(
   lens(x => x, value => _ => value)
 );
 
-// 状態の関数型更新
+// Functional state updates
 const userLens = prop('user');
 const profileLens = path('user', 'profile');
 const nameLens = path('user', 'profile', 'name');
@@ -138,10 +138,10 @@ const incrementUserAge = (state) =>
   path('user', 'profile', 'age').over(age => age + 1)(state);
 ```
 
-## APIクライアントの関数型設計
+## Functional API Client Design
 
 ```javascript
-// Monadicなエラーハンドリング付きAPIクライアント
+// Monadic error handling API client
 class ApiClient {
   constructor(baseUrl, defaultHeaders = {}) {
     this.baseUrl = baseUrl;
@@ -188,7 +188,7 @@ class ApiClient {
     });
   }
   
-  // 便利メソッド
+  // Convenience methods
   get(endpoint) {
     return this.request(endpoint, { method: 'GET' });
   }
@@ -214,7 +214,7 @@ class ApiClient {
   }
 }
 
-// 使用例
+// Usage example
 const api = new ApiClient('https://api.example.com');
 
 const getUserPosts = (userId) =>
@@ -229,7 +229,7 @@ getUserPosts(123)
   .catch(error => console.error('API Error:', error));
 ```
 
-## 関数型バリデーション
+## Functional Validation
 
 ```javascript
 // Validation Applicative Functor
@@ -275,7 +275,7 @@ class Validation {
   }
 }
 
-// バリデーション関数群
+// Validation function suite
 const required = (fieldName) => (value) =>
   value == null || value === '' 
     ? Validation.failure(`${fieldName} is required`)
@@ -296,11 +296,11 @@ const positiveNumber = (fieldName) => (value) =>
     ? Validation.failure(`${fieldName} must be a positive number`)
     : Validation.success(value);
 
-// フォームバリデーション
+// Form validation
 const validateUser = (userData) => {
   const { name, email: userEmail, age } = userData;
   
-  // Applicative による並列バリデーション
+  // Applicative parallel validation
   const validName = required('Name')(name)
     .flatMap(minLength(2, 'Name'));
     
@@ -310,12 +310,12 @@ const validateUser = (userData) => {
   const validAge = required('Age')(age)
     .flatMap(positiveNumber('Age'));
   
-  // 全てのバリデーションを組み合わせ
+  // Combine all validations
   return validName
     .ap(validEmail.ap(validAge.map(age => email => name => ({ name, email, age }))));
 };
 
-// 使用例
+// Usage example
 const userData = { name: 'John', email: 'john@example.com', age: 30 };
 const result = validateUser(userData);
 
@@ -325,15 +325,15 @@ result.fold(
 );
 ```
 
-## 関数型パイプライン
+## Functional Pipeline
 
 ```javascript
-// データ変換パイプライン
+// Data transformation pipeline
 const processUserData = pipe(
-  // データの取得
+  // Data retrieval
   (userId) => api.get(`/users/${userId}`).run(),
   
-  // データの変換
+  // Data transformation
   (userData) => ({
     ...userData,
     displayName: `${userData.firstName} ${userData.lastName}`,
@@ -341,19 +341,19 @@ const processUserData = pipe(
     formattedJoinDate: new Date(userData.joinDate).toLocaleDateString()
   }),
   
-  // バリデーション
+  // Validation
   (user) => validateUser(user).fold(
     errors => { throw new Error(`Invalid user data: ${errors.join(', ')}`); },
     validUser => validUser
   ),
   
-  // 追加データの取得
+  // Additional data retrieval
   async (user) => {
     const posts = await api.get(`/users/${user.id}/posts`).run();
     return { ...user, posts };
   },
   
-  // 最終的なデータ構造
+  // Final data structure
   (userWithPosts) => ({
     user: userWithPosts,
     summary: {
@@ -365,13 +365,13 @@ const processUserData = pipe(
   })
 );
 
-// エラーハンドリング付きの使用
+// Usage with error handling
 const safeProcessUserData = (userId) =>
   processUserData(userId)
     .then(result => ({ success: true, data: result }))
     .catch(error => ({ success: false, error: error.message }));
 
-// 使用例
+// Usage example
 safeProcessUserData(123)
   .then(result => {
     if (result.success) {

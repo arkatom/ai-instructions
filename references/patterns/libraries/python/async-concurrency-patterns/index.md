@@ -1,10 +1,10 @@
 # Async Python Concurrency Patterns
 
-本番環境で使用されるPythonの非同期・並行・並列処理の高度なパターン集です。asyncio、threading、multiprocessingを活用した実用的なソリューションを提供します。
+Advanced Python asynchronous, concurrent, and parallel processing patterns for production environments. Provides practical solutions leveraging asyncio, threading, and multiprocessing.
 
-## 目次
+## Table of Contents
 
-1. [Asyncio Advanced Patterns](#asyncio-advanced-patterns) - 本ファイル
+1. [Asyncio Advanced Patterns](#asyncio-advanced-patterns) - This file
 2. [Concurrent Futures Patterns](./concurrent-futures.md)
 3. [Threading Patterns](./threading-patterns.md)
 4. [Multiprocessing Patterns](./multiprocessing-patterns.md)
@@ -15,7 +15,7 @@
 
 ## Asyncio Advanced Patterns
 
-### 1. 高度な非同期コンテキストマネージャー
+### 1. Advanced Asynchronous Context Managers
 
 ```python
 import asyncio
@@ -28,7 +28,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class ConnectionPoolManager:
-    """高性能な接続プール管理"""
+    """High-performance connection pool management"""
     
     def __init__(self, max_connections: int = 100):
         self.max_connections = max_connections
@@ -66,12 +66,12 @@ class ConnectionPoolManager:
 
 @asynccontextmanager
 async def database_transaction() -> AsyncGenerator[Dict[str, Any], None]:
-    """非同期データベーストランザクション管理"""
+    """Asynchronous database transaction management"""
     connection = None
     transaction = None
     
     try:
-        # 仮想的なデータベース接続
+        # Virtual database connection
         connection = await create_connection()
         transaction = await connection.begin()
         
@@ -93,15 +93,15 @@ async def database_transaction() -> AsyncGenerator[Dict[str, Any], None]:
             await connection.close()
 
 async def create_connection():
-    """仮想的なデータベース接続作成"""
-    await asyncio.sleep(0.1)  # 接続時間をシミュレート
+    """Virtual database connection creation"""
+    await asyncio.sleep(0.1)  # Simulate connection time
     return type('Connection', (), {
         'begin': lambda: asyncio.create_task(asyncio.sleep(0.01)),
         'close': lambda: asyncio.create_task(asyncio.sleep(0.01))
     })()
 ```
 
-### 2. 非同期ジェネレータとストリーム処理
+### 2. Asynchronous Generators and Stream Processing
 
 ```python
 import asyncio
@@ -110,7 +110,7 @@ import json
 import aiofiles
 
 class AsyncStreamProcessor:
-    """非同期ストリーム処理エンジン"""
+    """Asynchronous stream processing engine"""
     
     def __init__(self, buffer_size: int = 1000):
         self.buffer_size = buffer_size
@@ -120,7 +120,7 @@ class AsyncStreamProcessor:
         file_path: str,
         processor: Callable[[str], Any]
     ) -> AsyncGenerator[Any, None]:
-        """ファイルストリームの非同期処理"""
+        """Asynchronous file stream processing"""
         
         async with aiofiles.open(file_path, 'r') as file:
             buffer = []
@@ -131,7 +131,7 @@ class AsyncStreamProcessor:
                     buffer.append(line)
                     
                 if len(buffer) >= self.buffer_size:
-                    # バッファ処理
+                    # Buffer processing
                     tasks = [
                         asyncio.create_task(self._process_line(line, processor))
                         for line in buffer
@@ -145,7 +145,7 @@ class AsyncStreamProcessor:
                             
                     buffer.clear()
             
-            # 残りのバッファを処理
+            # Process remaining buffer
             if buffer:
                 tasks = [
                     asyncio.create_task(self._process_line(line, processor))
@@ -159,19 +159,19 @@ class AsyncStreamProcessor:
                         yield result
     
     async def _process_line(self, line: str, processor: Callable[[str], Any]) -> Any:
-        """単一行の非同期処理"""
-        # CPU集約的なタスクは別スレッドで実行
+        """Single line asynchronous processing"""
+        # Run CPU-intensive tasks in a separate thread
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, processor, line)
 
 async def json_parser(line: str) -> dict:
-    """JSON解析の例"""
+    """JSON parsing example"""
     try:
         return json.loads(line)
     except json.JSONDecodeError:
         return {"error": "Invalid JSON", "line": line}
 
-# 使用例
+# Usage example
 async def stream_example():
     processor = AsyncStreamProcessor(buffer_size=500)
     
@@ -185,7 +185,7 @@ async def stream_example():
             logger.info(f"Processed {count} lines")
 ```
 
-### 3. 非同期タスクプール
+### 3. Asynchronous Task Pool
 
 ```python
 import asyncio
@@ -210,7 +210,7 @@ class TaskResult:
     execution_time: float = 0.0
 
 class AsyncTaskPool:
-    """高性能な非同期タスクプール"""
+    """High-performance asynchronous task pool"""
     
     def __init__(self, max_workers: int = 10):
         self.max_workers = max_workers
@@ -224,7 +224,7 @@ class AsyncTaskPool:
         coro: Coroutine,
         task_id: Optional[str] = None
     ) -> str:
-        """タスクをプールに投入"""
+        """Submit task to pool"""
         
         if task_id is None:
             self.task_counter += 1
@@ -233,7 +233,7 @@ class AsyncTaskPool:
         task = asyncio.create_task(self._execute_task(coro, task_id))
         self.active_tasks[task_id] = task
         
-        # タスク完了時のクリーンアップ
+        # Cleanup on task completion
         task.add_done_callback(
             lambda t: self.active_tasks.pop(task_id, None)
         )
@@ -241,7 +241,7 @@ class AsyncTaskPool:
         return task_id
         
     async def _execute_task(self, coro: Coroutine, task_id: str) -> TaskResult:
-        """タスクの実行とモニタリング"""
+        """Task execution and monitoring"""
         
         start_time = time.time()
         
@@ -277,7 +277,7 @@ class AsyncTaskPool:
             return task_result
     
     async def get_result(self, task_id: str, timeout: Optional[float] = None) -> TaskResult:
-        """タスク結果の取得"""
+        """Get task result"""
         
         if task_id in self.completed_tasks:
             return self.completed_tasks[task_id]
@@ -294,7 +294,7 @@ class AsyncTaskPool:
         raise ValueError(f"Task {task_id} not found")
     
     async def cancel_task(self, task_id: str) -> bool:
-        """タスクのキャンセル"""
+        """Cancel task"""
         
         if task_id in self.active_tasks:
             task = self.active_tasks[task_id]
@@ -303,7 +303,7 @@ class AsyncTaskPool:
         return False
     
     async def wait_all(self, timeout: Optional[float] = None) -> List[TaskResult]:
-        """全タスクの完了待機"""
+        """Wait for all tasks to complete"""
         
         if not self.active_tasks:
             return list(self.completed_tasks.values())
@@ -318,23 +318,23 @@ class AsyncTaskPool:
             
         return list(self.completed_tasks.values())
 
-# 使用例
+# Usage example
 async def cpu_intensive_task(data: int) -> int:
-    """CPU集約的なタスクの例"""
-    # 実際の処理をシミュレート
+    """CPU-intensive task example"""
+    # Simulate actual processing
     await asyncio.sleep(0.1)
     return data ** 2
 
 async def task_pool_example():
     pool = AsyncTaskPool(max_workers=5)
     
-    # 複数タスクの投入
+    # Submit multiple tasks
     task_ids = []
     for i in range(20):
         task_id = await pool.submit(cpu_intensive_task(i))
         task_ids.append(task_id)
     
-    # 結果の取得
+    # Get results
     results = await pool.wait_all(timeout=10.0)
     
     for result in results:
