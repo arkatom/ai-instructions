@@ -62,3 +62,6 @@ logs
 backups/ 
 # Serena cache
 .serena/cache/
+
+# Pattern files (migrated to references/)
+instructions/patterns/
