@@ -30,8 +30,15 @@ alwaysApply: true
 | Git操作 | [Git運用](./instructions/workflows/git-complete.md) | commit/PR/branch操作時 |
 | TDD開発 | [TDD手法](./instructions/methodologies/tdd.md) | テスト駆動開発時 |
 | Issue管理 | [Issue駆動](./instructions/methodologies/github-idd.md) | Issue関連作業時 |
-| カスタムインストラクション記述ガイド | [カスタムインストラクション記述ガイド](./instructions/core/custom-instruction-writing-guide.md) | カスタムインストラクション追加・編集時 |
-| インストラクション vs リファレンスの分離指針 | [インストラクション vs リファレンスの分離指針](./instructions/core/instruction-vs-reference.md) | カスタムインストラクション追加・編集時 |
+
+### 失敗防止ガイド（常時参照）
+| 技術 | 参照ファイル | 重要度 |
+|------|------------|---------|
+| TypeScript | [TypeScript失敗防止](./instructions/guidelines/typescript-pitfalls.md) | 必須 |
+| React | [React失敗防止](./instructions/guidelines/react-pitfalls.md) | 必須 |
+| JavaScript | [JavaScript失敗防止](./instructions/guidelines/javascript-pitfalls.md) | 必須 |
+| Python | [Python失敗防止](./instructions/guidelines/python-pitfalls.md) | 必須 |
+| Testing | [テスト失敗防止](./instructions/guidelines/testing-pitfalls.md) | 必須 |
 
 ## 🔧 ツール活用
 
@@ -63,27 +70,19 @@ alwaysApply: true
 project/
 ├── docs/          # ドキュメント集約
 ├── instructions/  # AI指示（このファイル群）
-│   ├── core/     # 必須ルール
-│   └── patterns/ # 参照パターン（人間向け）
+│   ├── core/     # 思考プロセス
+│   ├── guidelines/ # 失敗防止ガイド
+│   └── methodologies/ # 開発手法
+├── references/    # 実装例（人間向け）
+│   └── patterns/ # 具体的実装パターン
 └── src/          # ソースコード
 ```
 
-## 🎨 patterns/について（重要）
+## 🎨 patterns/について
 
-### 現在の状態
-`instructions/patterns/`配下には304個のファイル（3.5MB）の実装例が存在します。
-これらは**開発者向けリファレンス**であり、カスタムインストラクションではありません。
-
-### 参照ルール
-- **デフォルト**: 参照しない（創造性優先）
-- **例外的に参照する場合**:
-  - ユーザーが特定フレームワーク/ライブラリの使用を明示
-  - 「既存パターンに従って」という指示がある場合
-  - 一貫性が創造性より重要な場合
-
-### 今後の移行計画
-Issue #118に基づき、`references/patterns/`へ移動予定。
-過度な具体例への依存は創造性を制限するため、慎重に利用すること。
+`references/patterns/`配下のファイルは**開発者向けリファレンス**です。
+AIは必要と判断した場合のみ参照してください。
+過度な具体例への依存は創造性を制限します。
 
 ---
 *コンテキスト効率: 100行以内で核心を伝達*
