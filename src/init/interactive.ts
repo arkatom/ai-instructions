@@ -126,7 +126,7 @@ export class InteractiveInitializer {
     }
     
     if (config.languages.length > 0) {
-      Logger.item('Language patterns:', config.languages.map(l => `instructions/patterns/${l}/`).join(', '));
+      Logger.item('Language patterns:', config.languages.map(l => `references/patterns/${l}/`).join(', '));
     }
     
     if (config.agents && config.agents.length > 0) {

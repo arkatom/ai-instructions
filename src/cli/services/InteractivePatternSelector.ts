@@ -493,7 +493,7 @@ export class InteractivePatternSelector {
     if (relativePath.startsWith('templates/')) {
       return relativePath;
     } else {
-      return join('instructions/patterns', relativePath);
+      return join('references/patterns', relativePath);
     }
   }
 

@@ -31,10 +31,10 @@ export class PatternRegistry {
       Logger.info('🔍 Scanning pattern directories...');
       
       // Scan Japanese patterns
-      await this.scanPatternDirectory('instructions/patterns', 'ja');
+      await this.scanPatternDirectory('references/patterns', 'ja');
       
       // Scan English patterns
-      await this.scanPatternDirectory('templates/instructions/patterns', 'en');
+      await this.scanPatternDirectory('templates/references/patterns', 'en');
 
       this.isInitialized = true;
       Logger.info(`✅ Pattern registry initialized: ${this.patterns.size} files, ${this.directories.size} directories`);
