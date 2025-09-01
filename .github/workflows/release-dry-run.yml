@@ -1,0 +1,116 @@
+name: Release Dry Run
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-dry-run.yml'
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Simulate version bump
+        id: simulate
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Current version: $CURRENT_VERSION"
+          
+          # Simulate version bump based on input or default to patch
+          VERSION_TYPE="${{ github.event.inputs.version_type || 'patch' }}"
+          
+          # Calculate next version
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+          
+          case "$VERSION_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "🚀 Would bump to: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Dry run npm publish
+        run: |
+          echo "📝 Would publish version ${{ steps.simulate.outputs.new_version }} to npm"
+          npm publish --dry-run
+      
+      - name: Simulate GitHub Release
+        run: |
+          echo "📋 Would create GitHub Release:"
+          echo "  Tag: v${{ steps.simulate.outputs.new_version }}"
+          echo "  Title: Release v${{ steps.simulate.outputs.new_version }}"
+          echo ""
+          echo "✅ Dry run completed successfully!"
+          echo ""
+          echo "⚠️ Note: This is a simulation. No actual release was performed."
+      
+      - name: Summary
+        run: |
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## 🧪 Release Dry Run Results
+          
+          ### Version Information
+          - **Current Version:** $(node -p "require('./package.json').version")
+          - **Would Bump To:** ${{ steps.simulate.outputs.new_version }}
+          - **Bump Type:** ${{ github.event.inputs.version_type || 'patch' }}
+          
+          ### Actions That Would Be Performed
+          - ✅ Tests passed
+          - 📦 npm version bump
+          - 📤 npm publish (to registry)
+          - 🏷️ Git tag creation
+          - 📋 GitHub Release creation
+          
+          ### Next Steps
+          To perform an actual release:
+          1. Merge this PR to main
+          2. The release workflow will automatically trigger
+          3. Monitor the Actions tab for release status
+          
+          ⚠️ **Remember:** This was a dry run. No actual changes were made.
+          EOF
