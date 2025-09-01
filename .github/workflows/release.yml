@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'templates/**'
+      - 'instructions/**'
+      - 'src/**'
+      - 'package.json'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Check if version bump needed
+        id: check
+        run: |
+          # Get latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          PACKAGE_VERSION="v$(node -p "require('./package.json').version")"
+          
+          if [ "$LATEST_TAG" = "$PACKAGE_VERSION" ]; then
+            echo "needs_bump=true" >> $GITHUB_OUTPUT
+            echo "current_version=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
+          else
+            echo "needs_bump=false" >> $GITHUB_OUTPUT
+            echo "current_version=${PACKAGE_VERSION#v}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Configure Git
+        if: steps.check.outputs.needs_bump == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Bump version
+        if: steps.check.outputs.needs_bump == 'true'
+        id: version
+        run: |
+          npm version patch -m "chore(release): %s"
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Push version commit
+        if: steps.check.outputs.needs_bump == 'true'
+        run: |
+          git push
+          git push --tags
+      
+      - name: Publish to npm
+        if: steps.check.outputs.needs_bump == 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Create GitHub Release
+        if: steps.check.outputs.needs_bump == 'true'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.new_version }}
+          release_name: Release v${{ steps.version.outputs.new_version }}
+          body: |
+            ## 🚀 Release v${{ steps.version.outputs.new_version }}
+            
+            This release includes updates to AI instructions and patterns.
+            
+            ### Changes
+            See [commit history](https://github.com/${{ github.repository }}/compare/${{ steps.check.outputs.current_version }}...v${{ steps.version.outputs.new_version }}) for detailed changes.
+            
+            ### Installation
+            ```bash
+            npm install @arkatom/ai-instructions@${{ steps.version.outputs.new_version }}
+            ```
+          draft: false
+          prerelease: false
+      
+      - name: Notify success
+        if: success() && steps.check.outputs.needs_bump == 'true'
+        run: |
+          echo "✅ Successfully released v${{ steps.version.outputs.new_version }}"
+      
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Release failed. Please check the logs."
+          exit 1
