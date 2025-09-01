@@ -22,7 +22,12 @@
     "prepublish": "echo \"⚠️ Use 'npm run prepublishOnly' for safety\"",
     "version": "npm run build",
     "postversion": "git push && git push --tags",
-    "prepare": "husky"
+    "prepare": "husky",
+    "release": "./scripts/release.sh",
+    "release:patch": "./scripts/release.sh patch",
+    "release:minor": "./scripts/release.sh minor",
+    "release:major": "./scripts/release.sh major",
+    "release:dry-run": "npm publish --dry-run"
   },
   "repository": {
     "type": "git",
