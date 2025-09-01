@@ -24,6 +24,16 @@ npm install -g @arkatom/ai-instructions
 npx @arkatom/ai-instructions init
 ```
 
+## CI/CD & Releases
+
+This project uses automated releases via GitHub Actions. Every merge to main automatically:
+- Runs tests
+- Bumps version
+- Publishes to npm
+- Creates GitHub release
+
+See [Release Documentation](./docs/RELEASE.md) for details.
+
 ## Quick Start
 
 ### 1. Generate instruction templates

@@ -1,0 +1,242 @@
+name: Release Dry Run
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-dry-run.yml'
+      - 'package.json'
+      - 'scripts/release.sh'
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests with coverage
+        run: |
+          npm test -- --coverage --watchAll=false || true
+          npm test
+      
+      - name: Validate package integrity
+        run: |
+          echo "📦 Validating package integrity..."
+          npm pack --dry-run
+          
+          echo "🔍 Running security audit..."
+          npm audit --audit-level moderate || echo "⚠️ Some vulnerabilities found (non-blocking)"
+          
+          echo "📊 Checking for outdated dependencies..."
+          npm outdated --depth=0 || echo "ℹ️ Some packages could be updated"
+      
+      - name: Validate NPM Token (if available)
+        run: |
+          if [ -n "$NODE_AUTH_TOKEN" ]; then
+            echo "🔐 NPM token is configured"
+            npm whoami || echo "⚠️ NPM token validation failed"
+          else
+            echo "⚠️ NPM_TOKEN not configured - actual release will fail without it"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        continue-on-error: true
+      
+      - name: Check GitHub CLI availability
+        run: |
+          if command -v gh &> /dev/null; then
+            echo "✅ GitHub CLI is available"
+            gh --version
+          else
+            echo "⚠️ GitHub CLI not available in this environment"
+          fi
+      
+      - name: Simulate version bump
+        id: simulate
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Current version: $CURRENT_VERSION"
+          
+          # Get latest tag for comparison
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "🏷️ Latest tag: $LATEST_TAG"
+          
+          # Simulate version bump based on input or default to patch
+          VERSION_TYPE="${{ github.event.inputs.version_type || 'patch' }}"
+          
+          # Calculate next version
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+          
+          case "$VERSION_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "🚀 Would bump to: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Validate package.json
+        run: |
+          echo "🔍 Validating package.json..."
+          node -e "
+            const pkg = require('./package.json');
+            const errors = [];
+            
+            // Check required fields
+            if (!pkg.name) errors.push('Missing name field');
+            if (!pkg.version) errors.push('Missing version field');
+            if (!pkg.description) errors.push('Missing description field');
+            if (!pkg.main) errors.push('Missing main field');
+            if (!pkg.repository) errors.push('Missing repository field');
+            if (!pkg.license) errors.push('Missing license field');
+            
+            // Check npm scripts
+            const requiredScripts = ['test', 'build', 'lint'];
+            requiredScripts.forEach(script => {
+              if (!pkg.scripts || !pkg.scripts[script]) {
+                errors.push(\`Missing script: \${script}\`);
+              }
+            });
+            
+            if (errors.length > 0) {
+              console.error('❌ Validation errors:');
+              errors.forEach(e => console.error('  - ' + e));
+              process.exit(1);
+            } else {
+              console.log('✅ package.json validation passed');
+            }
+          "
+      
+      - name: Test npm pack
+        run: |
+          echo "📦 Testing npm pack..."
+          npm pack
+          TARBALL=$(ls *.tgz | head -1)
+          echo "📊 Package size: $(du -h $TARBALL | cut -f1)"
+          tar -tzf $TARBALL | head -20
+          rm $TARBALL
+      
+      - name: Dry run npm publish
+        run: |
+          echo "📝 Would publish version ${{ steps.simulate.outputs.new_version }} to npm"
+          npm publish --dry-run
+      
+      - name: Generate simulated changelog
+        id: changelog
+        run: |
+          echo "📋 Generating changelog preview..."
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            CHANGELOG=$(git log $LAST_TAG..HEAD --pretty=format:"- %s" --no-merges | head -10)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges --max-count=10)
+          fi
+          
+          # Escape for GitHub Actions
+          CHANGELOG="${CHANGELOG//'%'/'%25'}"
+          CHANGELOG="${CHANGELOG//$'
+'/'%0A'}"
+          CHANGELOG="${CHANGELOG//$''/'%0D'}"
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Simulate GitHub Release
+        run: |
+          echo "📋 Would create GitHub Release:"
+          echo "  Tag: v${{ steps.simulate.outputs.new_version }}"
+          echo "  Title: Release v${{ steps.simulate.outputs.new_version }}"
+          echo ""
+          echo "Release notes preview:"
+          echo "------------------------"
+          echo "## 🚀 Release v${{ steps.simulate.outputs.new_version }}"
+          echo ""
+          echo "### 📝 Changes"
+          echo "${{ steps.changelog.outputs.changelog }}"
+          echo ""
+          echo "### 📦 Installation"
+          echo "\`\`\`bash"
+          echo "npm install @arkatom/ai-instructions@${{ steps.simulate.outputs.new_version }}"
+          echo "\`\`\`"
+          echo "------------------------"
+          echo ""
+          echo "✅ Dry run completed successfully!"
+          echo ""
+          echo "⚠️ Note: This is a simulation. No actual release was performed."
+      
+      - name: Summary
+        run: |
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## 🧪 Release Dry Run Results
+          
+          ### Version Information
+          - **Current Version:** ${{ steps.simulate.outputs.current_version }}
+          - **Would Bump To:** ${{ steps.simulate.outputs.new_version }}
+          - **Bump Type:** ${{ github.event.inputs.version_type || 'patch' }}
+          
+          ### Validation Results
+          - ✅ Tests passed
+          - ✅ Package integrity verified
+          - ✅ package.json validated
+          - ✅ npm pack successful
+          - ${{ secrets.NPM_TOKEN && '✅ NPM token configured' || '⚠️ NPM token not configured' }}
+          
+          ### Simulated Actions
+          - 📦 npm version bump to ${{ steps.simulate.outputs.new_version }}
+          - 📤 npm publish (dry-run executed)
+          - 🏷️ Git tag v${{ steps.simulate.outputs.new_version }}
+          - 📋 GitHub Release with changelog
+          
+          ### Preview Changelog
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ### Next Steps
+          To perform an actual release:
+          1. Ensure NPM_TOKEN secret is configured
+          2. Merge this PR to main
+          3. The release workflow will automatically trigger
+          4. Monitor the Actions tab for release status
+          
+          ⚠️ **Remember:** This was a dry run. No actual changes were made.
+          EOF
