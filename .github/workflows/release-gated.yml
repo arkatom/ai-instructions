@@ -1,0 +1,234 @@
+name: Gated Release Process
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'templates/**'
+      - 'instructions/**'
+      - 'src/**'
+      - 'package.json'
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.evaluate.outputs.should_release }}
+      version_type: ${{ steps.evaluate.outputs.version_type }}
+      
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run quality checks
+        id: quality
+        run: |
+          echo "🔍 Running comprehensive quality checks..."
+          
+          # Test coverage check
+          npm test -- --coverage --watchAll=false --coverageReporters=json-summary
+          COVERAGE=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          
+          # TypeScript strict check
+          npx tsc --noEmit --strict
+          echo "typescript=passed" >> $GITHUB_OUTPUT
+          
+          # ESLint check
+          npm run lint -- --max-warnings=0
+          echo "lint=passed" >> $GITHUB_OUTPUT
+          
+          # Bundle size check
+          npm run build
+          BUNDLE_SIZE=$(du -sb dist | cut -f1)
+          echo "bundle_size=$BUNDLE_SIZE" >> $GITHUB_OUTPUT
+      
+      - name: Analyze commit messages
+        id: commits
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"%s")
+          else
+            COMMITS=$(git log --pretty=format:"%s" --max-count=20)
+          fi
+          
+          # Analyze commit types
+          FEAT_COUNT=$(echo "$COMMITS" | grep -c "^feat" || true)
+          FIX_COUNT=$(echo "$COMMITS" | grep -c "^fix" || true)
+          BREAKING_COUNT=$(echo "$COMMITS" | grep -c "BREAKING CHANGE" || true)
+          CHORE_COUNT=$(echo "$COMMITS" | grep -c "^chore" || true)
+          
+          echo "feat_count=$FEAT_COUNT" >> $GITHUB_OUTPUT
+          echo "fix_count=$FIX_COUNT" >> $GITHUB_OUTPUT
+          echo "breaking_count=$BREAKING_COUNT" >> $GITHUB_OUTPUT
+          echo "chore_count=$CHORE_COUNT" >> $GITHUB_OUTPUT
+      
+      - name: Evaluate release decision
+        id: evaluate
+        run: |
+          # Quality gate evaluation
+          COVERAGE="${{ steps.quality.outputs.coverage }}"
+          FEAT_COUNT="${{ steps.commits.outputs.feat_count }}"
+          FIX_COUNT="${{ steps.commits.outputs.fix_count }}"
+          BREAKING_COUNT="${{ steps.commits.outputs.breaking_count }}"
+          CHORE_COUNT="${{ steps.commits.outputs.chore_count }}"
+          
+          # Determine if we should release
+          SHOULD_RELEASE="false"
+          VERSION_TYPE="none"
+          
+          # Coverage must be above 70%
+          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+            echo "❌ Coverage too low: $COVERAGE%"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "version_type=none" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Determine version type based on commits
+          if [ "$BREAKING_COUNT" -gt 0 ]; then
+            VERSION_TYPE="major"
+            SHOULD_RELEASE="true"
+          elif [ "$FEAT_COUNT" -gt 0 ]; then
+            VERSION_TYPE="minor"
+            SHOULD_RELEASE="true"
+          elif [ "$FIX_COUNT" -gt 0 ]; then
+            VERSION_TYPE="patch"
+            SHOULD_RELEASE="true"
+          else
+            echo "ℹ️ Only chore commits, skipping release"
+          fi
+          
+          echo "should_release=$SHOULD_RELEASE" >> $GITHUB_OUTPUT
+          echo "version_type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+          
+          # Create quality report
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## 📊 Release Quality Report
+          
+          ### Metrics
+          - **Test Coverage:** $COVERAGE%
+          - **TypeScript:** ${{ steps.quality.outputs.typescript }}
+          - **ESLint:** ${{ steps.quality.outputs.lint }}
+          - **Bundle Size:** $((${{ steps.quality.outputs.bundle_size }} / 1024))KB
+          
+          ### Commit Analysis
+          - Breaking Changes: $BREAKING_COUNT
+          - Features: $FEAT_COUNT
+          - Fixes: $FIX_COUNT
+          - Chores: $CHORE_COUNT
+          
+          ### Decision
+          - **Should Release:** $SHOULD_RELEASE
+          - **Version Type:** $VERSION_TYPE
+          EOF
+
+  release-approval:
+    needs: quality-check
+    if: needs.quality-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    environment: production  # Requires manual approval
+    
+    steps:
+      - name: Request approval
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚀 Release Approval Required: ${context.sha.substring(0, 7)}`,
+              body: `## Release Quality Gate
+              
+              A new release is ready for approval.
+              
+              **Version Type:** ${{ needs.quality-check.outputs.version_type }}
+              **Commit:** ${context.sha}
+              
+              Please review the quality report and approve the release.
+              
+              This issue will auto-close after release or timeout.`,
+              labels: ['release', 'approval-required']
+            });
+            
+            core.setOutput('issue_number', issue.data.number);
+
+  perform-release:
+    needs: [quality-check, release-approval]
+    if: needs.quality-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Bump version
+        id: version
+        run: |
+          VERSION_TYPE="${{ needs.quality-check.outputs.version_type }}"
+          npm version $VERSION_TYPE --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          git add package.json package-lock.json
+          git commit -m "chore(release): $NEW_VERSION [skip ci]"
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+      
+      - name: Publish to npm (dry-run first)
+        run: |
+          echo "🧪 Dry run first..."
+          npm publish --dry-run
+          
+          echo "📦 Publishing to npm..."
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Push changes
+        run: |
+          git push origin main
+          git push origin "v${{ steps.version.outputs.new_version }}"
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.new_version }}
+          name: Release v${{ steps.version.outputs.new_version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

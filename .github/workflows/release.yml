@@ -1,4 +1,4 @@
-name: Release
+name: Release (DISABLED - Use release-gated.yml)
 
 on:
   push:
@@ -134,7 +134,8 @@ jobs:
           CHANGELOG="${CHANGELOG//'%'/'%25'}"
           CHANGELOG="${CHANGELOG//$'
 '/'%0A'}"
-          CHANGELOG="${CHANGELOG//$''/'%0D'}"
+          CHANGELOG="${CHANGELOG//$'
+'/'%0D'}"
           
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
