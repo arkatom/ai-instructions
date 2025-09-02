@@ -1,0 +1,258 @@
+name: Bypass Detection & Enforcement
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [ opened, synchronize ]
+  schedule:
+    - cron: '0 */6 * * *'  # 6時間ごとに監査
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  detect-bypass:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check for force push
+        id: force_push
+        run: |
+          # Force pushの検出
+          if [ "${{ github.event_name }}" = "push" ]; then
+            if [ "${{ github.event.forced }}" = "true" ]; then
+              echo "::error::🚨 Force push detected!"
+              echo "force_pushed=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+      
+      - name: Check commit verification
+        id: commit_check
+        run: |
+          # 署名されていないコミットの検出
+          UNSIGNED_COMMITS=$(git log --format='%H %G?' origin/main..HEAD | grep -c ' N' || true)
+          if [ "$UNSIGNED_COMMITS" -gt 0 ]; then
+            echo "::warning::⚠️ $UNSIGNED_COMMITS unsigned commits detected"
+            echo "unsigned_count=$UNSIGNED_COMMITS" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Analyze commit messages
+        id: commit_analysis
+        run: |
+          # 疑わしいコミットメッセージの検出
+          SUSPICIOUS_PATTERNS=(
+            "skip ci"
+            "no verify"
+            "force"
+            "bypass"
+            "ignore"
+            "disable"
+            "YOLO"
+            "whatever"
+            "temp"
+            "test"
+          )
+          
+          SUSPICIOUS_COUNT=0
+          for pattern in "${SUSPICIOUS_PATTERNS[@]}"; do
+            COUNT=$(git log --format='%s' origin/main..HEAD | grep -ci "$pattern" || true)
+            SUSPICIOUS_COUNT=$((SUSPICIOUS_COUNT + COUNT))
+          done
+          
+          if [ "$SUSPICIOUS_COUNT" -gt 0 ]; then
+            echo "::warning::🔍 $SUSPICIOUS_COUNT suspicious commit messages detected"
+            echo "suspicious_commits=$SUSPICIOUS_COUNT" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Check test coverage
+        id: coverage
+        run: |
+          # カバレッジ低下の検出
+          npm ci
+          npm test -- --coverage --watchAll=false --coverageReporters=json-summary || true
+          
+          if [ -f "coverage/coverage-summary.json" ]; then
+            COVERAGE=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
+            
+            # 前回のカバレッジと比較
+            PREV_COVERAGE=$(gh api repos/${{ github.repository }}/contents/.github/coverage-baseline.txt \
+              --jq '.content' | base64 -d 2>/dev/null || echo "0")
+            
+            if (( $(echo "$COVERAGE < $PREV_COVERAGE - 5" | bc -l) )); then
+              echo "::error::📉 Coverage dropped significantly: $PREV_COVERAGE% → $COVERAGE%"
+              echo "coverage_dropped=true" >> $GITHUB_OUTPUT
+            fi
+            
+            # 新しいベースラインを保存
+            echo "$COVERAGE" > .github/coverage-baseline.txt
+          fi
+      
+      - name: Audit bypass events
+        id: audit
+        run: |
+          # バイパスイベントの監査
+          if [ -f ".github/bypass-audit.json" ]; then
+            MONTH=$(date +%Y-%m)
+            MONTH_COUNT=$(jq "[.bypass_events[] | select(.timestamp | startswith(\"$MONTH\"))] | length" .github/bypass-audit.json)
+            MAX_ALLOWED=$(jq '.policy.max_bypasses_per_month' .github/bypass-audit.json)
+            
+            echo "month_bypasses=$MONTH_COUNT" >> $GITHUB_OUTPUT
+            echo "max_allowed=$MAX_ALLOWED" >> $GITHUB_OUTPUT
+            
+            if [ "$MONTH_COUNT" -ge "$MAX_ALLOWED" ]; then
+              echo "::error::🚫 Monthly bypass limit reached: $MONTH_COUNT/$MAX_ALLOWED"
+              echo "limit_exceeded=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+      
+      - name: Generate security report
+        if: always()
+        run: |
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## 🔒 Security & Quality Report
+          
+          ### Bypass Detection Results
+          - **Force Push:** ${{ steps.force_push.outputs.force_pushed == 'true' && '🔴 Detected' || '✅ Not detected' }}
+          - **Unsigned Commits:** ${{ steps.commit_check.outputs.unsigned_count || '0' }}
+          - **Suspicious Messages:** ${{ steps.commit_analysis.outputs.suspicious_commits || '0' }}
+          - **Coverage Status:** ${{ steps.coverage.outputs.coverage_dropped == 'true' && '📉 Dropped' || '✅ Maintained' }}
+          
+          ### Monthly Bypass Usage
+          - **This Month:** ${{ steps.audit.outputs.month_bypasses || '0' }}/${{ steps.audit.outputs.max_allowed || '3' }}
+          - **Status:** ${{ steps.audit.outputs.limit_exceeded == 'true' && '🚫 Limit Exceeded' || '✅ Within Limit' }}
+          
+          ### Recommendations
+          $(if [ "${{ steps.force_push.outputs.force_pushed }}" = "true" ]; then
+            echo "- ⚠️ Avoid force pushing to protected branches"
+          fi)
+          $(if [ "${{ steps.commit_check.outputs.unsigned_count }}" -gt "0" ]; then
+            echo "- 🔐 Sign your commits with GPG"
+          fi)
+          $(if [ "${{ steps.coverage.outputs.coverage_dropped }}" = "true" ]; then
+            echo "- 📊 Improve test coverage before merging"
+          fi)
+          EOF
+      
+      - name: Create issue for violations
+        if: |
+          steps.force_push.outputs.force_pushed == 'true' ||
+          steps.audit.outputs.limit_exceeded == 'true' ||
+          steps.coverage.outputs.coverage_dropped == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Quality Bypass Violations Detected';
+            const body = `## Violations Found
+            
+            ${context.payload.pusher ? `**User:** ${context.payload.pusher.name}` : ''}
+            **Branch:** ${context.ref}
+            **Commit:** ${context.sha}
+            
+            ### Violations
+            ${steps.force_push.outputs.force_pushed === 'true' ? '- 🔴 Force push detected\n' : ''}
+            ${steps.audit.outputs.limit_exceeded === 'true' ? '- 🔴 Monthly bypass limit exceeded\n' : ''}
+            ${steps.coverage.outputs.coverage_dropped === 'true' ? '- 🔴 Test coverage dropped significantly\n' : ''}
+            
+            ### Required Actions
+            1. Review the violations
+            2. Provide justification
+            3. Implement corrective measures
+            
+            This issue requires immediate attention.`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['security', 'quality-violation', 'high-priority']
+            });
+      
+      - name: Block PR if violations
+        if: |
+          github.event_name == 'pull_request' && (
+            steps.force_push.outputs.force_pushed == 'true' ||
+            steps.audit.outputs.limit_exceeded == 'true' ||
+            steps.coverage.outputs.coverage_dropped == 'true'
+          )
+        run: |
+          echo "::error::PR blocked due to quality violations"
+          exit 1
+
+  hook-integrity:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Verify hook integrity
+        run: |
+          chmod +x scripts/protect-hooks.sh
+          ./scripts/protect-hooks.sh verify
+      
+      - name: Check hook files exist
+        run: |
+          # 必須フックファイルの存在確認
+          REQUIRED_HOOKS=(
+            ".husky/pre-commit"
+            ".husky/commit-msg"
+            ".husky/pre-push"
+          )
+          
+          for hook in "${REQUIRED_HOOKS[@]}"; do
+            if [ ! -f "$hook" ]; then
+              echo "::error::Required hook missing: $hook"
+              exit 1
+            fi
+          done
+      
+      - name: Validate hook content
+        run: |
+          # フックが無効化されていないか確認
+          for hook in .husky/*; do
+            if [ -f "$hook" ]; then
+              # "exit 0" や "true" で早期終了していないか
+              if grep -q "^exit 0" "$hook" || grep -q "^true$" "$hook"; then
+                echo "::error::Hook appears to be disabled: $hook"
+                exit 1
+              fi
+            fi
+          done
+
+  monthly-audit:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'  # スケジュール実行時
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate monthly report
+        run: |
+          # 月次監査レポート生成
+          LAST_MONTH=$(date -d "1 month ago" +%Y-%m)
+          
+          if [ -f ".github/bypass-audit.json" ]; then
+            jq --arg month "$LAST_MONTH" '
+              .bypass_events 
+              | map(select(.timestamp | startswith($month)))
+              | group_by(.user)
+              | map({
+                  user: .[0].user,
+                  count: length,
+                  types: map(.type) | unique
+                })' .github/bypass-audit.json > monthly-report.json
+            
+            # レポートをIssueとして作成
+            gh issue create \
+              --title "📊 Monthly Bypass Audit Report: $LAST_MONTH" \
+              --body "$(cat monthly-report.json | jq -r 'to_entries | map("- **\(.value.user)**: \(.value.count) bypasses (\(.value.types | join(", ")))") | join("\n")')" \
+              --label "audit,monthly-report"
+          fi

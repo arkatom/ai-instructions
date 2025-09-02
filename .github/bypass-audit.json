@@ -1,0 +1,9 @@
+{
+  "bypass_events": [],
+  "policy": {
+    "max_bypasses_per_month": 3,
+    "require_justification": true,
+    "notification_channels": ["github_issue", "slack", "email"],
+    "escalation_threshold": 5
+  }
+}

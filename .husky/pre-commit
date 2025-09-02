@@ -1,3 +1,50 @@
+#!/usr/bin/env sh
+
+# ===== バイパス防止システム =====
+# このセクションは絶対に削除・変更しないこと
+
+# 環境変数によるバイパス試行を検出
+if [ -n "$SKIP_HOOKS" ] || [ -n "$NO_VERIFY" ] || [ -n "$BYPASS_HOOKS" ]; then
+  echo "🚨 CRITICAL ERROR: Hook bypass attempt detected!"
+  echo "❌ Environment variables that bypass hooks are not allowed."
+  echo "📖 Please read: docs/BYPASS_POLICY.md"
+  echo ""
+  echo "If this is truly an emergency:"
+  echo "1. Create a bypass request issue: gh issue create --title 'Bypass Request'"
+  echo "2. Get 2+ approvals from senior developers"
+  echo "3. Use the approved bypass procedure with audit logging"
+  
+  # バイパス試行を記録
+  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ"): Bypass attempt by $(git config user.name || whoami)" >> .github/bypass-attempts.log
+  
+  # GitHub Issueを自動作成（可能な場合）
+  if command -v gh &> /dev/null; then
+    gh issue create \
+      --title "⚠️ Bypass Attempt Detected: $(git config user.name || whoami)" \
+      --body "Attempted to bypass pre-commit hooks at $(date)" \
+      --label "security,bypass-attempt" 2>/dev/null || true
+  fi
+  
+  exit 1
+fi
+
+# フック自体が改竄されていないかチェック
+HOOK_HASH="$(sha256sum "$0" 2>/dev/null | cut -d' ' -f1)"
+EXPECTED_HASH_FILE=".github/hooks-integrity.sha256"
+
+if [ -f "$EXPECTED_HASH_FILE" ]; then
+  EXPECTED_HASH="$(grep pre-commit "$EXPECTED_HASH_FILE" 2>/dev/null | cut -d' ' -f2)"
+  if [ -n "$EXPECTED_HASH" ] && [ "$HOOK_HASH" != "$EXPECTED_HASH" ]; then
+    echo "🚨 SECURITY ALERT: Pre-commit hook has been tampered with!"
+    echo "Expected: $EXPECTED_HASH"
+    echo "Actual: $HOOK_HASH"
+    echo "Please restore the original hook from version control."
+    exit 1
+  fi
+fi
+
+# ===== 警告メッセージ =====
+
 # 文字色定義
 RED="\033[1;31m"
 GREEN="\033[1;32m"
@@ -15,12 +62,16 @@ echo "${RED}\"--no-verify\" option MUST NOT BE USED. I AM WATCHING YOU.${RESET}"
 echo "${RED}Any inappropriate response will UNDERMINE your TRUST and VALUE.${RESET}"
 echo "${RED}============================================${RESET}"
 
+# ===== 品質チェック =====
 
 # TypeScript compile check (silent on success)
 echo "🔍 TypeScript check..."
 if ! npm run build > /dev/null 2>&1; then
   echo "❌ TypeScript compilation failed"
   npm run build
+  
+  # 失敗を記録
+  echo "$(date): TypeScript check failed" >> .github/quality-failures.log
   exit 1
 fi
 echo "✅ TypeScript OK"
@@ -32,6 +83,9 @@ if npm run lint > /dev/null 2>&1; then
 else
   echo "❌ Lint failed - blocking commit:"
   npm run lint  # Show errors
+  
+  # 失敗を記録
+  echo "$(date): Lint check failed" >> .github/quality-failures.log
   exit 1
 fi
 
@@ -40,8 +94,32 @@ echo "🧪 Running tests..."
 if ! npm test > /dev/null 2>&1; then
   echo "❌ Tests failed - blocking commit:"
   npm test | grep -E "(FAIL|failed|Test Suites:)" || npm test
+  
+  # 失敗を記録
+  echo "$(date): Test check failed" >> .github/quality-failures.log
   exit 1
 fi
 echo "✅ All tests passed"
 
+# ===== 最終チェック =====
+
+# カバレッジチェック（オプション）
+if [ -f "coverage/coverage-summary.json" ]; then
+  COVERAGE=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct" 2>/dev/null || echo "0")
+  if (( $(echo "$COVERAGE < 70" | bc -l 2>/dev/null || echo "0") )); then
+    echo "⚠️ Warning: Test coverage is below 70% ($COVERAGE%)"
+    echo "Consider adding more tests before committing."
+  fi
+fi
+
+# コミットメッセージの品質チェック準備
+echo ""
+echo "💡 Reminder: Write meaningful commit messages following conventional commits:"
+echo "   - feat: new feature"
+echo "   - fix: bug fix"
+echo "   - docs: documentation"
+echo "   - chore: maintenance"
+echo ""
+
 echo "${GREEN}✅ Code check completed! We have passed the quality standards.${RESET}"
+echo "${CYAN}Your commitment to quality is appreciated! 🙏${RESET}"
