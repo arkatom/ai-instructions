@@ -1,9 +1,20 @@
 {
-  "bypass_events": [],
+  "version": "1.0.0",
   "policy": {
-    "max_bypasses_per_month": 3,
-    "require_justification": true,
-    "notification_channels": ["github_issue", "slack", "email"],
-    "escalation_threshold": 5
+    "description": "Pre-commit hook bypass audit policy",
+    "effective_date": "2025-01-27",
+    "approval_required": 2,
+    "emergency_contact": "@arkatom"
+  },
+  "audit_log": [],
+  "monthly_limits": {
+    "warning": "This limit exists to detect patterns, not to enable bypassing",
+    "max_bypasses_per_user": 0,
+    "review_required_after": 0
+  },
+  "enforcement": {
+    "auto_create_issue": true,
+    "notify_security_team": true,
+    "block_future_commits": false
   }
 }
