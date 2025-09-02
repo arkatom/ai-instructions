@@ -16,6 +16,11 @@ on:
       - 'README.md'
       - 'docs/**'
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   documentation-check:
     runs-on: ubuntu-latest
