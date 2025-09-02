@@ -146,8 +146,16 @@ jobs:
           steps.audit.outputs.limit_exceeded == 'true' ||
           steps.coverage.outputs.coverage_dropped == 'true'
         uses: actions/github-script@v7
+        env:
+          FORCE_PUSHED: ${{ steps.force_push.outputs.force_pushed }}
+          LIMIT_EXCEEDED: ${{ steps.audit.outputs.limit_exceeded }}
+          COVERAGE_DROPPED: ${{ steps.coverage.outputs.coverage_dropped }}
         with:
           script: |
+            const forcePushed = process.env.FORCE_PUSHED === 'true';
+            const limitExceeded = process.env.LIMIT_EXCEEDED === 'true';
+            const coverageDropped = process.env.COVERAGE_DROPPED === 'true';
+            
             const title = '🚨 Quality Bypass Violations Detected';
             const body = `## Violations Found
             
@@ -156,9 +164,9 @@ jobs:
             **Commit:** ${context.sha}
             
             ### Violations
-            ${steps.force_push.outputs.force_pushed === 'true' ? '- 🔴 Force push detected\n' : ''}
-            ${steps.audit.outputs.limit_exceeded === 'true' ? '- 🔴 Monthly bypass limit exceeded\n' : ''}
-            ${steps.coverage.outputs.coverage_dropped === 'true' ? '- 🔴 Test coverage dropped significantly\n' : ''}
+            ${forcePushed ? '- 🔴 Force push detected\n' : ''}
+            ${limitExceeded ? '- 🔴 Monthly bypass limit exceeded\n' : ''}
+            ${coverageDropped ? '- 🔴 Test coverage dropped significantly\n' : ''}
             
             ### Required Actions
             1. Review the violations
