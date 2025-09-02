@@ -100,8 +100,8 @@ jobs:
           # バイパスイベントの監査
           if [ -f ".github/bypass-audit.json" ]; then
             MONTH=$(date +%Y-%m)
-            MONTH_COUNT=$(jq "[.bypass_events[] | select(.timestamp | startswith(\"$MONTH\"))] | length" .github/bypass-audit.json)
-            MAX_ALLOWED=$(jq '.policy.max_bypasses_per_month' .github/bypass-audit.json)
+            MONTH_COUNT=$(jq "[.audit_log[] | select(.timestamp | startswith(\"$MONTH\"))] | length" .github/bypass-audit.json)
+            MAX_ALLOWED=$(jq '.monthly_limits.max_bypasses_per_user' .github/bypass-audit.json)
             
             echo "month_bypasses=$MONTH_COUNT" >> $GITHUB_OUTPUT
             echo "max_allowed=$MAX_ALLOWED" >> $GITHUB_OUTPUT
