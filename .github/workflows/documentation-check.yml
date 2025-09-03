@@ -16,6 +16,11 @@ on:
       - 'README.md'
       - 'docs/**'
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   documentation-check:
     runs-on: ubuntu-latest
@@ -62,8 +67,14 @@ jobs:
     - name: Create or update documentation issue
       if: steps.doc-check.outputs.needs_update == 'true' || steps.circular-check.outcome == 'failure'
       uses: actions/github-script@v7
+      env:
+        CIRCULAR_CHECK_OUTCOME: ${{ steps.circular-check.outcome }}
+        DOC_CHECK_NEEDS_UPDATE: ${{ steps.doc-check.outputs.needs_update }}
       with:
         script: |
+          const circularCheckFailed = process.env.CIRCULAR_CHECK_OUTCOME === 'failure';
+          const docNeedsUpdate = process.env.DOC_CHECK_NEEDS_UPDATE === 'true';
+          
           const title = '📚 [Scheduled] Documentation & Architecture Update Needed';
           const body = `## 📋 Documentation Check Results
           
@@ -75,8 +86,8 @@ jobs:
           - ✅ Directory structure accuracy
           
           ### Issues Found:
-          ${steps.circular-check.outcome === 'failure' ? '- ⚠️ Circular dependencies detected' : ''}
-          ${steps.doc-check.outputs.needs_update === 'true' ? '- ⚠️ Documentation needs updating' : ''}
+          ${circularCheckFailed ? '- ⚠️ Circular dependencies detected' : ''}
+          ${docNeedsUpdate ? '- ⚠️ Documentation needs updating' : ''}
           
           ### Required Actions:
           1. Review and update README.md architecture section

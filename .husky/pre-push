@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+
+# プッシュ前の最終チェック
+
+# 色定義
+RED="\033[1;31m"
+GREEN="\033[1;32m"
+CYAN="\033[1;36m"
+RESET="\033[0m"
+
+echo "${CYAN}🚀 Pre-push checks...${RESET}"
+
+# mainブランチへの直接プッシュを防ぐ
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" = "main" ]; then
+  echo "${RED}❌ Direct push to main branch is not allowed!${RESET}"
+  echo "Please create a pull request instead."
+  exit 1
+fi
+
+# テストの実行
+echo "🧪 Running tests..."
+if ! npm test > /dev/null 2>&1; then
+  echo "${RED}❌ Tests failed. Fix them before pushing.${RESET}"
+  npm test
+  exit 1
+fi
+
+# ビルドチェック
+echo "🔨 Checking build..."
+if ! npm run build > /dev/null 2>&1; then
+  echo "${RED}❌ Build failed.${RESET}"
+  npm run build
+  exit 1
+fi
+
+echo "${GREEN}✅ All pre-push checks passed!${RESET}"

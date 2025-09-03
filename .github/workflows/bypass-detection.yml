@@ -73,10 +73,17 @@ jobs:
       
       - name: Check test coverage
         id: coverage
+        timeout-minutes: 5  # 5分でタイムアウト（十分な余裕を確保）
         run: |
           # カバレッジ低下の検出
-          npm ci
-          npm test -- --coverage --watchAll=false --coverageReporters=json-summary || true
+          echo "::notice::Installing dependencies..."
+          npm ci --prefer-offline --no-audit
+          
+          echo "::notice::Running CI tests with coverage..."
+          # Run tests but don't fail the step
+          npm run test:ci || {
+            echo "::warning::Tests completed with coverage threshold warnings"
+          }
           
           if [ -f "coverage/coverage-summary.json" ]; then
             COVERAGE=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
@@ -100,8 +107,8 @@ jobs:
           # バイパスイベントの監査
           if [ -f ".github/bypass-audit.json" ]; then
             MONTH=$(date +%Y-%m)
-            MONTH_COUNT=$(jq "[.bypass_events[] | select(.timestamp | startswith(\"$MONTH\"))] | length" .github/bypass-audit.json)
-            MAX_ALLOWED=$(jq '.policy.max_bypasses_per_month' .github/bypass-audit.json)
+            MONTH_COUNT=$(jq "[.audit_log[] | select(.timestamp | startswith(\"$MONTH\"))] | length" .github/bypass-audit.json)
+            MAX_ALLOWED=$(jq '.monthly_limits.max_bypasses_per_user' .github/bypass-audit.json)
             
             echo "month_bypasses=$MONTH_COUNT" >> $GITHUB_OUTPUT
             echo "max_allowed=$MAX_ALLOWED" >> $GITHUB_OUTPUT
@@ -146,8 +153,16 @@ jobs:
           steps.audit.outputs.limit_exceeded == 'true' ||
           steps.coverage.outputs.coverage_dropped == 'true'
         uses: actions/github-script@v7
+        env:
+          FORCE_PUSHED: ${{ steps.force_push.outputs.force_pushed }}
+          LIMIT_EXCEEDED: ${{ steps.audit.outputs.limit_exceeded }}
+          COVERAGE_DROPPED: ${{ steps.coverage.outputs.coverage_dropped }}
         with:
           script: |
+            const forcePushed = process.env.FORCE_PUSHED === 'true';
+            const limitExceeded = process.env.LIMIT_EXCEEDED === 'true';
+            const coverageDropped = process.env.COVERAGE_DROPPED === 'true';
+            
             const title = '🚨 Quality Bypass Violations Detected';
             const body = `## Violations Found
             
@@ -156,9 +171,9 @@ jobs:
             **Commit:** ${context.sha}
             
             ### Violations
-            ${steps.force_push.outputs.force_pushed === 'true' ? '- 🔴 Force push detected\n' : ''}
-            ${steps.audit.outputs.limit_exceeded === 'true' ? '- 🔴 Monthly bypass limit exceeded\n' : ''}
-            ${steps.coverage.outputs.coverage_dropped === 'true' ? '- 🔴 Test coverage dropped significantly\n' : ''}
+            ${forcePushed ? '- 🔴 Force push detected\n' : ''}
+            ${limitExceeded ? '- 🔴 Monthly bypass limit exceeded\n' : ''}
+            ${coverageDropped ? '- 🔴 Test coverage dropped significantly\n' : ''}
             
             ### Required Actions
             1. Review the violations

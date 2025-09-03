@@ -1,0 +1,51 @@
+#!/usr/bin/env sh
+
+# コミットメッセージの品質チェック
+
+# 色定義
+RED="\033[1;31m"
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+RESET="\033[0m"
+
+echo "📝 Checking commit message format..."
+
+# コミットメッセージを取得
+COMMIT_MSG=$(cat "$1")
+
+# Conventional Commits形式のチェック
+PATTERN="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,100}"
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+  echo "${RED}❌ Invalid commit message format!${RESET}"
+  echo ""
+  echo "${YELLOW}Expected format:${RESET}"
+  echo "  type(scope): description"
+  echo ""
+  echo "${YELLOW}Valid types:${RESET}"
+  echo "  feat:     new feature"
+  echo "  fix:      bug fix"
+  echo "  docs:     documentation only"
+  echo "  style:    formatting, missing semicolons, etc"
+  echo "  refactor: code change that neither fixes a bug nor adds a feature"
+  echo "  test:     adding missing tests"
+  echo "  chore:    maintenance"
+  echo "  perf:     performance improvement"
+  echo "  ci:       CI configuration"
+  echo "  build:    build system"
+  echo "  revert:   revert previous commit"
+  echo ""
+  echo "${YELLOW}Your message:${RESET}"
+  echo "  $COMMIT_MSG"
+  echo ""
+  exit 1
+fi
+
+# メッセージ長のチェック
+FIRST_LINE=$(echo "$COMMIT_MSG" | head -n1)
+if [ ${#FIRST_LINE} -gt 100 ]; then
+  echo "${RED}❌ Commit message too long (${#FIRST_LINE} chars, max 100)${RESET}"
+  exit 1
+fi
+
+echo "${GREEN}✅ Commit message format OK${RESET}"
