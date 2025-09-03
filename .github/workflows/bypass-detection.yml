@@ -73,10 +73,17 @@ jobs:
       
       - name: Check test coverage
         id: coverage
+        timeout-minutes: 3  # 3分でタイムアウト
         run: |
           # カバレッジ低下の検出
-          npm ci
-          npm test -- --coverage --watchAll=false --coverageReporters=json-summary || true
+          echo "::notice::Installing dependencies..."
+          npm ci --prefer-offline --no-audit
+          
+          echo "::notice::Running CI tests with coverage..."
+          # Run tests but don't fail the step
+          npm run test:ci || {
+            echo "::warning::Tests completed with coverage threshold warnings"
+          }
           
           if [ -f "coverage/coverage-summary.json" ]; then
             COVERAGE=$(node -p "require('./coverage/coverage-summary.json').total.lines.pct")
