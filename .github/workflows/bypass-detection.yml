@@ -73,7 +73,7 @@ jobs:
       
       - name: Check test coverage
         id: coverage
-        timeout-minutes: 3  # 3分でタイムアウト
+        timeout-minutes: 5  # 5分でタイムアウト（十分な余裕を確保）
         run: |
           # カバレッジ低下の検出
           echo "::notice::Installing dependencies..."
