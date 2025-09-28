@@ -65,3 +65,4 @@ backups/
 
 # Pattern files (migrated to references/)
 instructions/patterns/
+.serena/
