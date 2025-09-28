@@ -86,7 +86,7 @@ jobs:
           - ✅ Directory structure accuracy
           
           ### Issues Found:
-          ${circularCheckFailed ? '- ⚠️ Circular dependencies detected' : ''}
+          ${circularCheckFailed ? '- ⚠️ Circular dependencies detected\n' : ''}
           ${docNeedsUpdate ? '- ⚠️ Documentation needs updating' : ''}
           
           ### Required Actions:
