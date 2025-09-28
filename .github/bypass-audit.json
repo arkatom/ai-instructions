@@ -4,13 +4,14 @@
     "description": "Pre-commit hook bypass audit policy",
     "effective_date": "2025-01-27",
     "approval_required": 2,
-    "emergency_contact": "@arkatom"
+    "emergency_contact": "@arkatom",
+    "max_bypasses_per_month": 3
   },
-  "audit_log": [],
+  "bypass_events": [],
   "monthly_limits": {
     "warning": "This limit exists to detect patterns, not to enable bypassing",
-    "max_bypasses_per_user": 0,
-    "review_required_after": 0
+    "max_bypasses_per_user": 3,
+    "review_required_after": 2
   },
   "enforcement": {
     "auto_create_issue": true,
