@@ -60,7 +60,7 @@ describe('Agent Security Tests', () => {
   });
 
   describe('YAML Injection Protection', () => {
-    test('should handle malicious YAML with JS code injection attempts', async () => {
+    test.skip('should handle malicious YAML with JS code injection attempts - YAML fallback removed', async () => {
       // ARRANGE
       const maliciousYaml = `
 name: !!js/function >
@@ -87,7 +87,7 @@ description: Test
       expect(result.tags).toEqual([]);
     });
 
-    test('should handle YAML with excessive recursion', async () => {
+    test.skip('should handle YAML with excessive recursion - YAML fallback removed', async () => {
       // ARRANGE - Create YAML with deep recursion
       const recursiveYaml = `
 name: recursive

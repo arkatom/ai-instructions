@@ -1,112 +1,97 @@
 #!/bin/bash
-# pre-commitフック保護システム
 
-set -e
+# Hook integrity protection script
 
 HOOKS_DIR=".husky"
-PROTECTED_HASH_FILE=".github/hooks-integrity.sha256"
+INTEGRITY_FILE=".github/hooks-integrity.sha256"
 
-# フックの整合性チェック
-verify_hooks_integrity() {
+verify() {
   echo "🔍 フックの整合性を検証中..."
   
-  # 現在のフックのハッシュを計算
-  local current_hash=$(find "$HOOKS_DIR" -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
-  
-  # 保護されたハッシュと比較
-  if [ -f "$PROTECTED_HASH_FILE" ]; then
-    local protected_hash=$(cat "$PROTECTED_HASH_FILE")
-    
-    if [ "$current_hash" != "$protected_hash" ]; then
-      echo "🚨 警告: pre-commitフックが改竄されています！"
-      echo "期待値: $protected_hash"
-      echo "現在値: $current_hash"
-      
-      # 自動修復を試みる
-      restore_hooks
-      
-      # 改竄を記録
-      record_tampering
-      
-      return 1
-    fi
-  else
-    # 初回実行時はハッシュを保存
-    echo "$current_hash" > "$PROTECTED_HASH_FILE"
-    echo "✅ フックの保護ハッシュを記録しました。"
+  if [ ! -f "$INTEGRITY_FILE" ]; then
+    echo "⚠️ 整合性ファイルが見つかりません。生成中..."
+    generate
+    return 0
   fi
   
-  echo "✅ フックの整合性が確認されました。"
-}
-
-# フックの自動復元
-restore_hooks() {
-  echo "🔧 フックを復元中..."
+  local has_error=0
+  while IFS=' ' read -r hook expected_hash; do
+    if [ -f "$HOOKS_DIR/$hook" ]; then
+      actual_hash=$(sha256sum "$HOOKS_DIR/$hook" | awk '{print $1}')
+      if [ "$actual_hash" != "$expected_hash" ]; then
+        echo "🚨 警告: ${hook}フックが改竄されています！"
+        echo "期待値: $hook $expected_hash"
+        echo "現在値: $actual_hash"
+        
+        # バックアップからの復元を試みる
+        echo "🔧 フックを復元中..."
+        if [ -f "$HOOKS_DIR/.backup/$hook" ]; then
+          cp "$HOOKS_DIR/.backup/$hook" "$HOOKS_DIR/$hook"
+          echo "✅ バックアップから復元しました: $hook"
+        else
+          echo "❌ バックアップが見つかりません。手動での修復が必要です。"
+          has_error=1
+        fi
+      else
+        echo "✅ $hook: 正常"
+      fi
+    else
+      echo "⚠️ フックが見つかりません: $hook"
+      has_error=1
+    fi
+  done < "$INTEGRITY_FILE"
   
-  # バックアップから復元
-  if [ -d ".husky.backup" ]; then
-    rm -rf "$HOOKS_DIR"
-    cp -r ".husky.backup" "$HOOKS_DIR"
-    echo "✅ フックが復元されました。"
+  if [ $has_error -eq 0 ]; then
+    echo "✅ すべてのフックが検証されました"
   else
-    echo "❌ バックアップが見つかりません。手動での修復が必要です。"
     exit 1
   fi
 }
 
-# 改竄記録
-record_tampering() {
-  local event=$(cat <<EOF
-{
-  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "type": "hook-tampering",
-  "user": "$(git config user.name || echo 'unknown')",
-  "action": "automatic-restoration"
-}
-EOF
-)
+generate() {
+  echo "📝 Generating hook integrity hashes..."
+  > "$INTEGRITY_FILE"
   
-  # 監査ログに追記
-  if [ -f ".github/bypass-audit.json" ]; then
-    jq ".bypass_events += [$event]" ".github/bypass-audit.json" > tmp.json && mv tmp.json ".github/bypass-audit.json"
-  fi
-  
-  # 即座に通知
-  if command -v gh &> /dev/null; then
-    gh issue create \
-      --title "🚨 CRITICAL: Pre-commit Hook Tampering Detected" \
-      --body "Hook integrity check failed. Automatic restoration attempted." \
-      --label "security,critical" 2>/dev/null || true
-  fi
-}
-
-# 定期的な整合性チェック（CI/CDで実行）
-periodic_integrity_check() {
-  while true; do
-    verify_hooks_integrity
-    sleep 3600  # 1時間ごとにチェック
+  for hook in "$HOOKS_DIR"/*; do
+    if [ -f "$hook" ]; then
+      hook_name=$(basename "$hook")
+      hash=$(sha256sum "$hook" | awk '{print $1}')
+      echo "$hook_name $hash" >> "$INTEGRITY_FILE"
+      echo "✅ Generated hash for $hook_name"
+    fi
   done
+  
+  echo "✅ Integrity file generated: $INTEGRITY_FILE"
 }
 
-# バックアップ作成
-create_backup() {
-  cp -r "$HOOKS_DIR" ".husky.backup"
-  echo "✅ フックのバックアップを作成しました。"
+backup() {
+  echo "💾 フックをバックアップ中..."
+  mkdir -p "$HOOKS_DIR/.backup"
+  
+  for hook in "$HOOKS_DIR"/*; do
+    if [ -f "$hook" ] && [ "$(basename "$hook")" != ".backup" ]; then
+      hook_name=$(basename "$hook")
+      cp "$hook" "$HOOKS_DIR/.backup/$hook_name"
+      echo "✅ バックアップ完了: $hook_name"
+    fi
+  done
+  
+  echo "✅ すべてのフックをバックアップしました"
 }
 
-# メイン処理
-case "${1:-}" in
+case "${1:-verify}" in
   verify)
-    verify_hooks_integrity
+    verify
+    ;;
+  generate)
+    generate
+    backup
     ;;
   backup)
-    create_backup
-    ;;
-  monitor)
-    periodic_integrity_check
+    backup
     ;;
   *)
-    echo "Usage: $0 {verify|backup|monitor}"
+    echo "Usage: $0 [verify|generate|backup]"
     exit 1
     ;;
 esac

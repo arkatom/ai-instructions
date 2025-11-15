@@ -240,6 +240,43 @@ npm run build
 npm run dev init
 ```
 
+## 🏗️ Architecture
+
+### Project Structure
+```
+ai-instructions/
+├── src/                    # Source code
+│   ├── cli.ts             # Main CLI entry point
+│   ├── commands/          # Command implementations
+│   ├── generators/        # Template generators
+│   └── utils/             # Utility functions
+├── templates/             # Instruction templates
+│   ├── base/             # Base templates
+│   ├── agents/           # Agent configurations
+│   └── patterns/         # Language patterns
+├── instructions/          # Generated instructions
+│   ├── core/             # Core rules
+│   ├── methodologies/    # Development methods
+│   └── patterns/         # Code patterns
+└── docs/                  # Documentation
+    ├── notes/            # Development notes
+    └── agents-list.md    # Agent catalog
+```
+
+### Key Components
+
+1. **CLI Engine**: Commander.js-based CLI with modular command structure
+2. **Template System**: Hierarchical template generation with conflict resolution
+3. **Agent System**: 90+ specialized AI agents with metadata and deployment logic
+4. **Quality Gates**: Multi-layer quality enforcement through hooks and CI/CD
+
+### Quality Assurance
+
+- **Pre-commit Hooks**: TypeScript, linting, and test validation
+- **CI/CD Pipeline**: Automated testing, versioning, and NPM publishing
+- **Branch Protection**: PR-based workflow with required checks
+- **Bypass Detection**: Monitors and prevents quality standard violations
+
 ## Why use this?
 
 - **Save hours**: Stop writing the same instructions for every project

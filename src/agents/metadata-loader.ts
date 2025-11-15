@@ -5,9 +5,7 @@
 
 // Agent metadata processing with extracted methods for clarity
 
-import { readFile, readdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join, extname } from 'path';
+import { readFile } from 'fs/promises';
 import * as yaml from 'js-yaml';
 import { AgentMetadata, AgentRelationship } from './types';
 import { parseFrontmatter } from './frontmatter-parser';
@@ -45,12 +43,11 @@ interface CacheEntry {
  * Responsible for loading, parsing, and caching agent metadata
  */
 export class AgentMetadataLoader {
-  private metadataPath: string;
   private cache: Map<string, CacheEntry>;
   private readonly config: CacheConfig;
 
-  constructor(basePath: string, config: Partial<CacheConfig> = {}) {
-    this.metadataPath = join(basePath, 'metadata');
+  constructor(_basePath: string, config: Partial<CacheConfig> = {}) {
+    // basePath parameter kept for backward compatibility but no longer used
     this.cache = new Map();
     this.config = {
       maxSize: config.maxSize ?? 1000,
@@ -108,13 +105,13 @@ export class AgentMetadataLoader {
    * Get agent file path
    */
   private getAgentFilePath(agentName: string): string {
-    // First check templates directory for MD files
+    // Check templates directory for MD files
     const templatesDir = getTemplatesDir();
     const mdPath = findAgentFile(templatesDir, agentName);
     if (mdPath) return mdPath;
     
-    // Fallback to YAML in metadata path (for backward compatibility)
-    return join(this.metadataPath, `${agentName}.yaml`);
+    // No fallback - agent must exist in templates directory
+    throw new Error(`Agent metadata not found: ${agentName}`);
   }
 
   /**
@@ -161,7 +158,7 @@ export class AgentMetadataLoader {
   }
 
   /**
-   * Load all agent metadata files from the metadata directory
+   * Load all agent metadata files from the templates/agents directory
    * @returns Array of all agent metadata
    */
   async loadAllMetadata(): Promise<AgentMetadata[]> {
@@ -169,18 +166,6 @@ export class AgentMetadataLoader {
       // Load from templates/agents directory
       const templatesDir = getTemplatesDir();
       const agentNames = findAllAgentFiles(templatesDir);
-      
-      // Also check for YAML files in metadata directory (backward compatibility)
-      if (existsSync(this.metadataPath)) {
-        const files = await readdir(this.metadataPath);
-        const yamlFiles = files.filter(file => extname(file) === '.yaml' || extname(file) === '.yml');
-        yamlFiles.forEach(file => {
-          const agentName = file.replace(/\.(yaml|yml)$/, '');
-          if (!agentNames.includes(agentName)) {
-            agentNames.push(agentName);
-          }
-        });
-      }
       
       const metadataPromises = agentNames.map(agentName => {
         return this.loadAgentMetadata(agentName);

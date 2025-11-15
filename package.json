@@ -13,6 +13,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:ci": "jest --config=jest.config.ci.js --coverage --maxWorkers=2",
     "test:changed": "jest --changedSince=HEAD~1",
     "check:changed": "npm run lint -- --cache && npm run test:changed",
     "lint": "eslint src/**/*.ts test/**/*.ts",
